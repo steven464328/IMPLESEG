@@ -185,20 +185,6 @@ class Baja(SQLModel, table=True):
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
-class HistorialCambio(SQLModel, table=True):
-    __tablename__ = "historial_cambios"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    equipo_id: int
-    equipo_codigo: Optional[str] = None
-    accion: str
-    campo: Optional[str] = None
-    valor_anterior: Optional[str] = None
-    valor_nuevo: Optional[str] = None
-    usuario: Optional[str] = None
-    fecha: datetime = Field(default_factory=datetime.utcnow)
-
-
 # ... existing code ...
 class HistorialCambio(SQLModel, table=True):
     __tablename__ = "historial_cambios"
