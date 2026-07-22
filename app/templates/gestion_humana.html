@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EJ Soluciones · Gestión Humana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/gh.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">EJ</div>
+      <div class="brand-text">
+        <strong>EJ Soluciones</strong>
+        <span>Soporte Tecnológico</span>
+      </div>
+    </div>
+
+    <nav class="nav-modules">
+      <div class="nav-group-label">Áreas</div>
+      <button class="nav-item" onclick="window.location.href='/'">
+        <span class="dot"></span> Sistemas · Hojas de Vida
+      </button>
+      <button class="nav-item active">
+        <span class="dot dot-live"></span> Gestión Humana
+      </button>
+      <button class="nav-item is-locked" disabled>
+        <span class="dot"></span> Contabilidad <em>próximamente</em>
+      </button>
+      <button class="nav-item is-locked" disabled>
+        <span class="dot"></span> Almacén <em>próximamente</em>
+      </button>
+    </nav>
+
+    <div class="nav-group-label" style="margin-top:14px">Gestión Humana</div>
+    <nav class="nav-modules" id="ghSubNav">
+      <button class="nav-item sub on" data-v="dash">📊 Panel</button>
+      <button class="nav-item sub" data-v="inv">📦 Inventario</button>
+      <button class="nav-item sub" data-v="new">➕ Asignar</button>
+      <button class="nav-item sub" data-v="list">📋 Registros</button>
+      <button class="nav-item sub" data-v="rec">🔄 Recepción</button>
+      <button class="nav-item sub" data-v="baja">🗑️ Bajas</button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="status-pill"><span class="status-led"></span> Servidor local activo</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div id="ghApp"></div>
+  </main>
+</div>
+
+<div id="pz"></div>
+<div class="toast" id="toast"></div>
+
+<script src="/static/gh.js"></script>
+</body>
+</html>

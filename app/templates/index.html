@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EJ Soluciones · Plataforma de Automatización</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">EJ</div>
+      <div class="brand-text">
+        <strong>EJ Soluciones</strong>
+        <span>Soporte Tecnológico</span>
+      </div>
+    </div>
+
+    <nav class="nav-modules">
+      <div class="nav-group-label">Áreas</div>
+      <button class="nav-item active" data-area="sistemas">
+        <span class="dot dot-live"></span> Sistemas · Hojas de Vida
+      </button>
+      <button class="nav-item" onclick="window.location.href='/gestion-humana'">
+        <span class="dot dot-live"></span> Gestión Humana
+      </button>
+      <button class="nav-item is-locked" disabled>
+        <span class="dot"></span> Contabilidad <em>próximamente</em>
+      </button>
+      <button class="nav-item is-locked" disabled>
+        <span class="dot"></span> Almacén <em>próximamente</em>
+      </button>
+      <button class="nav-item is-locked" disabled>
+        <span class="dot"></span> Recepción <em>próximamente</em>
+      </button>
+      <button class="nav-item nav-add" disabled title="Cada área nueva se integra aquí sin afectar las demás">
+        + Agregar área
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="status-pill">
+        <span class="status-led"></span> Servidor local activo
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1>Hojas de Vida de Equipos</h1>
+        <p class="subtitle">Inventario técnico, asignación y trazabilidad — Área de Sistemas</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost" id="btnExport">Exportar CSV</button>
+        <button class="btn btn-primary" id="btnNuevo">+ Nueva hoja de vida</button>
+      </div>
+    </header>
+
+    <!-- DASHBOARD -->
+    <section class="dashboard-grid" id="dashboardGrid">
+      <div class="stat-card">
+        <span class="stat-label">Equipos registrados</span>
+        <span class="stat-value" id="statTotal">—</span>
+      </div>
+      <div class="stat-card stat-warning">
+        <span class="stat-label">En riesgo / requieren atención</span>
+        <span class="stat-value" id="statRiesgo">—</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Sin mantenimiento registrado</span>
+        <span class="stat-value" id="statSinMtto">—</span>
+      </div>
+      <div class="stat-card stat-money">
+        <span class="stat-label">Valor estimado del parque</span>
+        <span class="stat-value" id="statValor">—</span>
+      </div>
+    </section>
+
+    <section class="charts-row">
+      <div class="panel">
+        <h3>Distribución por área</h3>
+        <div id="chartArea" class="bar-chart"></div>
+      </div>
+      <div class="panel">
+        <h3>Estado de los equipos</h3>
+        <div id="chartEstado" class="bar-chart"></div>
+      </div>
+    </section>
+
+    <!-- FILTROS -->
+    <section class="panel filters-panel">
+      <input type="text" id="fBuscar" placeholder="Buscar por código, usuario, IP, serial, marca...">
+      <select id="fEmpresa"><option value="">Empresa: todas</option></select>
+      <select id="fArea"><option value="">Área: todas</option></select>
+      <select id="fTipo"><option value="">Tipo: todos</option></select>
+      <select id="fEstado"><option value="">Estado: todos</option></select>
+      <button class="btn btn-ghost" id="btnLimpiarFiltros">Limpiar</button>
+    </section>
+
+    <!-- TABLA -->
+    <section class="panel table-panel">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Equipo</th>
+            <th>Empresa</th>
+            <th>Área</th>
+            <th>Usuario asignado</th>
+            <th>Tipo</th>
+            <th>IP</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tablaBody">
+          <tr><td colspan="8" class="empty-state">Cargando registros…</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</div>
+
+<!-- DRAWER: Crear / Editar -->
+<div class="drawer-overlay" id="drawerOverlay">
+  <div class="drawer" id="drawer">
+    <div class="drawer-header">
+      <h2 id="drawerTitle">Nueva hoja de vida</h2>
+      <button class="btn-close" id="btnCerrarDrawer">×</button>
+    </div>
+    <form id="formEquipo" class="drawer-form">
+      <input type="hidden" id="f_id">
+
+      <div class="form-section-title">Identificación</div>
+      <div class="form-grid">
+        <label>Empresa* <input required id="f_empresa" placeholder="IMPLESEG"></label>
+        <label>Código de equipo* <input required id="f_equipo" placeholder="IMPLE032"></label>
+        <label>Código de activo <input id="f_codigo" placeholder="AIO032"></label>
+        <label>Área <input id="f_area" placeholder="MANTENIMIENTO"></label>
+        <label>Nombre del equipo <input id="f_nombre_equipo"></label>
+        <label>Tipo de equipo
+          <select id="f_tipo_equipo">
+            <option value="">Seleccionar…</option>
+            <option>AIO</option><option>DESKTOP</option><option>LAPTOP</option><option>SERVIDOR</option>
+          </select>
+        </label>
+        <label>Usuario asignado <input id="f_usuario_asignado"></label>
+        <label>Estado del equipo
+          <select id="f_estado_equipo">
+            <option value="">Seleccionar…</option>
+            <option>EQUIPO FUNCIONAL</option><option>EQUIPO LENTO</option>
+            <option>EN REVISIÓN</option><option>DONADO</option><option>CHATARRIZADO</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="form-section-title">Hardware</div>
+      <div class="form-grid">
+        <label>CPU <input id="f_cpu"></label>
+        <label>Procesador <input id="f_procesador" placeholder="COREI5 13"></label>
+        <label>Memoria <input id="f_memoria" placeholder="16GB"></label>
+        <label>Mainboard <input id="f_mainboard"></label>
+        <label>Disco <input id="f_tipo_disco" placeholder="SOLIDO"></label>
+        <label>Tamaño disco <input id="f_tamano_disco" placeholder="512GB"></label>
+        <label>Marca <input id="f_marca"></label>
+        <label>Serial <input id="f_serial"></label>
+      </div>
+
+      <div class="form-section-title">Red y acceso remoto</div>
+      <div class="form-grid">
+        <label>IP <input id="f_ip" placeholder="192.168.1.100"></label>
+        <label>MAC <input id="f_mac"></label>
+        <label>AnyDesk ID <input id="f_anydesk_id"></label>
+        <label>Dominio <input id="f_dominio"></label>
+      </div>
+
+      <div class="form-section-title">Software</div>
+      <div class="form-grid">
+        <label>Sistema operativo <input id="f_sistema_operativo"></label>
+        <label>Antivirus <input id="f_antivirus" placeholder="BITDEFENDER"></label>
+        <label>Vigencia antivirus <input id="f_antivirus_vigencia" placeholder="27/12/2025 BUSINESS SECURITY"></label>
+        <label>Office <input id="f_office"></label>
+      </div>
+
+      <div class="form-section-title">Mantenimiento y observaciones</div>
+      <div class="form-grid">
+        <label>Fecha último mantenimiento <input id="f_fecha_ultimo_mantenimiento" placeholder="DD/MM/AAAA"></label>
+        <label class="span-2">Observación de estado <textarea id="f_observacion_estado"></textarea></label>
+        <label class="span-2">Observaciones finales <textarea id="f_observaciones_finales"></textarea></label>
+      </div>
+
+      <div class="drawer-actions">
+        <button type="button" class="btn btn-ghost" id="btnEliminar" style="display:none">Eliminar</button>
+        <div class="spacer"></div>
+        <button type="button" class="btn btn-ghost" id="btnCancelar">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar hoja de vida</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
