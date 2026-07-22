@@ -14,6 +14,7 @@ import os
 
 from app.database import init_db
 from app.routers import equipos, dashboard, gh_inventario, gh_asignaciones, gh_bajas
+from app.routers import equipos, dashboard, gh_inventario, gh_asignaciones, gh_bajas, recepcion # <--- AÑADIR 'recepcion'
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -42,6 +43,7 @@ app.include_router(dashboard.router)
 app.include_router(gh_inventario.router)
 app.include_router(gh_asignaciones.router)
 app.include_router(gh_bajas.router)
+app.include_router(recepcion.router)
 
 # --- Frontend estático ---
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
