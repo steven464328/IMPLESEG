@@ -36,34 +36,40 @@ async def vista_recepcion(request: Request):
 @router.post("/api/ingreso")
 async def registrar_ingreso(datos: IngresoVisitante, db: Session = Depends(get_session)):
     """Registra la entrada de un visitante."""
-    
-    # Validar si ya está adentro sin haber marcado salida
-    visitante_activo = db.exec(
-        select(Visitante).where(
-            Visitante.cedula == datos.cedula,
-            Visitante.fecha_salida == None
+    try:
+        # Validar si ya está adentro sin haber marcado salida
+        visitante_activo = db.exec(
+            select(Visitante).where(
+                Visitante.cedula == datos.cedula,
+                Visitante.fecha_salida == None
+            )
+        ).first()
+
+        if visitante_activo:
+            raise HTTPException(status_code=400, detail=f"{visitante_activo.nombre_completo} ya tiene un ingreso activo. Debe marcar salida primero.")
+
+        nuevo_ingreso = Visitante(
+            cedula=datos.cedula,
+            nombre_completo=datos.nombre_completo.upper(),
+            empresa=datos.empresa.upper() if datos.empresa else "N/A",
+            correo=datos.correo.lower() if datos.correo else "N/A",
+            area_visita=datos.area_visita.upper(),
+            motivo_visita=datos.motivo_visita.upper(),
+            arl=datos.arl.upper(),
+            numero_emergencia=datos.numero_emergencia,
+            persona_recibe=datos.persona_recibe.upper(),
+            fecha_ingreso=datetime.now()
         )
-    ).first()
-
-    if visitante_activo:
-        raise HTTPException(status_code=400, detail=f"{visitante_activo.nombre_completo} ya tiene un ingreso activo. Debe marcar salida primero.")
-
-    nuevo_ingreso = Visitante(
-        cedula=datos.cedula,
-        nombre_completo=datos.nombre_completo.upper(),
-        empresa=datos.empresa.upper(),
-        correo=datos.correo.lower(),
-        area_visita=datos.area_visita.upper(),
-        motivo_visita=datos.motivo_visita.upper(),
-        arl=datos.arl.upper(),
-        numero_emergencia=datos.numero_emergencia,
-        persona_recibe=datos.persona_recibe.upper(),
-        fecha_ingreso=datetime.now()
-    )
-    
-    db.add(nuevo_ingreso)
-    db.commit()
-    return {"status": "ok", "nombre": nuevo_ingreso.nombre_completo}
+        
+        db.add(nuevo_ingreso)
+        db.commit()
+        return {"status": "ok", "nombre": nuevo_ingreso.nombre_completo}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error en ingreso: {e}")
+        raise HTTPException(status_code=500, detail="Error interno en el servidor. Verifica los datos.")
 
 @router.post("/api/salida")
 async def registrar_salida(datos: SalidaVisitante, db: Session = Depends(get_session)):
