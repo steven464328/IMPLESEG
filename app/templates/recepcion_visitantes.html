@@ -4,305 +4,389 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IMPLESEG - Control de Acceso</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- SweetAlert2 para popups bonitos -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         body {
-            background-color: #0f172a; /* Fondo oscuro inspirado en la imagen */
-            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
+            background-color: #0b1120;
+            background-image: radial-gradient(circle at 50% 100%, #172554 0%, #0b1120 70%);
             min-height: 100vh;
             color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            overflow-x: hidden;
         }
+
+        .bg-shapes {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; z-index: 0; overflow: hidden;
+        }
+        .shape {
+            position: absolute;
+            fill: rgba(255, 255, 255, 0.02);
+            stroke: rgba(255, 255, 255, 0.05);
+            stroke-width: 1px;
+            animation: float 20s infinite linear;
+        }
+        @keyframes float {
+            0% { transform: translateY(110vh) rotate(0deg) scale(1); }
+            100% { transform: translateY(-20vh) rotate(360deg) scale(1.5); }
+        }
+
+        .spark {
+            position: absolute;
+            width: 3px; height: 3px;
+            background: #f97316;
+            border-radius: 50%;
+            box-shadow: 0 0 10px 2px #f97316;
+            animation: sparkRise linear infinite;
+            opacity: 0;
+        }
+        @keyframes sparkRise {
+            0% { transform: translateY(100vh) translateX(0); opacity: 1; }
+            100% { transform: translateY(-10vh) translateX(20px); opacity: 0; }
+        }
+
         .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative; z-index: 10;
         }
-        .btn-ingreso:hover { box-shadow: 0 0 20px rgba(249, 115, 22, 0.4); border-color: #f97316; }
-        .btn-salida:hover { box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); border-color: #22c55e; }
+        .main-btn {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .main-btn-ingreso:hover { 
+            border-color: #f97316; 
+            box-shadow: inset 0 0 20px rgba(249, 115, 22, 0.1), 0 0 30px rgba(249, 115, 22, 0.2); 
+            transform: translateY(-5px);
+        }
+        .main-btn-salida:hover { 
+            border-color: #22c55e; 
+            box-shadow: inset 0 0 20px rgba(34, 197, 94, 0.1), 0 0 30px rgba(34, 197, 94, 0.2); 
+            transform: translateY(-5px);
+        }
+
+        .input-group label {
+            display: block; font-size: 0.7rem; font-weight: 700; color: #9ca3af;
+            text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;
+        }
+        .input-field {
+            width: 100%; background: #1e293b; color: white;
+            border: 1px solid #334155; padding: 1rem; border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .input-field:focus {
+            outline: none; background: #0f172a;
+        }
+        .focus-orange:focus { border-color: #f97316; box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2); }
+        .focus-green:focus { border-color: #22c55e; box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2); }
         
-        /* Estilos para los formularios */
-        input, select {
-            background-color: #1e293b;
-            color: white;
-            border: 1px solid #334155;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            width: 100%;
-        }
-        input:focus, select:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        .hazard-tape {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 12px;
+            background: repeating-linear-gradient(45deg, #ea580c, #ea580c 20px, #0f172a 20px, #0f172a 40px);
+            z-index: 50; box-shadow: 0 -2px 10px rgba(234, 88, 12, 0.3);
         }
     </style>
 </head>
-<body class="flex flex-col items-center p-6 relative overflow-hidden">
+<body class="flex flex-col items-center p-6 pb-20 relative">
 
-    <!-- Header / Logo / Reloj -->
-    <div class="w-full max-w-5xl flex justify-between items-center mb-12 mt-4 relative z-10">
+    <div class="bg-shapes" id="bg-shapes-container">
+        <!-- Los SVGs y chispas se inyectan vía JS -->
+    </div>
+
+    <!-- Header y Reloj -->
+    <div class="w-full max-w-6xl flex justify-between items-center mb-8 relative z-10 border-b border-gray-800 pb-4">
         <div class="flex items-center gap-4">
-            <!-- Logo Icono (simulado) -->
-            <div class="w-14 h-14 bg-orange-600 rounded-lg flex items-center justify-center shadow-lg transform rotate-3">
-                <svg class="w-8 h-8 text-white -rotate-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"></path></svg>
+            <div class="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-900/50">
+                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
             </div>
             <div>
-                <h1 class="text-3xl font-black tracking-wider text-white">IMPLESEG</h1>
-                <p class="text-orange-500 font-semibold tracking-widest text-xs">CONTROL DE ACCESO - VISITANTES</p>
+                <h1 class="text-3xl font-black tracking-widest text-white">IMPLESEG</h1>
+                <p class="text-orange-500 font-bold tracking-widest text-xs mt-1 uppercase">Control de Acceso · Visitantes</p>
             </div>
         </div>
         
-        <!-- Reloj en vivo -->
-        <div class="glass-panel px-6 py-3 rounded-xl border border-gray-700 text-center">
-            <div id="clock-time" class="text-2xl font-bold text-white tracking-widest">--:--:--</div>
-            <div id="clock-date" class="text-xs text-gray-400 font-semibold uppercase tracking-wider mt-1">-- --- ----</div>
+        <div class="flex gap-4 items-center">
+            <!-- Botón de Descarga Excel -->
+            <button onclick="descargarBaseDatos()" class="hidden md:flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg text-sm font-semibold transition border border-gray-700 hover:border-gray-500 shadow-lg">
+                <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Descargar BD
+            </button>
+            <div class="glass-panel px-6 py-2 rounded-xl border border-gray-700/50 text-center">
+                <div id="clock-time" class="text-2xl font-black text-white tracking-widest">--:--:--</div>
+                <div id="clock-date" class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">-- --- ----</div>
+            </div>
         </div>
     </div>
 
-    <!-- Indicador de Estado -->
-    <div id="status-indicator" class="text-sm font-medium text-gray-300 tracking-[0.2em] mb-8 flex items-center gap-2 relative z-10">
-        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+    <!-- Indicador -->
+    <div id="status-indicator" class="text-xs font-bold text-gray-400 tracking-[0.2em] mb-8 flex items-center gap-2 relative z-10 uppercase">
+        <span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]"></span>
         SISTEMA ACTIVO · SELECCIONE UNA OPCIÓN
     </div>
 
-    <!-- CONTENEDOR PRINCIPAL -->
+    <!-- CONTENEDOR VISTAS -->
     <div class="w-full max-w-5xl relative z-10">
         
-        <!-- VISTA: BOTONES PRINCIPALES -->
         <div id="view-menu" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <!-- Botón Ingreso -->
-            <button onclick="showView('view-ingreso')" class="btn-ingreso glass-panel rounded-2xl p-10 flex flex-col items-center justify-center transition-all duration-300 group cursor-pointer border border-transparent">
-                <div class="w-24 h-24 rounded-full border-2 border-orange-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform bg-orange-500/10">
-                    <svg class="w-10 h-10 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+            <!-- Ingreso -->
+            <button onclick="showView('view-ingreso')" class="main-btn main-btn-ingreso rounded-2xl p-12 flex flex-col items-center justify-center group cursor-pointer">
+                <div class="w-28 h-28 rounded-full border border-orange-500/50 flex items-center justify-center mb-8 group-hover:bg-orange-500/10 transition-colors shadow-[0_0_30px_rgba(249,115,22,0.1)]">
+                    <svg class="w-14 h-14 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2m8-10a4 4 0 100-8 4 4 0 000 8zm6 4l-4-4m0 0l4-4m-4 4h14"></path></svg>
                 </div>
-                <h2 class="text-4xl font-black text-orange-500 mb-4 tracking-wider">INGRESO</h2>
-                <p class="text-gray-400 text-center text-sm leading-relaxed max-w-xs">
+                <h2 class="text-4xl font-black text-orange-500 mb-4 tracking-widest uppercase">Ingreso</h2>
+                <p class="text-gray-400 text-center text-sm leading-relaxed max-w-sm font-medium">
                     Registre su entrada completando el formulario de visitante. Tenga su cédula a la mano.
                 </p>
             </button>
 
-            <!-- Botón Salida -->
-            <button onclick="showView('view-salida')" class="btn-salida glass-panel rounded-2xl p-10 flex flex-col items-center justify-center transition-all duration-300 group cursor-pointer border border-transparent">
-                <div class="w-24 h-24 rounded-full border-2 border-green-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform bg-green-500/10">
-                    <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+            <!-- Salida -->
+            <button onclick="showView('view-salida')" class="main-btn main-btn-salida rounded-2xl p-12 flex flex-col items-center justify-center group cursor-pointer">
+                <div class="w-28 h-28 rounded-full border border-green-500/50 flex items-center justify-center mb-8 group-hover:bg-green-500/10 transition-colors shadow-[0_0_30px_rgba(34,197,94,0.1)]">
+                    <svg class="w-14 h-14 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                 </div>
-                <h2 class="text-4xl font-black text-green-500 mb-4 tracking-wider">SALIDA</h2>
-                <p class="text-gray-400 text-center text-sm leading-relaxed max-w-xs">
+                <h2 class="text-4xl font-black text-green-500 mb-4 tracking-widest uppercase">Salida</h2>
+                <p class="text-gray-400 text-center text-sm leading-relaxed max-w-sm font-medium">
                     Registre su salida de las instalaciones con el número de cédula que usó al ingresar.
                 </p>
             </button>
         </div>
 
-        <!-- VISTA: FORMULARIO DE INGRESO -->
-        <div id="view-ingreso" class="hidden glass-panel rounded-2xl p-8 border border-orange-500/30 shadow-2xl shadow-orange-900/20 max-w-3xl mx-auto">
-            <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
-                <h2 class="text-2xl font-bold text-orange-500 flex items-center gap-2">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+        <div id="view-ingreso" class="hidden">
+            <div class="flex items-center gap-4 mb-6">
+                <button onclick="showView('view-menu')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded font-bold text-xs tracking-widest uppercase border border-gray-600 transition flex items-center gap-2">
+                    ← Volver
+                </button>
+                <h2 class="text-2xl font-black text-orange-500 flex items-center gap-3 uppercase tracking-widest">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 16h2v2h-2zm0-6h2v4h-2z"/></svg>
                     Registro de Ingreso
                 </h2>
-                <button onclick="showView('view-menu')" class="text-gray-400 hover:text-white transition-colors">Volver al menú ✖</button>
             </div>
             
-            <form id="form-ingreso" onsubmit="enviarIngreso(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-400 mb-1">N° Cédula *</label>
-                    <input type="number" id="in_cedula" required placeholder="Ej: 1020304050">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-400 mb-1">Nombres Completos *</label>
-                    <input type="text" id="in_nombre" required placeholder="Nombres y Apellidos">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-400 mb-1">Entidad / Empresa</label>
-                    <input type="text" id="in_empresa" placeholder="Empresa a la que representa">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-400 mb-1">Tipo de Visitante *</label>
-                    <select id="in_tipo" required>
-                        <option value="">Seleccione...</option>
-                        <option value="PROVEEDOR">PROVEEDOR</option>
-                        <option value="VISITANTE">VISITANTE</option>
-                        <option value="CONTRATISTA">CONTRATISTA</option>
-                        <option value="CLIENTE">CLIENTE</option>
-                        <option value="ENTREVISTA">ENTREVISTA</option>
-                    </select>
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-gray-400 mb-1">A Quién Visita *</label>
-                    <input type="text" id="in_visita_a" required placeholder="Nombre de la persona en Impleseg">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-400 mb-1">¿Tiene ARL? *</label>
-                    <select id="in_arl" required>
-                        <option value="">Seleccione...</option>
-                        <option value="SI">SÍ</option>
-                        <option value="NO">NO</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-400 mb-1">N° Tarjeta Asignada *</label>
-                    <input type="text" id="in_tarjeta" required placeholder="Ej: T-01">
-                </div>
-                
-                <div class="md:col-span-2 mt-6">
-                    <button type="submit" id="btn-submit-ingreso" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 rounded-xl shadow-lg transition-colors flex justify-center items-center gap-2">
-                        REGISTRAR INGRESO
-                    </button>
-                </div>
-            </form>
+            <div class="glass-panel rounded-2xl p-8 border-t-4 border-t-orange-500">
+                <form id="form-ingreso" onsubmit="enviarIngreso(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="input-group">
+                        <label>Nombre y Apellido *</label>
+                        <input type="text" id="in_nombre" required placeholder="Ej. Juan Pérez García" class="input-field focus-orange">
+                    </div>
+                    <div class="input-group">
+                        <label>Cédula de Ciudadanía *</label>
+                        <input type="number" id="in_cedula" required placeholder="Ej. 1023456789" class="input-field focus-orange">
+                    </div>
+                    <div class="input-group">
+                        <label>Empresa / Organización *</label>
+                        <input type="text" id="in_empresa" required placeholder="Nombre de su empresa" class="input-field focus-orange">
+                    </div>
+                    <div class="input-group">
+                        <label>Correo Electrónico</label>
+                        <input type="email" id="in_correo" placeholder="correo@empresa.com" class="input-field focus-orange">
+                    </div>
+                    <div class="input-group">
+                        <label>Área a Visitar *</label>
+                        <select id="in_area" required class="input-field focus-orange text-gray-300">
+                            <option value="">— Seleccione el área —</option>
+                            <option value="SISTEMAS">SISTEMAS</option>
+                            <option value="GERENCIA">GERENCIA</option>
+                            <option value="TALLER">TALLER EXTINGUIDORES</option>
+                            <option value="BODEGA">BODEGA / ALMACÉN</option>
+                            <option value="GESTION HUMANA">GESTIÓN HUMANA</option>
+                            <option value="CONTABILIDAD">CONTABILIDAD</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Motivo de Visita *</label>
+                        <select id="in_motivo" required class="input-field focus-orange text-gray-300">
+                            <option value="">— Seleccione el motivo —</option>
+                            <option value="PROVEEDOR">ENTREGA PROVEEDOR</option>
+                            <option value="REUNION">REUNIÓN / VISITA</option>
+                            <option value="SOPORTE">SOPORTE TÉCNICO</option>
+                            <option value="ENTREVISTA">ENTREVISTA DE TRABAJO</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>ARL *</label>
+                        <select id="in_arl" required class="input-field focus-orange text-gray-300">
+                            <option value="">— Seleccione su ARL —</option>
+                            <option value="SURA">SURA</option>
+                            <option value="POSITIVA">POSITIVA</option>
+                            <option value="COLMENA">COLMENA</option>
+                            <option value="BOLIVAR">SEGUROS BOLÍVAR</option>
+                            <option value="OTRA">OTRA</option>
+                            <option value="NINGUNA">NINGUNA</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Número en caso de emergencia *</label>
+                        <input type="number" id="in_emergencia" required placeholder="Ej. 3001234567" class="input-field focus-orange">
+                    </div>
+                    <div class="input-group md:col-span-2">
+                        <label>Persona que lo recibe en IMPLESEG *</label>
+                        <input type="text" id="in_recibe" required placeholder="Nombre completo de quien lo atiende" class="input-field focus-orange">
+                    </div>
+                    
+                    <div class="md:col-span-2 mt-4">
+                        <button type="submit" id="btn-submit-ingreso" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-black tracking-widest text-lg py-5 rounded-xl shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all flex justify-center items-center gap-2 uppercase">
+                            Registrar Ingreso →
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
 
-        <!-- VISTA: FORMULARIO DE SALIDA -->
-        <div id="view-salida" class="hidden glass-panel rounded-2xl p-8 border border-green-500/30 shadow-2xl shadow-green-900/20 max-w-md mx-auto mt-10">
-            <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
-                <h2 class="text-2xl font-bold text-green-500 flex items-center gap-2">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        <div id="view-salida" class="hidden max-w-2xl mx-auto">
+            <div class="flex items-center gap-4 mb-6">
+                <button onclick="showView('view-menu')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded font-bold text-xs tracking-widest uppercase border border-gray-600 transition flex items-center gap-2">
+                    ← Volver
+                </button>
+                <h2 class="text-2xl font-black text-green-500 flex items-center gap-3 uppercase tracking-widest">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                     Registro de Salida
                 </h2>
-                <button onclick="showView('view-menu')" class="text-gray-400 hover:text-white transition-colors">Volver ✖</button>
             </div>
-            
-            <form id="form-salida" onsubmit="enviarSalida(event)">
-                <div class="mb-6 text-center">
-                    <p class="text-gray-400 mb-6">Por favor, ingrese su número de cédula para registrar su hora de salida y finalización de la visita.</p>
-                    
-                    <label class="block text-sm font-semibold text-gray-400 mb-1 text-left">N° Cédula *</label>
-                    <input type="number" id="out_cedula" required placeholder="Ingrese su cédula" class="text-center text-xl tracking-widest font-bold py-4">
-                </div>
-                
-                <button type="submit" id="btn-submit-salida" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg transition-colors flex justify-center items-center gap-2">
-                    REGISTRAR SALIDA
-                </button>
-            </form>
-        </div>
 
+            <div class="glass-panel rounded-2xl p-10 border-t-4 border-t-green-500 text-center">
+                <form id="form-salida" onsubmit="enviarSalida(event)">
+                    <p class="text-gray-400 mb-8 font-medium">Ingrese su número de cédula para confirmar<br>y registrar su salida de las instalaciones Impleseg.</p>
+                    
+                    <div class="input-group mb-8">
+                        <label class="text-center text-gray-500">Cédula de Ciudadanía</label>
+                        <input type="number" id="out_cedula" required placeholder="- - - - - - - -" class="input-field focus-green text-center text-3xl tracking-[0.3em] font-black py-4 bg-gray-900 border-gray-700">
+                    </div>
+                    
+                    <button type="submit" id="btn-submit-salida" class="w-full bg-green-600 hover:bg-green-500 text-white font-black tracking-widest text-lg py-5 rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all flex justify-center items-center gap-2 uppercase">
+                        Confirmar Salida →
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 
+    <!-- Cinta Peligro -->
+    <div class="hazard-tape"></div>
+    <a href="/" class="fixed bottom-6 right-6 bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 px-4 py-3 rounded-full shadow-lg border border-gray-600 transition flex items-center gap-2 z-50 text-xs font-bold uppercase tracking-wider">
+        Ir al Panel Admin
+    </a>
+
     <script>
-        // 1. Reloj en vivo
+        // Reloj
         function updateClock() {
             const now = new Date();
-            // Formato de hora HH:MM:SS
             document.getElementById('clock-time').innerText = now.toLocaleTimeString('es-CO', { hour12: false });
-            
-            // Formato de fecha MAR, 21 JUL 2026
             const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
-            let dateStr = now.toLocaleDateString('es-CO', options).replace(/\./g, '').toUpperCase();
-            document.getElementById('clock-date').innerText = dateStr;
+            document.getElementById('clock-date').innerText = now.toLocaleDateString('es-CO', options).replace(/\./g, '').toUpperCase();
         }
-        setInterval(updateClock, 1000);
-        updateClock();
+        setInterval(updateClock, 1000); updateClock();
 
-        // 2. Control de Vistas (SPA feeling)
+        // Vistas
         function showView(viewId) {
-            document.getElementById('view-menu').classList.add('hidden');
-            document.getElementById('view-ingreso').classList.add('hidden');
-            document.getElementById('view-salida').classList.add('hidden');
-            
+            ['view-menu', 'view-ingreso', 'view-salida'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
             
-            // Textos de ayuda
             const status = document.getElementById('status-indicator');
-            if(viewId === 'view-menu') status.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> SISTEMA ACTIVO · SELECCIONE UNA OPCIÓN';
-            if(viewId === 'view-ingreso') status.innerHTML = '<span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span> MÓDULO DE INGRESO ACTIVADO';
-            if(viewId === 'view-salida') status.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> MÓDULO DE SALIDA ACTIVADO';
+            if(viewId === 'view-menu') status.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]"></span> SISTEMA ACTIVO · SELECCIONE UNA OPCIÓN';
+            if(viewId === 'view-ingreso') status.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse shadow-[0_0_8px_#f97316]"></span> MÓDULO DE INGRESO';
+            if(viewId === 'view-salida') status.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]"></span> MÓDULO DE SALIDA';
         }
 
-        // 3. Petición POST para INGRESO
+        // Descargar BD
+        function descargarBaseDatos() {
+            window.location.href = '/recepcion/api/descargar_csv';
+        }
+
+        // Ingreso
         async function enviarIngreso(e) {
             e.preventDefault();
             const btn = document.getElementById('btn-submit-ingreso');
-            btn.innerHTML = 'PROCESANDO...';
-            btn.disabled = true;
+            btn.innerHTML = 'Procesando...'; btn.disabled = true;
 
             const datos = {
-                cedula: document.getElementById('in_cedula').value.trim(),
                 nombre_completo: document.getElementById('in_nombre').value.trim(),
-                empresa: document.getElementById('in_empresa').value.trim() || 'N/A',
-                tipo_visitante: document.getElementById('in_tipo').value,
-                a_quien_visita: document.getElementById('in_visita_a').value.trim(),
+                cedula: document.getElementById('in_cedula').value.trim(),
+                empresa: document.getElementById('in_empresa').value.trim(),
+                correo: document.getElementById('in_correo').value.trim(),
+                area_visita: document.getElementById('in_area').value,
+                motivo_visita: document.getElementById('in_motivo').value,
                 arl: document.getElementById('in_arl').value,
-                tarjeta_asignada: document.getElementById('in_tarjeta').value.trim()
+                numero_emergencia: document.getElementById('in_emergencia').value.trim(),
+                persona_recibe: document.getElementById('in_recibe').value.trim()
             };
 
             try {
-                const response = await fetch('/recepcion/api/ingreso', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(datos)
-                });
+                const res = await fetch('/recepcion/api/ingreso', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) });
+                const result = await res.json();
                 
-                const result = await response.json();
-                
-                if (response.ok) {
+                if (res.ok) {
                     Swal.fire({
-                        title: '¡Ingreso Autorizado!',
-                        text: 'Bienvenido a las instalaciones de Impleseg.',
-                        icon: 'success',
-                        background: '#1e293b',
-                        color: 'white',
-                        confirmButtonColor: '#f97316'
+                        title: '¡Ingreso Exitoso!',
+                        html: `Bienvenido(a) a Impleseg,<br><b style="color:#f97316; font-size:1.5rem">${result.nombre}</b>`,
+                        icon: 'success', background: '#1e293b', color: 'white', confirmButtonColor: '#f97316'
                     });
                     document.getElementById('form-ingreso').reset();
                     showView('view-menu');
                 } else {
-                    Swal.fire('Error', result.detail || 'Ocurrió un problema.', 'error');
+                    Swal.fire('Error', result.detail, 'error');
                 }
-            } catch (error) {
-                Swal.fire('Error de conexión', 'No se pudo conectar con el servidor.', 'error');
-            } finally {
-                btn.innerHTML = 'REGISTRAR INGRESO';
-                btn.disabled = false;
-            }
+            } catch (err) { Swal.fire('Error', 'Problema de conexión.', 'error'); }
+            finally { btn.innerHTML = 'Registrar Ingreso →'; btn.disabled = false; }
         }
 
-        // 4. Petición POST para SALIDA
+        // Salida
         async function enviarSalida(e) {
             e.preventDefault();
             const btn = document.getElementById('btn-submit-salida');
-            btn.innerHTML = 'BUSCANDO REGISTRO...';
-            btn.disabled = true;
+            btn.innerHTML = 'Verificando...'; btn.disabled = true;
 
             const cedula = document.getElementById('out_cedula').value.trim();
 
             try {
-                const response = await fetch('/recepcion/api/salida', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cedula: cedula })
-                });
+                const res = await fetch('/recepcion/api/salida', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cedula }) });
+                const result = await res.json();
                 
-                const result = await response.json();
-                
-                if (response.ok) {
+                if (res.ok) {
                     Swal.fire({
-                        title: '¡Salida Registrada!',
-                        text: result.mensaje,
-                        icon: 'success',
-                        background: '#1e293b',
-                        color: 'white',
-                        confirmButtonColor: '#22c55e'
+                        title: '¡Salida Confirmada!',
+                        html: `Gracias por visitarnos, <b style="color:#22c55e">${result.nombre}</b>.<br><span style="font-size:0.9em; color:#9ca3af">Hora: ${result.hora_salida}</span>`,
+                        icon: 'success', background: '#1e293b', color: 'white', confirmButtonColor: '#22c55e'
                     });
                     document.getElementById('form-salida').reset();
                     showView('view-menu');
                 } else {
-                    Swal.fire({
-                        title: 'Aviso',
-                        text: result.detail || 'Ocurrió un problema.',
-                        icon: 'warning',
-                        background: '#1e293b',
-                        color: 'white'
-                    });
+                    Swal.fire({ title: 'Atención', text: result.detail, icon: 'warning', background: '#1e293b', color: 'white', confirmButtonColor: '#f97316' });
                 }
-            } catch (error) {
-                Swal.fire('Error de conexión', 'No se pudo conectar con el servidor.', 'error');
-            } finally {
-                btn.innerHTML = 'REGISTRAR SALIDA';
-                btn.disabled = false;
-            }
+            } catch (err) { Swal.fire('Error', 'Problema de conexión.', 'error'); }
+            finally { btn.innerHTML = 'Confirmar Salida →'; btn.disabled = false; }
+        }
+
+        // Generar Fondo Animado
+        const shapesContainer = document.getElementById('bg-shapes-container');
+        // SVG Extintor simplificado
+        const svgExtintor = `<svg viewBox="0 0 24 24"><path d="M7,22v-2h10v2H7z M12,2c-1.1,0-2,0.9-2,2v2H9C7.3,6,6,7.3,6,9v11h12V9c0-1.7-1.3-3-3-3h-1V4C14,2.9,13.1,2,12,2z M12,4c0.6,0,1,0.4,1,1v1h-2V5C11,4.4,11.4,4,12,4z"/></svg>`;
+        // SVG Camara CCTV
+        const svgCamara = `<svg viewBox="0 0 24 24"><path d="M15,9.5V8c0-0.55-0.45-1-1-1H4C3.45,7,3,7.45,3,8v8c0,0.55,0.45,1,1,1h10c0.55,0,1-0.45,1-1v-1.5l4,4v-11L15,9.5z"/></svg>`;
+
+        // Generar figuras flotantes grandes
+        for(let i=0; i<8; i++){
+            let div = document.createElement('div');
+            div.className = 'shape';
+            div.innerHTML = i%2===0 ? svgExtintor : svgCamara;
+            div.style.left = `${Math.random() * 100}vw`;
+            div.style.width = `${Math.random() * 100 + 100}px`;
+            div.style.animationDuration = `${Math.random() * 20 + 20}s`;
+            div.style.animationDelay = `${Math.random() * -20}s`;
+            shapesContainer.appendChild(div);
+        }
+
+        // Generar chispas
+        for(let i=0; i<30; i++){
+            let spark = document.createElement('div');
+            spark.className = 'spark';
+            spark.style.left = `${Math.random() * 100}vw`;
+            spark.style.animationDuration = `${Math.random() * 3 + 2}s`;
+            spark.style.animationDelay = `${Math.random() * -5}s`;
+            shapesContainer.appendChild(spark);
         }
     </script>
 </body>

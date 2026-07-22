@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
 from datetime import datetime
 from pydantic import BaseModel
+import csv
+import io
 
 from app.database import get_session
 from app.models import Visitante
@@ -11,27 +13,29 @@ from app.models import Visitante
 router = APIRouter(prefix="/recepcion", tags=["Recepción"])
 templates = Jinja2Templates(directory="app/templates")
 
-# Esquemas para recibir datos desde el frontend (AJAX)
+# Esquemas para recibir datos desde el frontend
 class IngresoVisitante(BaseModel):
-    cedula: str
     nombre_completo: str
+    cedula: str
     empresa: str
-    tipo_visitante: str
-    a_quien_visita: str
+    correo: str
+    area_visita: str
+    motivo_visita: str
     arl: str
-    tarjeta_asignada: str
+    numero_emergencia: str
+    persona_recibe: str
 
 class SalidaVisitante(BaseModel):
     cedula: str
 
 @router.get("/visitantes", response_class=HTMLResponse)
 async def vista_recepcion(request: Request):
-    """Renderiza la interfaz principal (Botones Ingreso/Salida)"""
+    """Renderiza la interfaz principal"""
     return templates.TemplateResponse("recepcion_visitantes.html", {"request": request})
 
 @router.post("/api/ingreso")
 async def registrar_ingreso(datos: IngresoVisitante, db: Session = Depends(get_session)):
-    """API para registrar la entrada de un visitante."""
+    """Registra la entrada de un visitante."""
     
     # Validar si ya está adentro sin haber marcado salida
     visitante_activo = db.exec(
@@ -42,29 +46,29 @@ async def registrar_ingreso(datos: IngresoVisitante, db: Session = Depends(get_s
     ).first()
 
     if visitante_activo:
-        raise HTTPException(status_code=400, detail="Este visitante ya tiene un ingreso activo. Debe marcar salida primero.")
+        raise HTTPException(status_code=400, detail=f"{visitante_activo.nombre_completo} ya tiene un ingreso activo. Debe marcar salida primero.")
 
     nuevo_ingreso = Visitante(
         cedula=datos.cedula,
         nombre_completo=datos.nombre_completo.upper(),
         empresa=datos.empresa.upper(),
-        tipo_visitante=datos.tipo_visitante,
-        a_quien_visita=datos.a_quien_visita.upper(),
-        arl=datos.arl,
-        tarjeta_asignada=datos.tarjeta_asignada,
+        correo=datos.correo.lower(),
+        area_visita=datos.area_visita.upper(),
+        motivo_visita=datos.motivo_visita.upper(),
+        arl=datos.arl.upper(),
+        numero_emergencia=datos.numero_emergencia,
+        persona_recibe=datos.persona_recibe.upper(),
         fecha_ingreso=datetime.now()
     )
     
     db.add(nuevo_ingreso)
     db.commit()
-    db.refresh(nuevo_ingreso)
-    return {"status": "ok", "mensaje": "Ingreso registrado correctamente"}
+    return {"status": "ok", "nombre": nuevo_ingreso.nombre_completo}
 
 @router.post("/api/salida")
 async def registrar_salida(datos: SalidaVisitante, db: Session = Depends(get_session)):
-    """API para registrar la salida usando solo la cédula."""
+    """Registra la salida verificando si existe."""
     
-    # Buscar el último registro de esta cédula que no tenga salida
     visitante = db.exec(
         select(Visitante)
         .where(Visitante.cedula == datos.cedula, Visitante.fecha_salida == None)
@@ -72,7 +76,7 @@ async def registrar_salida(datos: SalidaVisitante, db: Session = Depends(get_ses
     ).first()
 
     if not visitante:
-        raise HTTPException(status_code=404, detail="No se encontró un ingreso activo para esta cédula.")
+        raise HTTPException(status_code=404, detail="No se encontró un ingreso activo para esta cédula. Verifique el número ingresado.")
 
     visitante.fecha_salida = datetime.now()
     db.add(visitante)
@@ -80,6 +84,34 @@ async def registrar_salida(datos: SalidaVisitante, db: Session = Depends(get_ses
     
     return {
         "status": "ok", 
-        "mensaje": f"Salida registrada exitosamente para {visitante.nombre_completo}",
-        "hora_salida": visitante.fecha_salida.strftime("%Y-%m-%d %H:%M:%S")
+        "nombre": visitante.nombre_completo,
+        "hora_salida": visitante.fecha_salida.strftime("%H:%M:%S")
     }
+
+@router.get("/api/descargar_csv")
+async def descargar_csv(db: Session = Depends(get_session)):
+    """Exporta toda la tabla de visitantes a formato CSV (Excel)."""
+    visitantes = db.exec(select(Visitante)).all()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Escribir encabezados
+    writer.writerow(["ID", "Cédula", "Nombre", "Empresa", "Correo", "Área Visitada", "Motivo", "ARL", "Contacto Emergencia", "Recibido Por", "Fecha/Hora Ingreso", "Fecha/Hora Salida"])
+    
+    # Escribir datos
+    for v in visitantes:
+        fecha_salida_str = v.fecha_salida.strftime("%Y-%m-%d %H:%M:%S") if v.fecha_salida else "AÚN EN INSTALACIONES"
+        writer.writerow([
+            v.id, v.cedula, v.nombre_completo, v.empresa, v.correo, v.area_visita, 
+            v.motivo_visita, v.arl, v.numero_emergencia, v.persona_recibe, 
+            v.fecha_ingreso.strftime("%Y-%m-%d %H:%M:%S"), fecha_salida_str
+        ])
+    
+    output.seek(0)
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=Registro_Visitantes_{datetime.now().strftime('%Y%m%d')}.csv"}
+    )
