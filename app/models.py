@@ -197,3 +197,39 @@ class HistorialCambio(SQLModel, table=True):
     valor_nuevo: Optional[str] = None
     usuario: Optional[str] = None
     fecha: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ... existing code ...
+class HistorialCambio(SQLModel, table=True):
+    __tablename__ = "historial_cambios"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    equipo_id: int
+    equipo_codigo: Optional[str] = None
+    accion: str
+    campo: Optional[str] = None
+    valor_anterior: Optional[str] = None
+    valor_nuevo: Optional[str] = None
+    usuario: Optional[str] = None
+    fecha: datetime = Field(default_factory=datetime.utcnow)
+
+# ═══════════════════════════════════════════════════════════════
+# MÓDULO 3: RECEPCIÓN
+# Control de acceso de visitantes (Ingreso y Salida)
+# ═══════════════════════════════════════════════════════════════
+
+class Visitante(SQLModel, table=True):
+    """Registro de entradas y salidas de visitantes."""
+    __tablename__ = "recepcion_visitantes"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cedula: str = Field(index=True)
+    nombre_completo: str
+    empresa: Optional[str] = None
+    tipo_visitante: str  # PROVEEDOR, VISITANTE, CONTRATISTA, CLIENTE
+    a_quien_visita: str
+    arl: str  # SI / NO
+    tarjeta_asignada: Optional[str] = None
+    
+    fecha_ingreso: datetime = Field(default_factory=datetime.now)
+    fecha_salida: Optional[datetime] = None  # Se llena cuando marcan salida
