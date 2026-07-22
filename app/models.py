@@ -17,7 +17,7 @@ class Empresa(SQLModel, table=True):
     """Catálogo de empresas cliente (multi-tenant lógico dentro de la misma base)."""
     __tablename__ = "empresas"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     nombre: str = Field(index=True, unique=True)
     nit: Optional[str] = None
     contacto_principal: Optional[str] = None
@@ -35,9 +35,7 @@ class Equipo(SQLModel, table=True):
     """
     __tablename__ = "equipos"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-
-    # --- Identificación ---
+    id: int | None = Field(default=None, primary_key=True)
     empresa: str = Field(index=True)
     equipo: str = Field(index=True, unique=True)          # Ej: IMPLE001
     codigo: Optional[str] = Field(default=None, index=True)  # Ej: AIO001
@@ -130,7 +128,7 @@ class HerramientaInventario(SQLModel, table=True):
     del inventario técnico de Sistemas, aunque comparte la misma plataforma)."""
     __tablename__ = "gh_inventario"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     nombre: str = Field(index=True)
     categoria: Optional[str] = Field(default=None, index=True)
     marca: Optional[str] = None
@@ -149,7 +147,7 @@ class Asignacion(SQLModel, table=True):
     """Acta de asignación de herramientas a un colaborador (formato F-SGI-GH-12)."""
     __tablename__ = "gh_asignaciones"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     codigo: str = Field(index=True, unique=True)  # Ej: ASG-LXXXXX (se conserva el formato original)
 
     nombre: str
@@ -180,7 +178,7 @@ class Baja(SQLModel, table=True):
     """Acta de baja de activos (formato F-GT-BAJA-01)."""
     __tablename__ = "gh_bajas"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     codigo: str = Field(index=True, unique=True)  # Ej: BAJA-LXXXXX
 
     fecha: str
@@ -217,8 +215,8 @@ class HistorialCambio(SQLModel, table=True):
     """
     __tablename__ = "historial_cambios"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    equipo_id: Optional[int] = Field(default=None, index=True)
+    id: int | None = Field(default=None, primary_key=True)
+    equipo_id: int
     equipo_codigo: Optional[str] = None
     accion: str  # CREACION / MODIFICACION / ELIMINACION
     campo: Optional[str] = None
