@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
 from datetime import datetime
 from pydantic import BaseModel
+from typing import Optional
 import csv
 import io
 
@@ -13,17 +14,24 @@ from app.models import Visitante
 router = APIRouter(prefix="/recepcion", tags=["Recepción"])
 templates = Jinja2Templates(directory="app/templates")
 
-# Esquemas para recibir datos desde el frontend
+# Esquema "Blindado": Acepta campos tanto del diseño viejo como del nuevo
 class IngresoVisitante(BaseModel):
-    nombre_completo: str
     cedula: str
-    empresa: str
-    correo: str
-    area_visita: str
-    motivo_visita: str
-    arl: str
-    numero_emergencia: str
-    persona_recibe: str
+    nombre_completo: str
+    empresa: Optional[str] = "N/A"
+    arl: Optional[str] = "N/A"
+    
+    # Campos del diseño nuevo
+    tipo_visitante: Optional[str] = "N/A"
+    a_quien_visita: Optional[str] = "N/A"
+    tarjeta_asignada: Optional[str] = "N/A"
+    
+    # Campos del diseño viejo
+    correo: Optional[str] = "N/A"
+    area_visita: Optional[str] = "N/A"
+    motivo_visita: Optional[str] = "N/A"
+    numero_emergencia: Optional[str] = "N/A"
+    persona_recibe: Optional[str] = "N/A"
 
 class SalidaVisitante(BaseModel):
     cedula: str
@@ -46,21 +54,23 @@ async def registrar_ingreso(datos: IngresoVisitante, db: Session = Depends(get_s
         ).first()
 
         if visitante_activo:
-            raise HTTPException(status_code=400, detail=f"{visitante_activo.nombre_completo} ya tiene un ingreso activo. Debe marcar salida primero.")
+            raise HTTPException(status_code=400, detail=f"La cédula {datos.cedula} ya está adentro. Registre la salida primero.")
 
+        # Crear el objeto con los datos básicos
         nuevo_ingreso = Visitante(
             cedula=datos.cedula,
             nombre_completo=datos.nombre_completo.upper(),
-            empresa=datos.empresa.upper() if datos.empresa else "N/A",
-            correo=datos.correo.lower() if datos.correo else "N/A",
-            area_visita=datos.area_visita.upper(),
-            motivo_visita=datos.motivo_visita.upper(),
-            arl=datos.arl.upper(),
-            numero_emergencia=datos.numero_emergencia,
-            persona_recibe=datos.persona_recibe.upper(),
             fecha_ingreso=datetime.now()
         )
         
+        # Asignar los campos dinámicamente solo si existen en tu base de datos actual
+        campos_opcionales = ['empresa', 'arl', 'tipo_visitante', 'a_quien_visita', 'tarjeta_asignada', 'correo', 'area_visita', 'motivo_visita', 'numero_emergencia', 'persona_recibe']
+        
+        for campo in campos_opcionales:
+            if hasattr(nuevo_ingreso, campo):
+                valor = getattr(datos, campo)
+                setattr(nuevo_ingreso, campo, valor.upper() if valor else "N/A")
+
         db.add(nuevo_ingreso)
         db.commit()
         return {"status": "ok", "nombre": nuevo_ingreso.nombre_completo}
@@ -69,12 +79,11 @@ async def registrar_ingreso(datos: IngresoVisitante, db: Session = Depends(get_s
         raise
     except Exception as e:
         print(f"Error en ingreso: {e}")
-        raise HTTPException(status_code=500, detail="Error interno en el servidor. Verifica los datos.")
+        raise HTTPException(status_code=500, detail="Error interno del servidor guardando el registro.")
 
 @router.post("/api/salida")
 async def registrar_salida(datos: SalidaVisitante, db: Session = Depends(get_session)):
     """Registra la salida verificando si existe."""
-    
     visitante = db.exec(
         select(Visitante)
         .where(Visitante.cedula == datos.cedula, Visitante.fecha_salida == None)
@@ -82,7 +91,7 @@ async def registrar_salida(datos: SalidaVisitante, db: Session = Depends(get_ses
     ).first()
 
     if not visitante:
-        raise HTTPException(status_code=404, detail="No se encontró un ingreso activo para esta cédula. Verifique el número ingresado.")
+        raise HTTPException(status_code=404, detail="Cédula no encontrada o ya registró su salida.")
 
     visitante.fecha_salida = datetime.now()
     db.add(visitante)
@@ -90,34 +99,41 @@ async def registrar_salida(datos: SalidaVisitante, db: Session = Depends(get_ses
     
     return {
         "status": "ok", 
-        "nombre": visitante.nombre_completo,
+        "mensaje": f"Buen viaje, {visitante.nombre_completo}",
         "hora_salida": visitante.fecha_salida.strftime("%H:%M:%S")
     }
 
 @router.get("/api/descargar_csv")
 async def descargar_csv(db: Session = Depends(get_session)):
-    """Exporta toda la tabla de visitantes a formato CSV (Excel)."""
+    """Exporta la tabla a CSV a prueba de fallos."""
     visitantes = db.exec(select(Visitante)).all()
-    
     output = io.StringIO()
     writer = csv.writer(output)
     
-    # Escribir encabezados
-    writer.writerow(["ID", "Cédula", "Nombre", "Empresa", "Correo", "Área Visitada", "Motivo", "ARL", "Contacto Emergencia", "Recibido Por", "Fecha/Hora Ingreso", "Fecha/Hora Salida"])
+    # Encabezados
+    writer.writerow(["Cédula", "Nombre", "Empresa", "ARL", "A Quien Visita/Recibe", "Fecha Ingreso", "Fecha Salida"])
     
-    # Escribir datos
+    # Datos extraídos dinámicamente para que nunca falle
     for v in visitantes:
-        fecha_salida_str = v.fecha_salida.strftime("%Y-%m-%d %H:%M:%S") if v.fecha_salida else "AÚN EN INSTALACIONES"
+        fecha_ing = v.fecha_ingreso.strftime("%Y-%m-%d %H:%M:%S") if getattr(v, 'fecha_ingreso', None) else "N/A"
+        fecha_sal = v.fecha_salida.strftime("%Y-%m-%d %H:%M:%S") if getattr(v, 'fecha_salida', None) else "AÚN EN INSTALACIONES"
+        
+        # Busca el campo de quien recibe, sin importar si es de la versión vieja o nueva
+        recibe = getattr(v, 'a_quien_visita', getattr(v, 'persona_recibe', 'N/A'))
+        
         writer.writerow([
-            v.id, v.cedula, v.nombre_completo, v.empresa, v.correo, v.area_visita, 
-            v.motivo_visita, v.arl, v.numero_emergencia, v.persona_recibe, 
-            v.fecha_ingreso.strftime("%Y-%m-%d %H:%M:%S"), fecha_salida_str
+            v.cedula, 
+            v.nombre_completo, 
+            getattr(v, 'empresa', 'N/A'), 
+            getattr(v, 'arl', 'N/A'), 
+            recibe,
+            fecha_ing, 
+            fecha_sal
         ])
     
     output.seek(0)
-    
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=Registro_Visitantes_{datetime.now().strftime('%Y%m%d')}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=Visitantes_{datetime.now().strftime('%Y%m%d')}.csv"}
     )
