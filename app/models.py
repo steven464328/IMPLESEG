@@ -1,8 +1,10 @@
-from sqlmodel import SQLModel, Field
+rom sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime
 
-# === TABLAS ORIGINALES RECUPERADAS ===
+# ==========================================
+# 1. TABLAS DE SISTEMAS (HOJAS DE VIDA)
+# ==========================================
 class Empresa(SQLModel, table=True):
     __tablename__ = "empresas"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -15,7 +17,6 @@ class HistorialCambio(SQLModel, table=True):
     fecha: datetime = Field(default_factory=datetime.now)
     descripcion: Optional[str] = None
 
-# === TABLAS DE INVENTARIO Y VISITAS ===
 class Equipo(SQLModel, table=True):
     __tablename__ = "equipos"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -38,6 +39,9 @@ class Equipo(SQLModel, table=True):
     fecha_ultimo_mantenimiento: Optional[str] = None
     proveedor_mantenimiento: Optional[str] = None
 
+# ==========================================
+# 2. TABLAS DE RECEPCIÓN (VISITAS Y ETIQUETAS)
+# ==========================================
 class Visitante(SQLModel, table=True):
     __tablename__ = "recepcion_visitantes"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -56,7 +60,6 @@ class Visitante(SQLModel, table=True):
     numero_emergencia: Optional[str] = Field(default="N/A")
     persona_recibe: Optional[str] = Field(default="N/A")
 
-# === NUEVA TABLA DE ETIQUETAS ===
 class RegistroEtiqueta(SQLModel, table=True):
     __tablename__ = "recepcion_etiquetas_historial"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -67,7 +70,9 @@ class RegistroEtiqueta(SQLModel, table=True):
     fecha_ingreso: datetime = Field(default_factory=datetime.now)
     impreso: bool = Field(default=True)
 
-# === TABLAS DE GESTIÓN HUMANA (RECUPERADAS PARA EVITAR ERROR) ===
+# ==========================================
+# 3. TABLAS DE GESTIÓN HUMANA (INVENTARIO)
+# ==========================================
 class HerramientaInventario(SQLModel, table=True):
     __tablename__ = "gh_inventario_herramientas"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -78,7 +83,7 @@ class HerramientaInventario(SQLModel, table=True):
     estado: str = Field(default="Disponible")
     fecha_adquisicion: Optional[datetime] = None
 
-class AsignacionHerramienta(SQLModel, table=True):
+class Asignacion(SQLModel, table=True):
     __tablename__ = "gh_asignaciones_herramientas"
     id: Optional[int] = Field(default=None, primary_key=True)
     herramienta_id: int
@@ -88,10 +93,14 @@ class AsignacionHerramienta(SQLModel, table=True):
     fecha_devolucion: Optional[datetime] = None
     estado_asignacion: str = Field(default="Activa")
 
-class BajaHerramienta(SQLModel, table=True):
+class Baja(SQLModel, table=True):
     __tablename__ = "gh_bajas_herramientas"
     id: Optional[int] = Field(default=None, primary_key=True)
     herramienta_id: int
     motivo: str
     fecha_baja: datetime = Field(default_factory=datetime.now)
     usuario_registro: str
+
+# ALIAS PARA EVITAR CUALQUIER OTRO ERROR DE IMPORTACIÓN
+AsignacionHerramienta = Asignacion
+BajaHerramienta = Baja
