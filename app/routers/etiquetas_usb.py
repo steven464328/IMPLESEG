@@ -1,349 +1,180 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IMPLESEG - Sistema de Etiquetas v2.0</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f0f0; }
-        
-        #login-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 9999; display: flex;
-            align-items: center; justify-content: center; backdrop-filter: blur(5px);
-        }
-        
-        .app-container { background-color: #f0f0f0; min-height: 100vh; padding: 20px; }
-        .header-title { color: #0056b3; font-weight: bold; font-size: 24px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        .counter-text { color: #004d40; font-weight: bold; }
-        
-        .tabs { display: flex; border-bottom: 1px solid #ccc; margin-bottom: 20px; }
-        .tab-btn { padding: 8px 16px; background: #e0e0e0; border: 1px solid #ccc; border-bottom: none; margin-right: 2px; cursor: pointer; color: #333; font-size: 14px; }
-        .tab-btn.active { background: #f0f0f0; border-top: 2px solid #0056b3; background-color: white; font-weight: bold; }
-        .tab-content { display: none; background: white; padding: 20px; border: 1px solid #ccc; border-top: none; min-height: 400px;}
-        .tab-content.active { display: block; }
-        
-        .btn-blue { background-color: #1a65a5; color: white; border: 1px solid #0f406b; padding: 10px 20px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 2px 2px 5px rgba(0,0,0,0.2);}
-        .btn-green { background-color: #557940; color: white; border: 1px solid #364d29; padding: 10px 20px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 2px 2px 5px rgba(0,0,0,0.2);}
-        .btn-red { background-color: #c9302c; color: white; border: 1px solid #ac2925; padding: 6px 12px; font-weight: bold; cursor: pointer; }
-        
-        .input-box { border: 1px solid #ccc; padding: 4px 8px; width: 150px; }
-        .form-row { display: flex; align-items: center; margin-bottom: 15px; gap: 15px; }
-        .form-label { width: 250px; font-size: 14px; color: #333; }
-        
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        th { background-color: #f8f9fa; font-weight: bold; position: sticky; top: 0;}
-    </style>
-</head>
-<body>
+from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from sqlmodel import Session, select
+from pydantic import BaseModel
+from typing import Optional
+from sqlalchemy import func
+from datetime import datetime
 
-    <!-- Modal de Autenticación Obligatoria -->
-    <div id="login-modal">
-        <div class="bg-white p-8 rounded-lg shadow-2xl w-96 text-center">
-            <h2 class="text-2xl font-bold text-blue-800 mb-2">Acceso al Sistema</h2>
-            <p class="text-sm text-gray-600 mb-6">Identifíquese para registrar sus impresiones</p>
-            <input type="text" id="login-nombre" placeholder="Su Nombre Completo" class="w-full border p-3 rounded mb-4 focus:outline-none focus:border-blue-500">
-            <input type="number" id="login-cedula" placeholder="Su Cédula" class="w-full border p-3 rounded mb-6 focus:outline-none focus:border-blue-500">
-            <button onclick="iniciarSesion()" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700">Entrar al Módulo</button>
-        </div>
-    </div>
+from app.database import get_session
+from app.models import RegistroEtiqueta
 
-    <div class="app-container">
-        <!-- Encabezado -->
-        <div class="flex justify-between items-center mb-2">
-            <div class="header-title">
-                IMPLESEG - Impresion USB
-                <span class="text-black font-normal text-xl ml-2">Siguiente: <span id="lbl-siguiente" class="counter-text">Cargando...</span></span>
-            </div>
-            <div class="flex items-center gap-4">
-                <span id="user-info" class="text-sm text-gray-600 font-bold bg-white px-3 py-1 border rounded shadow-sm">Usuario: No identificado</span>
-                <button onclick="cerrarSesion()" class="btn-red text-xs">Cambiar Usuario</button>
-                <button onclick="window.location.href='/'" class="text-sm text-blue-500 hover:text-blue-700 underline">Volver al Menú Principal</button>
-            </div>
-        </div>
+router = APIRouter(prefix="/etiquetas", tags=["Control Etiquetas"])
+templates = Jinja2Templates(directory="app/templates")
 
-        <!-- Pestañas -->
-        <div class="tabs">
-            <button class="tab-btn active" onclick="abrirTab(event, 'tab-nueva')">Imprimir Nueva</button>
-            <button class="tab-btn" onclick="abrirTab(event, 'tab-rango')">Hasta Numero</button>
-            <button class="tab-btn" onclick="abrirTab(event, 'tab-reimprimir')">Reimprimir</button>
-            <button class="tab-btn" onclick="abrirTab(event, 'tab-historial')">Historial</button>
-            <button class="tab-btn" onclick="abrirTab(event, 'tab-config')">Configuracion</button>
-        </div>
+class DatosNuevaEtiqueta(BaseModel):
+    cantidad: int
+    copias: int
+    solo_asignar: bool
+    usuario_nombre: str
+    usuario_cedula: str
+    c_nombre: Optional[str] = ""
+    c_nit: Optional[str] = ""
+    c_contacto: Optional[str] = ""
+    c_direccion: Optional[str] = ""
 
-        <!-- CONTENIDO: Imprimir Nueva -->
-        <div id="tab-nueva" class="tab-content active">
-            <div class="form-row">
-                <div class="form-label">Cantidad de etiquetas (numeros unicos):</div>
-                <input type="number" id="n_cantidad" class="input-box" value="1" min="1">
-            </div>
-            <div class="form-row">
-                <div class="form-label">Copias por etiqueta:</div>
-                <input type="number" id="n_copias" class="input-box" value="2" min="1">
-            </div>
-            
-            <div class="bg-gray-50 p-4 border rounded mb-6 mt-4 w-1/2">
-                <h4 class="font-bold text-sm text-gray-700 mb-3 border-b pb-1">Trazabilidad de Cliente (Opcional)</h4>
-                <input type="text" id="c_nombre" placeholder="Nombre Empresa o Persona" class="w-full border p-2 mb-2 text-sm">
-                <div class="flex gap-2 mb-2">
-                    <input type="text" id="c_nit" placeholder="NIT / C.C." class="w-1/2 border p-2 text-sm">
-                    <input type="text" id="c_contacto" placeholder="Teléfono" class="w-1/2 border p-2 text-sm">
-                </div>
-                <input type="text" id="c_direccion" placeholder="Dirección" class="w-full border p-2 text-sm">
-            </div>
+class DatosRangoEtiqueta(BaseModel):
+    hasta_numero: int
+    copias: int
+    usuario_nombre: str
+    usuario_cedula: str
 
-            <div class="flex gap-4 mt-6">
-                <button class="btn-blue text-lg px-8" onclick="procesarNueva(false)">Imprimir y Avanzar</button>
-                <button class="btn-green text-lg px-8" onclick="procesarNueva(true)">Asignar sin Imprimir</button>
-            </div>
-            <p class="text-xs text-gray-500 mt-4 italic">'Asignar' reserva numeros y avanza el consecutivo sin enviar nada a la impresora.</p>
-        </div>
+class DatosReimpresion(BaseModel):
+    desde_numero: int
+    hasta_numero: int
+    copias: int
+    usuario_nombre: str
+    usuario_cedula: str
 
-        <!-- CONTENIDO: Hasta Numero -->
-        <div id="tab-rango" class="tab-content">
-            <div class="form-row">
-                <div class="form-label">Imprimir hasta el numero (inclusive):</div>
-                <input type="number" id="r_hasta" class="input-box" placeholder="Ej. 20000000010">
-            </div>
-            <div class="form-row">
-                <div class="form-label">Copias por etiqueta:</div>
-                <input type="number" id="r_copias" class="input-box" value="2" min="1">
-            </div>
-            <div class="mt-8">
-                <button class="btn-blue text-lg px-8" onclick="procesarHastaNumero()">Imprimir Rango y Avanzar</button>
-            </div>
-        </div>
+class DatosConfiguracion(BaseModel):
+    nuevo_consecutivo: int
+    nombre_impresora: str
 
-        <!-- CONTENIDO: Reimprimir -->
-        <div id="tab-reimprimir" class="tab-content">
-            <p class="text-red-600 font-bold mb-6">ATENCION: Reimprimir NO avanza el consecutivo.</p>
-            <div class="form-row">
-                <div class="form-label">Desde el numero:</div>
-                <input type="number" id="re_desde" class="input-box">
-            </div>
-            <div class="form-row">
-                <div class="form-label">Hasta el numero:</div>
-                <input type="number" id="re_hasta" class="input-box">
-            </div>
-            <div class="form-row">
-                <div class="form-label">Copias por etiqueta:</div>
-                <input type="number" id="re_copias" class="input-box" value="2" min="1">
-            </div>
-            <div class="mt-8">
-                <button class="btn-green text-lg px-8" style="background-color: #004d40; border-color:#00251a;" onclick="procesarReimpresion()">Reimprimir Rango</button>
-            </div>
-        </div>
+def get_next_consecutivo(db: Session) -> int:
+    ultimo_registro = db.exec(select(RegistroEtiqueta).order_by(RegistroEtiqueta.fecha_ingreso.desc())).first()
+    return (ultimo_registro.consecutivo + 1) if ultimo_registro else 20000000000
 
-        <!-- CONTENIDO: Historial -->
-        <div id="tab-historial" class="tab-content">
-            <div class="flex justify-between items-center mb-4">
-                <div class="text-sm">
-                    Total registros mostrados: <span id="h_total">0</span>
-                </div>
-                <button class="btn-red" onclick="cargarHistorial()">Actualizar tabla</button>
-            </div>
-            <div style="height: 400px; overflow-y: auto; border: 1px solid #ccc;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Fecha / Hora</th>
-                            <th>Tipo</th>
-                            <th>Desde</th>
-                            <th>Hasta</th>
-                            <th>Cantidad</th>
-                            <th>Usuario (Empleado)</th>
-                            <th>Cliente</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-historial-body">
-                    </tbody>
-                </table>
-            </div>
-        </div>
+def generar_zpl_base(consecutivo: int, copias: int, fecha_str: str) -> str:
+    return f"""^XA
+^PQ{copias}
+^PW400
+^LL200
+^FO20,20^A0N,25,25^FDIMPLESEG S.A.S^FS
+^FO20,50^A0N,20,20^FDControl de Ingreso^FS
+^FO20,130^A0N,20,20^FDFecha: {fecha_str}^FS
+^FO220,100^BQN,2,4^FDQA,{consecutivo}^FS
+^FO220,160^A0N,25,25^FDN. {consecutivo}^FS
+^XZ
+"""
 
-        <!-- CONTENIDO: Configuración -->
-        <div id="tab-config" class="tab-content">
-            <div class="border p-4 bg-gray-50 mb-6">
-                <h3 class="font-bold text-gray-700 mb-4">Consecutivo manual</h3>
-                <div class="form-row">
-                    <div class="form-label">Numero actual:</div>
-                    <span id="cfg_actual" class="font-bold text-teal-800 text-lg">Cargando...</span>
-                </div>
-                <div class="form-row">
-                    <div class="form-label">Nuevo valor:</div>
-                    <input type="number" id="cfg_nuevo" class="input-box">
-                </div>
-                <p class="text-xs text-red-500 italic mt-4">CUIDADO: cambiar el consecutivo puede generar numeros duplicados si se pone un numero anterior.</p>
-            </div>
-            
-            <div class="text-center mt-8">
-                <button class="btn-green text-lg px-8" style="background-color: #004d40;" onclick="guardarConfiguracion()">Guardar configuración</button>
-            </div>
-        </div>
-    </div>
+@router.get("/", response_class=HTMLResponse)
+async def vista_etiquetas(request: Request):
+    return templates.TemplateResponse("recepcion_etiquetas.html", {"request": request})
 
-    <script>
-        let usuarioActual = { nombre: "", cedula: "" };
+@router.get("/api/estado")
+async def obtener_estado(db: Session = Depends(get_session)):
+    siguiente = get_next_consecutivo(db)
+    return {"consecutivo": siguiente, "impresora": "ZEBRA"}
 
-        window.onload = () => {
-            // FORZAR LIMPIEZA PARA QUE SIEMPRE PIDA DATOS
-            localStorage.removeItem('impleseg_user'); 
-            
-            document.getElementById('login-modal').style.display = 'flex';
-        };
+@router.get("/api/historial")
+async def obtener_historial(db: Session = Depends(get_session)):
+    registros = db.exec(select(RegistroEtiqueta).order_by(RegistroEtiqueta.consecutivo.desc()).limit(100)).all()
+    historial = []
+    for r in registros:
+        historial.append({
+            "fecha_hora": r.fecha_ingreso.isoformat(),
+            "tipo_operacion": "IMPRESION" if r.impreso else "ASIGNACION",
+            "desde_numero": r.consecutivo,
+            "hasta_numero": r.consecutivo,
+            "cantidad": 1,
+            "copias": 1,
+            "usuario_nombre": r.nombre_completo,
+            "usuario_cedula": r.cedula,
+            "cliente_nombre": r.equipo_descripcion,
+            "cliente_nit": ""
+        })
+    return historial
 
-        function iniciarSesion() {
-            const nom = document.getElementById('login-nombre').value.trim();
-            const ced = document.getElementById('login-cedula').value.trim();
-            if(!nom || !ced) return Swal.fire("Error", "Debe ingresar nombre y cédula", "error");
-            
-            usuarioActual = { nombre: nom, cedula: ced };
-            localStorage.setItem('impleseg_user', JSON.stringify(usuarioActual));
-            document.getElementById('login-modal').style.display = 'none';
-            document.getElementById('user-info').innerText = `Usuario: ${usuarioActual.nombre}`;
-            actualizarEstado();
-        }
+@router.post("/api/imprimir_nueva")
+async def imprimir_nueva(datos: DatosNuevaEtiqueta, db: Session = Depends(get_session)):
+    try:
+        zpl_completo = ""
+        primer_consecutivo = get_next_consecutivo(db)
+        ultimo_consecutivo = primer_consecutivo + datos.cantidad - 1
 
-        function cerrarSesion() {
-            localStorage.removeItem('impleseg_user');
-            document.getElementById('login-nombre').value = "";
-            document.getElementById('login-cedula').value = "";
-            document.getElementById('login-modal').style.display = 'flex';
-        }
+        for i in range(datos.cantidad):
+            consecutivo_actual = primer_consecutivo + i
+            fecha_actual = datetime.now()
+            cliente_info = datos.c_nombre
+            if datos.c_nit: cliente_info += f" - NIT: {datos.c_nit}"
+            if not cliente_info: cliente_info = "Sin detalles de cliente"
 
-        function abrirTab(evt, tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            evt.currentTarget.classList.add('active');
-            if(tabId === 'tab-historial') cargarHistorial();
-        }
+            nuevo_registro = RegistroEtiqueta(
+                consecutivo=consecutivo_actual,
+                cedula=datos.usuario_cedula,
+                nombre_completo=datos.usuario_nombre,
+                equipo_descripcion=cliente_info,
+                fecha_ingreso=fecha_actual,
+                impreso=not datos.solo_asignar
+            )
+            db.add(nuevo_registro)
+            if not datos.solo_asignar:
+                zpl_completo += generar_zpl_base(consecutivo_actual, datos.copias, fecha_actual.strftime("%Y-%m-%d"))
 
-        async function actualizarEstado() {
-            try {
-                const res = await fetch('/etiquetas/api/estado');
-                const data = await res.json();
-                document.getElementById('lbl-siguiente').innerText = data.consecutivo;
-                document.getElementById('cfg_actual').innerText = data.consecutivo;
-                document.getElementById('cfg_nuevo').value = data.consecutivo;
-            } catch (e) { console.error(e); }
-        }
+        db.commit()
+        return {"status": "ok", "mensaje": f"Se procesaron {datos.cantidad} etiquetas (Desde {primer_consecutivo} hasta {ultimo_consecutivo})", "zpl": zpl_completo if not datos.solo_asignar else None}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
-        function descargarArchivoZPL(zplContent) {
-            if(!zplContent) return;
-            const blob = new Blob([zplContent], { type: 'text/plain' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `etiquetas_${new Date().getTime()}.zpl`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+@router.post("/api/imprimir_rango")
+async def imprimir_rango(datos: DatosRangoEtiqueta, db: Session = Depends(get_session)):
+    try:
+        primer_consecutivo = get_next_consecutivo(db)
+        if datos.hasta_numero < primer_consecutivo:
+            raise HTTPException(status_code=400, detail=f"El número 'hasta' debe ser mayor o igual al consecutivo actual ({primer_consecutivo})")
 
-        async function enviarPeticion(url, payload, limpiarFuncion) {
-            try {
-                const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-                const data = await res.json();
-                if(res.ok) {
-                    actualizarEstado();
-                    if(limpiarFuncion) limpiarFuncion();
-                    if(data.zpl) {
-                        descargarArchivoZPL(data.zpl);
-                        Swal.fire("Archivo Descargado", "Abre el archivo .zpl para imprimir.", "success");
-                    } else {
-                        Swal.fire("Éxito", data.mensaje, "success");
-                    }
-                } else {
-                    Swal.fire("Error", data.detail || "Error en la operación", "error");
-                }
-            } catch (e) {
-                Swal.fire("Error", "Problema de conexión", "error");
-            }
-        }
+        cantidad = (datos.hasta_numero - primer_consecutivo) + 1
+        zpl_completo = ""
 
-        function procesarNueva(soloAsignar) {
-            const payload = {
-                cantidad: parseInt(document.getElementById('n_cantidad').value),
-                copias: parseInt(document.getElementById('n_copias').value),
-                solo_asignar: soloAsignar,
-                usuario_nombre: usuarioActual.nombre,
-                usuario_cedula: usuarioActual.cedula,
-                c_nombre: document.getElementById('c_nombre').value.trim(),
-                c_nit: document.getElementById('c_nit').value.trim(),
-                c_contacto: document.getElementById('c_contacto').value.trim(),
-                c_direccion: document.getElementById('c_direccion').value.trim()
-            };
-            enviarPeticion('/etiquetas/api/imprimir_nueva', payload, () => {
-                document.getElementById('c_nombre').value = '';
-                document.getElementById('c_nit').value = '';
-                document.getElementById('c_contacto').value = '';
-                document.getElementById('c_direccion').value = '';
-            });
-        }
+        for i in range(cantidad):
+            consecutivo_actual = primer_consecutivo + i
+            fecha_actual = datetime.now()
+            nuevo_registro = RegistroEtiqueta(
+                consecutivo=consecutivo_actual,
+                cedula=datos.usuario_cedula,
+                nombre_completo=datos.usuario_nombre,
+                equipo_descripcion="Impresión por Rango",
+                fecha_ingreso=fecha_actual,
+                impreso=True
+            )
+            db.add(nuevo_registro)
+            zpl_completo += generar_zpl_base(consecutivo_actual, datos.copias, fecha_actual.strftime("%Y-%m-%d"))
 
-        function procesarHastaNumero() {
-            const payload = {
-                hasta_numero: parseInt(document.getElementById('r_hasta').value),
-                copias: parseInt(document.getElementById('r_copias').value),
-                usuario_nombre: usuarioActual.nombre,
-                usuario_cedula: usuarioActual.cedula
-            };
-            enviarPeticion('/etiquetas/api/imprimir_rango', payload, () => {
-                document.getElementById('r_hasta').value = '';
-            });
-        }
+        db.commit()
+        return {"status": "ok", "mensaje": f"Se imprimieron etiquetas hasta el número {datos.hasta_numero}", "zpl": zpl_completo}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
-        function procesarReimpresion() {
-            const payload = {
-                desde_numero: parseInt(document.getElementById('re_desde').value),
-                hasta_numero: parseInt(document.getElementById('re_hasta').value),
-                copias: parseInt(document.getElementById('re_copias').value),
-                usuario_nombre: usuarioActual.nombre,
-                usuario_cedula: usuarioActual.cedula
-            };
-            enviarPeticion('/etiquetas/api/reimprimir', payload, () => {
-                document.getElementById('re_desde').value = '';
-                document.getElementById('re_hasta').value = '';
-            });
-        }
+@router.post("/api/reimprimir")
+async def reimprimir(datos: DatosReimpresion, db: Session = Depends(get_session)):
+    if datos.desde_numero > datos.hasta_numero:
+         raise HTTPException(status_code=400, detail="El número 'desde' no puede ser mayor que 'hasta'")
+    zpl_completo = ""
+    cantidad = (datos.hasta_numero - datos.desde_numero) + 1
+    fecha_str = datetime.now().strftime("%Y-%m-%d")
+    for i in range(cantidad):
+        consecutivo_actual = datos.desde_numero + i
+        zpl_completo += generar_zpl_base(consecutivo_actual, datos.copias, fecha_str)
+    return {"status": "ok", "mensaje": f"Se generó archivo para reimprimir desde {datos.desde_numero} hasta {datos.hasta_numero}", "zpl": zpl_completo}
 
-        function guardarConfiguracion() {
-            const payload = {
-                nuevo_consecutivo: parseInt(document.getElementById('cfg_nuevo').value),
-                nombre_impresora: "ZEBRA"
-            };
-            enviarPeticion('/etiquetas/api/configurar', payload, () => {
-                // Actualizar la interfaz visualmente tras cambiar config
-                actualizarEstado(); 
-            });
-        }
-
-        async function cargarHistorial() {
-            const res = await fetch('/etiquetas/api/historial');
-            const data = await res.json();
-            
-            const tbody = document.getElementById('tabla-historial-body');
-            tbody.innerHTML = '';
-            
-            data.forEach(item => {
-                let fechaFormateada = new Date(item.fecha_hora).toLocaleString('es-CO');
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${fechaFormateada}</td>
-                        <td class="font-bold text-gray-700">${item.tipo_operacion}</td>
-                        <td>${item.desde_numero}</td>
-                        <td>${item.hasta_numero}</td>
-                        <td>${item.cantidad}</td>
-                        <td class="text-xs">${item.usuario_nombre}</td>
-                        <td class="text-xs">${item.cliente_nombre || '-'}</td>
-                    </tr>
-                `;
-            });
-            document.getElementById('h_total').innerText = data.length;
-        }
-    </script>
-</body>
-</html>
+@router.post("/api/configurar")
+async def configurar(datos: DatosConfiguracion, db: Session = Depends(get_session)):
+    try:
+        nuevo_valor_requerido = datos.nuevo_consecutivo
+        registro_ajuste = RegistroEtiqueta(
+            consecutivo=nuevo_valor_requerido - 1,
+            cedula="000000",
+            nombre_completo="SISTEMA",
+            equipo_descripcion="Ajuste Manual de Consecutivo",
+            fecha_ingreso=datetime.now(),
+            impreso=False
+        )
+        db.add(registro_ajuste)
+        db.commit()
+        return {"status": "ok", "mensaje": f"Consecutivo ajustado a {nuevo_valor_requerido}"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error ajustando configuración.")
