@@ -66,3 +66,32 @@ class RegistroEtiqueta(SQLModel, table=True):
     equipo_descripcion: Optional[str] = None
     fecha_ingreso: datetime = Field(default_factory=datetime.now)
     impreso: bool = Field(default=True)
+
+# === TABLAS DE GESTIÓN HUMANA (RECUPERADAS PARA EVITAR ERROR) ===
+class HerramientaInventario(SQLModel, table=True):
+    __tablename__ = "gh_inventario_herramientas"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    codigo_barras: str = Field(index=True, unique=True)
+    nombre: str
+    tipo: str
+    marca: Optional[str] = None
+    estado: str = Field(default="Disponible")
+    fecha_adquisicion: Optional[datetime] = None
+
+class AsignacionHerramienta(SQLModel, table=True):
+    __tablename__ = "gh_asignaciones_herramientas"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    herramienta_id: int
+    empleado_cedula: str
+    empleado_nombre: str
+    fecha_asignacion: datetime = Field(default_factory=datetime.now)
+    fecha_devolucion: Optional[datetime] = None
+    estado_asignacion: str = Field(default="Activa")
+
+class BajaHerramienta(SQLModel, table=True):
+    __tablename__ = "gh_bajas_herramientas"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    herramienta_id: int
+    motivo: str
+    fecha_baja: datetime = Field(default_factory=datetime.now)
+    usuario_registro: str
