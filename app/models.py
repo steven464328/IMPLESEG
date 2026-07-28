@@ -2,6 +2,20 @@ from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime
 
+# === TABLAS ORIGINALES RECUPERADAS ===
+class Empresa(SQLModel, table=True):
+    __tablename__ = "empresas"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    nombre: Optional[str] = None
+
+class HistorialCambio(SQLModel, table=True):
+    __tablename__ = "historial_cambios"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    equipo_id: Optional[int] = None
+    fecha: datetime = Field(default_factory=datetime.now)
+    descripcion: Optional[str] = None
+
+# === TABLAS DE INVENTARIO Y VISITAS ===
 class Equipo(SQLModel, table=True):
     __tablename__ = "equipos"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -42,6 +56,7 @@ class Visitante(SQLModel, table=True):
     numero_emergencia: Optional[str] = Field(default="N/A")
     persona_recibe: Optional[str] = Field(default="N/A")
 
+# === NUEVA TABLA DE ETIQUETAS ===
 class RegistroEtiqueta(SQLModel, table=True):
     __tablename__ = "recepcion_etiquetas_historial"
     id: Optional[int] = Field(default=None, primary_key=True)
