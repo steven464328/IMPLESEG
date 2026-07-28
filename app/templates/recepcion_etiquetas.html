@@ -27,8 +27,6 @@
             transition: all 0.3s ease;
         }
         .input-field:focus { outline: none; background: #0f172a; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2); }
-        
-        /* Tabla */
         table { border-collapse: separate; border-spacing: 0; width: 100%; }
         th { background-color: #0f172a; color: #38bdf8; padding: 12px; text-align: left; border-bottom: 2px solid #334155; position: sticky; top: 0; }
         td { padding: 12px; border-bottom: 1px solid #334155; font-size: 0.875rem; }
@@ -37,7 +35,6 @@
 </head>
 <body class="p-6 h-screen flex flex-col relative">
 
-    <!-- Header -->
     <div class="w-full flex justify-between items-center mb-6 relative z-10 border-b border-gray-800 pb-4">
         <div class="flex items-center gap-4">
             <div class="w-14 h-14 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/50">
@@ -49,17 +46,13 @@
             </div>
         </div>
         <button onclick="window.location.href='/'" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded font-bold text-xs tracking-widest uppercase border border-gray-600 transition flex items-center gap-2">
-            ← Volver al Inicio
+            ← Volver al Menú Principal
         </button>
     </div>
 
-    <!-- Main Content -->
     <div class="flex-grow flex gap-6 overflow-hidden relative z-10">
-        
-        <!-- Panel Izquierdo: Formulario -->
         <div class="w-1/3 glass-panel rounded-2xl p-8 border-t-4 border-t-sky-500 flex flex-col gap-4">
             <h2 class="text-xl font-bold text-sky-400 uppercase tracking-widest mb-4">Nuevo Ingreso</h2>
-            
             <form id="form-etiqueta" onsubmit="registrarIngreso(event)" class="flex flex-col gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Cédula *</label>
@@ -73,24 +66,21 @@
                     <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Equipo / Objeto *</label>
                     <input type="text" id="equipo" required placeholder="Ej. Laptop HP Plata" class="input-field">
                 </div>
-                
                 <button type="submit" id="btn-registrar" class="mt-4 w-full bg-sky-600 hover:bg-sky-500 text-white font-black tracking-widest text-sm py-4 rounded-xl shadow-[0_0_20px_rgba(2,132,199,0.4)] transition-all uppercase">
                     Registrar y Generar Etiqueta
                 </button>
             </form>
             
-            <!-- Zona de código ZPL para imprimir -->
             <div id="zpl-container" class="mt-6 hidden flex-col gap-2 p-4 bg-gray-900 rounded-xl border border-gray-700">
                 <p class="text-xs text-green-400 font-bold uppercase tracking-wider flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                     Código ZPL Generado
                 </p>
                 <textarea id="zpl-code" class="w-full h-32 bg-black text-green-500 p-2 text-xs font-mono rounded border border-gray-800 focus:outline-none" readonly></textarea>
-                <p class="text-xs text-gray-500 mt-2">Copia este código y envíalo a tu impresora Zebra. <br>(Se implementará impresión automática en red próximamente).</p>
+                <p class="text-xs text-gray-500 mt-2">Copia este código y envíalo a tu impresora Zebra.</p>
             </div>
         </div>
 
-        <!-- Panel Derecho: Tabla Historial -->
         <div class="w-2/3 glass-panel rounded-2xl p-8 flex flex-col overflow-hidden">
             <h2 class="text-xl font-bold text-gray-300 uppercase tracking-widest mb-4">Historial de Registros</h2>
             <div class="overflow-y-auto flex-grow rounded-xl border border-gray-700 bg-gray-800/50">
@@ -105,7 +95,6 @@
                         </tr>
                     </thead>
                     <tbody id="tabla-registros">
-                        <!-- Llenado por JS -->
                     </tbody>
                 </table>
             </div>
@@ -113,7 +102,6 @@
     </div>
 
     <script>
-        // Cargar registros al inicio
         async function cargarRegistros() {
             try {
                 const res = await fetch('/etiquetas/api/registros');
@@ -164,7 +152,6 @@
                         background: '#1e293b', color: 'white', confirmButtonColor: '#0284c7'
                     });
                     
-                    // Mostrar código ZPL
                     document.getElementById('zpl-container').classList.remove('hidden');
                     document.getElementById('zpl-code').value = data.zpl;
                     
@@ -181,7 +168,6 @@
             }
         }
 
-        // Iniciar
         cargarRegistros();
     </script>
 </body>

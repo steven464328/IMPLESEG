@@ -1,6 +1,3 @@
-"""
-Modelos de base de datos - Sistema de Automatización EJ Soluciones
-"""
 from datetime import datetime
 from typing import Optional, Dict, Any
 from sqlmodel import SQLModel, Field, Column, JSON
@@ -17,7 +14,6 @@ class Empresa(SQLModel, table=True):
     direccion: Optional[str] = None
     activo: bool = Field(default=True)
     creado_en: datetime = Field(default_factory=datetime.utcnow)
-
 
 class Equipo(SQLModel, table=True):
     __tablename__ = "equipos"
@@ -89,7 +85,6 @@ class Equipo(SQLModel, table=True):
     creado_por: Optional[str] = None
     actualizado_por: Optional[str] = None
 
-
 class HerramientaInventario(SQLModel, table=True):
     __tablename__ = "gh_inventario"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -132,7 +127,6 @@ class Asignacion(SQLModel, table=True):
     creado_en: datetime = Field(default_factory=datetime.utcnow)
     actualizado_en: datetime = Field(default_factory=datetime.utcnow)
 
-
 class Baja(SQLModel, table=True):
     __tablename__ = "gh_bajas"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -174,7 +168,6 @@ class HistorialCambio(SQLModel, table=True):
     usuario: Optional[str] = None
     fecha: datetime = Field(default_factory=datetime.utcnow)
 
-
 class Visitante(SQLModel, table=True):
     __tablename__ = "recepcion_visitantes_v2" 
 
@@ -203,15 +196,3 @@ class RegistroEtiqueta(SQLModel, table=True):
     fecha_ingreso: datetime = Field(default_factory=datetime.now)
     fecha_salida: Optional[datetime] = None
     impreso: bool = Field(default=False)
-```eof
-
-5. Guarda el archivo (`Ctrl + S`).
-
-### Sube y reinicia (Los pasos de siempre)
-
-Ahora, en la **terminal de Visual Studio Code**, sube esta corrección:
-
-```bash
-git add .
-git commit -m "Corregido error de sintaxis en models.py"
-git push origin main
