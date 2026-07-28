@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -21,7 +21,7 @@
 
             <nav class="sidebar-nav">
                 <h3 class="nav-header">ÁREAS</h3>
-                <button class="nav-item active">
+                <button class="nav-item active" onclick="window.location.href='/'">
                     <span class="dot dot-live"></span> Sistemas · Hojas de Vida
                 </button>
                 <button class="nav-item" onclick="window.location.href='/gestion-humana'">
@@ -36,17 +36,8 @@
                 <button class="nav-item" onclick="window.location.href='/recepcion/visitantes'">
                     <span class="dot dot-live"></span> Recepción
                 </button>
-                
-                <!-- BOTÓN NUEVO DE ETIQUETAS AQUÍ -->
                 <button class="nav-item" onclick="window.location.href='/etiquetas/'">
                     <span class="dot dot-live" style="background-color: #38bdf8; box-shadow: 0 0 10px #38bdf8;"></span> Etiquetas USB
-                </button>
-
-                <button class="nav-item nav-add" disabled title="Cada área nueva se integra aquí sin afectar las demás">
-                    + Agregar área
-                </button>
-                <button class="nav-item nav-add" disabled>
-                    + Agregar área
                 </button>
             </nav>
         </aside>
@@ -58,8 +49,8 @@
                     <p>Inventario técnico, asignación y trazabilidad — Área de Sistemas</p>
                 </div>
                 <div class="header-actions">
-                    <button class="btn btn-secondary" onclick="exportarCSV()">Exportar CSV</button>
-                    <button class="btn btn-primary" onclick="abrirModalNuevo()">+ Nueva hoja de vida</button>
+                    <button class="btn btn-secondary" onclick="alert('Exportación CSV en desarrollo')">Exportar CSV</button>
+                    <button class="btn btn-primary" onclick="alert('Formulario de nueva hoja en desarrollo')">+ Nueva hoja de vida</button>
                 </div>
             </header>
 
@@ -86,6 +77,7 @@
                         <h3>Distribución por área</h3>
                     </div>
                     <div class="chart-body" id="chart-areas-container">
+                        <canvas id="chartAreas"></canvas>
                     </div>
                 </div>
 
@@ -94,6 +86,7 @@
                         <h3>Estado de los equipos</h3>
                     </div>
                     <div class="chart-body" id="chart-estados-container">
+                         <canvas id="chartEstados"></canvas>
                     </div>
                 </div>
             </div>
@@ -105,15 +98,7 @@
                             <circle cx="11" cy="11" r="8"></circle>
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
-                        <input type="text" id="buscadorGlobal" placeholder="Buscar por equipo, serial, usuario o IP..." onkeyup="filtrarTabla()">
-                    </div>
-                    <div class="filters">
-                        <select id="filtroArea" onchange="filtrarTabla()">
-                            <option value="">Todas las áreas</option>
-                        </select>
-                        <select id="filtroTipo" onchange="filtrarTabla()">
-                            <option value="">Todos los tipos</option>
-                        </select>
+                        <input type="text" id="buscadorGlobal" placeholder="Buscar por equipo, serial, usuario o IP...">
                     </div>
                 </div>
 
@@ -126,132 +111,52 @@
                             <th>Tipo</th>
                             <th>IP / Dominio</th>
                             <th>Estado</th>
-                            <th class="text-right">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tablaBody">
-                        <tr><td colspan="7" class="loading-state">Cargando inventario...</td></tr>
+                        <tr><td colspan="6" class="loading-state">Los datos están cargando... (Conectando a base de datos)</td></tr>
                     </tbody>
                 </table>
             </div>
         </main>
     </div>
 
-    <div id="modalFormulario" class="modal-overlay">
-        <div class="modal-content modal-large">
-            <div class="modal-header">
-                <h3 id="modalTitulo">Nueva Hoja de Vida</h3>
-                <button class="close-btn" onclick="cerrarModal('modalFormulario')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="formEquipo" class="form-grid">
-                    <input type="hidden" id="equipoId">
-                    <div class="form-section">
-                        <h4>1. Identificación del Equipo</h4>
-                        <div class="form-row form-cols-2">
-                            <div class="form-group"><label>Empresa*</label><input type="text" id="f_empresa" required></div>
-                            <div class="form-group"><label>Nombre del Equipo*</label><input type="text" id="f_equipo" required></div>
-                            <div class="form-group"><label>Código de Inventario</label><input type="text" id="f_codigo"></div>
-                            <div class="form-group"><label>Área o Departamento</label><input type="text" id="f_area"></div>
-                            <div class="form-group"><label>Usuario Servidor</label><input type="text" id="f_usuario_servidor"></div>
-                            <div class="form-group">
-                                <label>Tipo de Equipo</label>
-                                <select id="f_tipo_equipo">
-                                    <option value="">Seleccione...</option>
-                                    <option value="PORTATIL">Portátil</option>
-                                    <option value="ESCRITORIO">Escritorio</option>
-                                    <option value="ALL IN ONE">All in One</option>
-                                    <option value="SERVIDOR">Servidor</option>
-                                    <option value="OTRO">Otro</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-section">
-                        <h4>2. Especificaciones de Hardware</h4>
-                        <div class="form-row form-cols-3">
-                            <div class="form-group"><label>Marca</label><input type="text" id="f_marca"></div>
-                            <div class="form-group"><label>Modelo</label><input type="text" id="f_modelo_equipo"></div>
-                            <div class="form-group"><label>Serial</label><input type="text" id="f_serial"></div>
-                            <div class="form-group"><label>CPU (Resumen)</label><input type="text" id="f_cpu"></div>
-                            <div class="form-group"><label>Procesador (Detalle)</label><input type="text" id="f_procesador"></div>
-                            <div class="form-group"><label>Memoria RAM</label><input type="text" id="f_memoria"></div>
-                            <div class="form-group">
-                                <label>Tipo de Disco</label>
-                                <select id="f_tipo_disco">
-                                    <option value="">Seleccione...</option>
-                                    <option value="SSD">SSD</option>
-                                    <option value="HDD">HDD</option>
-                                    <option value="NVMe">NVMe</option>
-                                </select>
-                            </div>
-                            <div class="form-group"><label>Tamaño Disco</label><input type="text" id="f_tamano_disco"></div>
-                            <div class="form-group"><label>Mainboard</label><input type="text" id="f_mainboard"></div>
-                        </div>
-                    </div>
-                    <div class="form-section">
-                        <h4>3. Red y Conectividad</h4>
-                        <div class="form-row form-cols-2">
-                            <div class="form-group"><label>Dirección IP</label><input type="text" id="f_ip"></div>
-                            <div class="form-group"><label>Dirección MAC</label><input type="text" id="f_mac"></div>
-                            <div class="form-group"><label>ID AnyDesk</label><input type="text" id="f_anydesk_id"></div>
-                            <div class="form-group"><label>Dominio</label><input type="text" id="f_dominio"></div>
-                        </div>
-                    </div>
-                    <div class="form-section">
-                        <h4>4. Asignación y Periféricos</h4>
-                        <div class="form-row form-cols-2">
-                            <div class="form-group" style="grid-column: 1 / -1;">
-                                <label>Usuario Asignado</label><input type="text" id="f_usuario_asignado" style="font-weight: 600; color: #38bdf8;">
-                            </div>
-                            <div class="form-group"><label>Diadema</label><input type="text" id="f_diadema"></div>
-                            <div class="form-group"><label>Teclado</label><input type="text" id="f_teclado"></div>
-                            <div class="form-group"><label>Mouse</label><input type="text" id="f_mouse"></div>
-                            <div class="form-group"><label>Base Refrigerante</label><input type="text" id="f_base_refrigerante"></div>
-                            <div class="form-group"><label>Pantalla Auxiliar</label><input type="text" id="f_pantalla_auxiliar"></div>
-                        </div>
-                    </div>
-                    <div class="form-section">
-                        <h4>5. Software y Licenciamiento</h4>
-                        <div class="form-row form-cols-2">
-                            <div class="form-group"><label>Sistema Operativo</label><input type="text" id="f_sistema_operativo"></div>
-                            <div class="form-group"><label>Programas</label><input type="text" id="f_programas_instalados"></div>
-                            <div class="form-group"><label>Antivirus</label><input type="text" id="f_antivirus"></div>
-                            <div class="form-group"><label>Vencimiento Antivirus</label><input type="text" id="f_antivirus_vigencia"></div>
-                            <div class="form-group"><label>Office</label><input type="text" id="f_office"></div>
-                            <div class="form-group"><label>Licencia Office</label><input type="text" id="f_office_licencia"></div>
-                            <div class="form-group"><label>Serial Office</label><input type="text" id="f_office_serial"></div>
-                        </div>
-                    </div>
-                    <div class="form-section">
-                        <h4>6. Mantenimiento y Estado</h4>
-                        <div class="form-row form-cols-2">
-                            <div class="form-group">
-                                <label>Estado del Equipo</label>
-                                <select id="f_estado_equipo">
-                                    <option value="">Seleccione...</option>
-                                    <option value="ACTIVO">Activo / Operativo</option>
-                                    <option value="MANTENIMIENTO">En Mantenimiento</option>
-                                    <option value="DADO DE BAJA">Dado de Baja</option>
-                                    <option value="BODEGA">En Bodega / Disponible</option>
-                                </select>
-                            </div>
-                            <div class="form-group"><label>Último Mantenimiento</label><input type="text" id="f_fecha_ultimo_mantenimiento"></div>
-                            <div class="form-group" style="grid-column: 1 / -1;">
-                                <label>Observaciones Finales</label><textarea id="f_observaciones_finales" rows="3"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="cerrarModal('modalFormulario')">Cancelar</button>
-                <button class="btn btn-primary" onclick="guardarEquipo()">Guardar Equipo</button>
-            </div>
-        </div>
-    </div>
+    <!-- SCRIPT PARA RECUPERAR FUNCIONALIDAD DEL TABLERO -->
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                // 1. Cargar KPIs
+                const res = await fetch('/api/dashboard/resumen');
+                if(res.ok) {
+                    const data = await res.json();
+                    document.getElementById('kpi-total').innerText = data.kpis.total;
+                    document.getElementById('kpi-riesgo').innerText = data.kpis.riesgo;
+                    document.getElementById('kpi-mantenimiento').innerText = data.kpis.mantenimiento;
+                    
+                    // 2. Gráfico Áreas
+                    new Chart(document.getElementById('chartAreas'), {
+                        type: 'bar',
+                        data: {
+                            labels: data.graficos.areas.map(a => a.name),
+                            datasets: [{ label: 'Equipos', data: data.graficos.areas.map(a => a.value), backgroundColor: '#38bdf8' }]
+                        },
+                        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
+                    });
 
-    <!-- Script principal de la aplicación -->
-    <script src="/static/app.js"></script>
+                    // 3. Gráfico Estados
+                    new Chart(document.getElementById('chartEstados'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: data.graficos.estados.map(e => e.name),
+                            datasets: [{ data: data.graficos.estados.map(e => e.value), backgroundColor: ['#38bdf8', '#818cf8', '#34d399', '#f472b6', '#fbbf24'] }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false }
+                    });
+                }
+            } catch (error) {
+                console.error("Error cargando dashboard:", error);
+            }
+        });
+    </script>
 </body>
 </html>
