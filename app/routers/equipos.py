@@ -77,30 +77,59 @@ def obtener_equipo(
 # ---------------------------------------------------------------------------
 # CREAR
 # ---------------------------------------------------------------------------
-try:
-    return EquipoService.crear(
-        session,
-        datos,
-    )
-except ValueError as e:
-    raise HTTPException(
-        status_code=400,
-        detail=str(e),
-    )
+@router.post("", response_model=Equipo)
+def crear_equipo(
+    datos: EquipoCreate,
+    session: Session = Depends(get_session),
+):
+
+    try:
+        return EquipoService.crear(
+            session,
+            datos,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
+
+
 # ---------------------------------------------------------------------------
-# ACTUALIZAR (registra diffs campo a campo en la bitácora)
+# ACTUALIZAR
 # ---------------------------------------------------------------------------
-try:
-    return EquipoService.actualizar(
+
+@router.put("/{equipo_id}", response_model=Equipo)
+def actualizar_equipo(
+    equipo_id: int,
+    datos: EquipoUpdate,
+    session: Session = Depends(get_session),
+):
+
+    equipo = EquipoService.obtener(
         session,
-        equipo,
-        datos,
+        equipo_id,
     )
-except ValueError as e:
-    raise HTTPException(
-        status_code=400,
-        detail=str(e),
-    )
+
+    if not equipo:
+        raise HTTPException(
+            status_code=404,
+            detail="Equipo no encontrado",
+        )
+
+    try:
+        return EquipoService.actualizar(
+            session,
+            equipo,
+            datos,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
 
 # ---------------------------------------------------------------------------
 # ELIMINAR (borrado + registro en bitácora, no se pierde el rastro)
