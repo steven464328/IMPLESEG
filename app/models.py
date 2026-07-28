@@ -43,7 +43,6 @@ class Visitante(SQLModel, table=True):
     persona_recibe: Optional[str] = Field(default="N/A")
 
 class RegistroEtiqueta(SQLModel, table=True):
-    """Guarda cada etiqueta impresa o asignada para llevar el consecutivo"""
     __tablename__ = "recepcion_etiquetas_historial"
     id: Optional[int] = Field(default=None, primary_key=True)
     consecutivo: int = Field(index=True, unique=True)
