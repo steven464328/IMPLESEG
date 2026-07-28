@@ -16,6 +16,11 @@ from app.database import init_db
 from app.routers import equipos, dashboard, gh_inventario, gh_asignaciones, gh_bajas
 from app.routers import equipos, dashboard, gh_inventario, gh_asignaciones, gh_bajas, recepcion # <--- AÑADIR 'recepcion'
 
+# (Asegúrate de que tus importaciones incluyan etiquetas_usb)
+from app.routers import equipos, dashboard, gh_inventario, gh_asignaciones, gh_bajas, recepcion, etiquetas_usb
+
+
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = FastAPI(
@@ -44,6 +49,17 @@ app.include_router(gh_inventario.router)
 app.include_router(gh_asignaciones.router)
 app.include_router(gh_bajas.router)
 app.include_router(recepcion.router)
+# ... (código existente) ...
+
+app.include_router(dashboard.router)
+app.include_router(equipos.router)
+app.include_router(gh_inventario.router)
+app.include_router(gh_asignaciones.router)
+app.include_router(gh_bajas.router)
+app.include_router(recepcion.router)
+# AGREGAR ESTA LÍNEA AQUÍ:
+app.include_router(etiquetas_usb.router)
+
 
 # --- Frontend estático ---
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")

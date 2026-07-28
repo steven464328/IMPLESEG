@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMPLESEG - Control de Etiquetas Web</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            background-color: #0b1120;
+            background-image: radial-gradient(circle at 50% 100%, #172554 0%, #0b1120 70%);
+            min-height: 100vh;
+            color: white;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            overflow-x: hidden;
+        }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .input-field {
+            width: 100%; background: #1e293b; color: white;
+            border: 1px solid #334155; padding: 1rem; border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .input-field:focus { outline: none; background: #0f172a; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2); }
+        
+        /* Tabla */
+        table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        th { background-color: #0f172a; color: #38bdf8; padding: 12px; text-align: left; border-bottom: 2px solid #334155; position: sticky; top: 0; }
+        td { padding: 12px; border-bottom: 1px solid #334155; font-size: 0.875rem; }
+        tbody tr:hover { background-color: #1e293b; }
+    </style>
+</head>
+<body class="p-6 h-screen flex flex-col relative">
+
+    <!-- Header -->
+    <div class="w-full flex justify-between items-center mb-6 relative z-10 border-b border-gray-800 pb-4">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/50">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-3xl font-black tracking-widest text-white">IMPLESEG</h1>
+                <p class="text-sky-400 font-bold tracking-widest text-xs mt-1 uppercase">Control de Etiquetas USB</p>
+            </div>
+        </div>
+        <button onclick="window.location.href='/'" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded font-bold text-xs tracking-widest uppercase border border-gray-600 transition flex items-center gap-2">
+            ← Volver al Inicio
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-grow flex gap-6 overflow-hidden relative z-10">
+        
+        <!-- Panel Izquierdo: Formulario -->
+        <div class="w-1/3 glass-panel rounded-2xl p-8 border-t-4 border-t-sky-500 flex flex-col gap-4">
+            <h2 class="text-xl font-bold text-sky-400 uppercase tracking-widest mb-4">Nuevo Ingreso</h2>
+            
+            <form id="form-etiqueta" onsubmit="registrarIngreso(event)" class="flex flex-col gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Cédula *</label>
+                    <input type="number" id="cedula" required placeholder="Ej. 10234567" class="input-field">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nombre Completo *</label>
+                    <input type="text" id="nombre" required placeholder="Nombre de la persona" class="input-field">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Equipo / Objeto *</label>
+                    <input type="text" id="equipo" required placeholder="Ej. Laptop HP Plata" class="input-field">
+                </div>
+                
+                <button type="submit" id="btn-registrar" class="mt-4 w-full bg-sky-600 hover:bg-sky-500 text-white font-black tracking-widest text-sm py-4 rounded-xl shadow-[0_0_20px_rgba(2,132,199,0.4)] transition-all uppercase">
+                    Registrar y Generar Etiqueta
+                </button>
+            </form>
+            
+            <!-- Zona de código ZPL para imprimir -->
+            <div id="zpl-container" class="mt-6 hidden flex-col gap-2 p-4 bg-gray-900 rounded-xl border border-gray-700">
+                <p class="text-xs text-green-400 font-bold uppercase tracking-wider flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    Código ZPL Generado
+                </p>
+                <textarea id="zpl-code" class="w-full h-32 bg-black text-green-500 p-2 text-xs font-mono rounded border border-gray-800 focus:outline-none" readonly></textarea>
+                <p class="text-xs text-gray-500 mt-2">Copia este código y envíalo a tu impresora Zebra. <br>(Se implementará impresión automática en red próximamente).</p>
+            </div>
+        </div>
+
+        <!-- Panel Derecho: Tabla Historial -->
+        <div class="w-2/3 glass-panel rounded-2xl p-8 flex flex-col overflow-hidden">
+            <h2 class="text-xl font-bold text-gray-300 uppercase tracking-widest mb-4">Historial de Registros</h2>
+            <div class="overflow-y-auto flex-grow rounded-xl border border-gray-700 bg-gray-800/50">
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th># Cons.</th>
+                            <th>Fecha de Ingreso</th>
+                            <th>Cédula</th>
+                            <th>Nombre</th>
+                            <th>Equipo Registrado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-registros">
+                        <!-- Llenado por JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Cargar registros al inicio
+        async function cargarRegistros() {
+            try {
+                const res = await fetch('/etiquetas/api/registros');
+                const data = await res.json();
+                const tbody = document.getElementById('tabla-registros');
+                tbody.innerHTML = '';
+                
+                data.forEach(reg => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="font-black text-sky-400 text-lg">${reg.consecutivo}</td>
+                            <td class="text-gray-400">${reg.fecha}</td>
+                            <td class="font-medium">${reg.cedula}</td>
+                            <td class="font-bold">${reg.nombre}</td>
+                            <td class="text-sky-200">${reg.equipo}</td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error("Error cargando registros", error);
+            }
+        }
+
+        async function registrarIngreso(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-registrar');
+            btn.innerHTML = "Procesando..."; btn.disabled = true;
+            
+            const datos = {
+                cedula: document.getElementById('cedula').value.trim(),
+                nombre_completo: document.getElementById('nombre').value.trim(),
+                equipo_descripcion: document.getElementById('equipo').value.trim()
+            };
+
+            try {
+                const res = await fetch('/etiquetas/api/registrar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datos)
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    Swal.fire({
+                        title: '¡Registro Exitoso!',
+                        text: data.mensaje,
+                        icon: 'success',
+                        background: '#1e293b', color: 'white', confirmButtonColor: '#0284c7'
+                    });
+                    
+                    // Mostrar código ZPL
+                    document.getElementById('zpl-container').classList.remove('hidden');
+                    document.getElementById('zpl-code').value = data.zpl;
+                    
+                    document.getElementById('form-etiqueta').reset();
+                    cargarRegistros();
+                } else {
+                    Swal.fire({title: 'Error', text: 'No se pudo guardar.', icon: 'error', background: '#1e293b', color: 'white'});
+                }
+            } catch (error) {
+                console.error(error);
+                Swal.fire({title: 'Error', text: 'Problema de conexión con el servidor.', icon: 'error', background: '#1e293b', color: 'white'});
+            } finally {
+                btn.innerHTML = "Registrar y Generar Etiqueta"; btn.disabled = false;
+            }
+        }
+
+        // Iniciar
+        cargarRegistros();
+    </script>
+</body>
+</html>

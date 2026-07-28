@@ -1,15 +1,13 @@
 """
 Modelos de base de datos - Sistema de Automatización EJ Soluciones
-Módulo: Área de Sistemas > Hojas de Vida de Equipos
 """
-from datetime import datetime, date
-from typing import Optional, Dict, Any, List
+from datetime import datetime
+from typing import Optional, Dict, Any
 from sqlmodel import SQLModel, Field, Column, JSON
 
 
 class Empresa(SQLModel, table=True):
     __tablename__ = "empresas"
-
     id: Optional[int] = Field(default=None, primary_key=True)
     nombre: str = Field(index=True, unique=True)
     nit: Optional[str] = None
@@ -23,17 +21,15 @@ class Empresa(SQLModel, table=True):
 
 class Equipo(SQLModel, table=True):
     __tablename__ = "equipos"
-
     id: Optional[int] = Field(default=None, primary_key=True)
     empresa: str = Field(index=True)
-    equipo: str = Field(index=True, unique=True)          # Ej: IMPLE001
-    codigo: Optional[str] = Field(default=None, index=True)  # Ej: AIO001
+    equipo: str = Field(index=True, unique=True)
+    codigo: Optional[str] = Field(default=None, index=True)
     area: Optional[str] = Field(default=None, index=True)
     nombre_equipo: Optional[str] = None
     usuario_servidor: Optional[str] = None
     tipo_equipo: Optional[str] = Field(default=None, index=True)
 
-    # --- Hardware ---
     cpu: Optional[str] = None
     procesador: Optional[str] = None
     memoria: Optional[str] = None
@@ -46,22 +42,18 @@ class Equipo(SQLModel, table=True):
     serial: Optional[str] = None
     pantalla_auxiliar: Optional[str] = None
 
-    # --- Red / acceso remoto ---
     mac: Optional[str] = None
     ip: Optional[str] = Field(default=None, index=True)
     anydesk_id: Optional[str] = None
     dominio: Optional[str] = None
 
-    # --- Periféricos ---
     diadema: Optional[str] = None
     teclado: Optional[str] = None
     mouse: Optional[str] = None
     base_refrigerante: Optional[str] = None
 
-    # --- Asignación ---
     usuario_asignado: Optional[str] = Field(default=None, index=True)
 
-    # --- Software base ---
     sistema_operativo: Optional[str] = None
     antivirus: Optional[str] = None
     antivirus_vigencia: Optional[str] = None
@@ -71,10 +63,8 @@ class Equipo(SQLModel, table=True):
     office_funciones: Optional[str] = None
     programas_instalados: Optional[str] = None
 
-    # --- Checklist de software instalado ---
     checklist_software: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
 
-    # --- Compra / activo fijo ---
     compra_numero: Optional[str] = None
     compra_factura: Optional[str] = None
     compra_fecha: Optional[str] = None
@@ -85,7 +75,6 @@ class Equipo(SQLModel, table=True):
     compra_seriales: Optional[str] = None
     compra_usuarios_relacionados: Optional[str] = None
 
-    # --- Estado y mantenimiento ---
     estado_equipo: Optional[str] = Field(default=None, index=True)
     fecha_ultimo_mantenimiento: Optional[str] = None
     fecha_revision_drive: Optional[str] = None
@@ -93,23 +82,16 @@ class Equipo(SQLModel, table=True):
     observacion_estado: Optional[str] = None
     observaciones_finales: Optional[str] = None
 
-    # --- Bolsa de campos futuros ---
     extra_data: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
 
-    # --- Auditoría ---
     creado_en: datetime = Field(default_factory=datetime.utcnow)
     actualizado_en: datetime = Field(default_factory=datetime.utcnow)
     creado_por: Optional[str] = None
     actualizado_por: Optional[str] = None
 
 
-# ═══════════════════════════════════════════════════════════════
-# MÓDULO 2: GESTIÓN HUMANA
-# ═══════════════════════════════════════════════════════════════
-
 class HerramientaInventario(SQLModel, table=True):
     __tablename__ = "gh_inventario"
-
     id: Optional[int] = Field(default=None, primary_key=True)
     nombre: str = Field(index=True)
     categoria: Optional[str] = Field(default=None, index=True)
@@ -120,17 +102,14 @@ class HerramientaInventario(SQLModel, table=True):
     cantidad_stock: int = Field(default=0)
     colaborador: Optional[str] = None
     disponible: Optional[str] = None
-
     creado_en: datetime = Field(default_factory=datetime.utcnow)
     actualizado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
 class Asignacion(SQLModel, table=True):
     __tablename__ = "gh_asignaciones"
-
     id: Optional[int] = Field(default=None, primary_key=True)
     codigo: str = Field(index=True, unique=True)
-
     nombre: str
     cedula: str = Field(index=True)
     cargo: Optional[str] = None
@@ -140,7 +119,6 @@ class Asignacion(SQLModel, table=True):
     items: list = Field(default_factory=list, sa_column=Column(JSON))
     firma_recibe: Optional[str] = None
     firma_entrega: Optional[str] = None
-
     status: str = Field(default="activo", index=True)
 
     fecha_dev: Optional[str] = None
@@ -157,10 +135,8 @@ class Asignacion(SQLModel, table=True):
 
 class Baja(SQLModel, table=True):
     __tablename__ = "gh_bajas"
-
     id: Optional[int] = Field(default=None, primary_key=True)
     codigo: str = Field(index=True, unique=True)
-
     fecha: str
     item_id: Optional[str] = None
     nombre: Optional[str] = None
@@ -185,7 +161,6 @@ class Baja(SQLModel, table=True):
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
-# ... existing code ...
 class HistorialCambio(SQLModel, table=True):
     __tablename__ = "historial_cambios"
 
@@ -201,21 +176,39 @@ class HistorialCambio(SQLModel, table=True):
 
 # ═══════════════════════════════════════════════════════════════
 # MÓDULO 3: RECEPCIÓN
-# Control de acceso de visitantes (Ingreso y Salida)
 # ═══════════════════════════════════════════════════════════════
 
 class Visitante(SQLModel, table=True):
     """Registro de entradas y salidas de visitantes."""
-    __tablename__ = "recepcion_visitantes"
+    __tablename__ = "recepcion_visitantes_v2" 
 
     id: Optional[int] = Field(default=None, primary_key=True)
     cedula: str = Field(index=True)
     nombre_completo: str
     empresa: Optional[str] = None
-    tipo_visitante: str  # PROVEEDOR, VISITANTE, CONTRATISTA, CLIENTE
-    a_quien_visita: str
-    arl: str  # SI / NO
-    tarjeta_asignada: Optional[str] = None
+    correo: Optional[str] = None
+    area_visita: str
+    motivo_visita: str
+    arl: str
+    numero_emergencia: str
+    persona_recibe: str
     
     fecha_ingreso: datetime = Field(default_factory=datetime.now)
-    fecha_salida: Optional[datetime] = None  # Se llena cuando marcan salida
+    fecha_salida: Optional[datetime] = None
+
+# ═══════════════════════════════════════════════════════════════
+# MÓDULO NUEVO: CONTROL DE ETIQUETAS USB
+# ═══════════════════════════════════════════════════════════════
+
+class RegistroEtiqueta(SQLModel, table=True):
+    """Registro de ingreso de equipos para control por etiquetas USB."""
+    __tablename__ = "recepcion_etiquetas_usb"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    consecutivo: int = Field(index=True, unique=True)
+    cedula: str = Field(index=True)
+    nombre_completo: str
+    equipo_descripcion: str
+    fecha_ingreso: datetime = Field(default_factory=datetime.now)
+    fecha_salida: Optional[datetime] = None
+    impreso: bool = Field(default=False)
