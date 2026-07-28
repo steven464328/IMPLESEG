@@ -185,14 +185,3 @@ class Visitante(SQLModel, table=True):
     fecha_ingreso: datetime = Field(default_factory=datetime.now)
     fecha_salida: Optional[datetime] = None
 
-class RegistroEtiqueta(SQLModel, table=True):
-    __tablename__ = "recepcion_etiquetas_usb"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    consecutivo: int = Field(index=True, unique=True)
-    cedula: str = Field(index=True)
-    nombre_completo: str
-    equipo_descripcion: str
-    fecha_ingreso: datetime = Field(default_factory=datetime.now)
-    fecha_salida: Optional[datetime] = None
-    impreso: bool = Field(default=False)

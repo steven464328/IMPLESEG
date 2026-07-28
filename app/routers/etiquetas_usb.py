@@ -189,15 +189,10 @@
         let usuarioActual = { nombre: "", cedula: "" };
 
         window.onload = () => {
-            const savedUser = localStorage.getItem('impleseg_user');
-            if (savedUser) {
-                usuarioActual = JSON.parse(savedUser);
-                document.getElementById('login-modal').style.display = 'none';
-                document.getElementById('user-info').innerText = `Usuario: ${usuarioActual.nombre}`;
-                actualizarEstado();
-            } else {
-                document.getElementById('login-modal').style.display = 'flex';
-            }
+            // FORZAR LIMPIEZA PARA QUE SIEMPRE PIDA DATOS
+            localStorage.removeItem('impleseg_user'); 
+            
+            document.getElementById('login-modal').style.display = 'flex';
         };
 
         function iniciarSesion() {
@@ -320,7 +315,10 @@
                 nuevo_consecutivo: parseInt(document.getElementById('cfg_nuevo').value),
                 nombre_impresora: "ZEBRA"
             };
-            enviarPeticion('/etiquetas/api/configurar', payload, null);
+            enviarPeticion('/etiquetas/api/configurar', payload, () => {
+                // Actualizar la interfaz visualmente tras cambiar config
+                actualizarEstado(); 
+            });
         }
 
         async function cargarHistorial() {
