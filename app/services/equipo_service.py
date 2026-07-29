@@ -144,3 +144,125 @@ class EquipoService:
 
         session.delete(equipo)
         session.commit()
+
+        # ==========================================================
+    # DASHBOARD ERP
+    # ==========================================================
+
+    @staticmethod
+    def total_equipos(session: Session):
+        return len(session.exec(select(Equipo)).all())
+
+
+    @staticmethod
+    def equipos_activos(session: Session):
+        return len(
+            session.exec(
+                select(Equipo).where(
+                    Equipo.estado_equipo == "ACTIVO"
+                )
+            ).all()
+        )
+
+
+    @staticmethod
+    def equipos_por_empresa(session: Session, empresa_id: int):
+        return session.exec(
+            select(Equipo).where(
+                Equipo.empresa_id == empresa_id
+            )
+        ).all()
+
+
+    @staticmethod
+    def equipos_por_usuario(session: Session, usuario: str):
+        return session.exec(
+            select(Equipo).where(
+                Equipo.usuario_asignado == usuario
+            )
+        ).all()
+
+
+    @staticmethod
+    def equipos_por_area(session: Session, area: str):
+        return session.exec(
+            select(Equipo).where(
+                Equipo.area == area
+            )
+        ).all()
+
+
+    @staticmethod
+    def mantenimientos_pendientes(session: Session):
+
+        hoy = datetime.utcnow()
+
+        return session.exec(
+            select(Equipo).where(
+                Equipo.proximo_mantenimiento <= hoy
+            )
+        ).all()
+
+
+    @staticmethod
+    def antivirus_vencidos(session: Session):
+
+        from datetime import date
+
+        hoy = date.today()
+
+        return session.exec(
+            select(Equipo).where(
+                Equipo.fecha_vencimiento_antivirus <= hoy
+            )
+        ).all()
+
+
+    @staticmethod
+    def garantia_vencida(session: Session):
+
+        from datetime import date
+
+        hoy = date.today()
+
+        return session.exec(
+            select(Equipo).where(
+                Equipo.fecha_fin_garantia <= hoy
+            )
+        ).all()
+
+
+    @staticmethod
+    def equipos_sin_mantenimiento(session: Session):
+
+        return session.exec(
+            select(Equipo).where(
+                Equipo.fecha_ultimo_mantenimiento == None
+            )
+        ).all()
+
+
+    @staticmethod
+    def buscar(session: Session, texto: str):
+
+        texto = texto.lower()
+
+        equipos = session.exec(
+            select(Equipo)
+        ).all()
+
+        return [
+
+            e
+
+            for e in equipos
+
+            if texto in (e.codigo or "").lower()
+            or texto in (e.serial or "").lower()
+            or texto in (e.nombre_equipo or "").lower()
+            or texto in (e.usuario_asignado or "").lower()
+            or texto in (e.hostname or "").lower()
+            or texto in (e.ip or "").lower()
+            or texto in (e.mac or "").lower()
+
+        ]

@@ -203,7 +203,142 @@ def valores_filtros(
 
     }
 
+# ---------------------------------------------------------------------------
+# DASHBOARD ERP
+# ---------------------------------------------------------------------------
 
+@router.get("/dashboard")
+def dashboard(
+    session: Session = Depends(get_session),
+):
+
+    return {
+
+        "total_equipos": EquipoService.total_equipos(session),
+
+        "equipos_activos": EquipoService.equipos_activos(session),
+
+        "mantenimientos_pendientes": len(
+            EquipoService.mantenimientos_pendientes(session)
+        ),
+
+        "antivirus_vencidos": len(
+            EquipoService.antivirus_vencidos(session)
+        ),
+
+        "garantias_vencidas": len(
+            EquipoService.garantia_vencida(session)
+        ),
+
+        "sin_mantenimiento": len(
+            EquipoService.equipos_sin_mantenimiento(session)
+        ),
+
+    }
+
+
+# ---------------------------------------------------------------------------
+# ALERTAS ANTIVIRUS
+# ---------------------------------------------------------------------------
+
+@router.get("/alertas/antivirus")
+def antivirus_vencidos(
+    session: Session = Depends(get_session),
+):
+    return EquipoService.antivirus_vencidos(session)
+
+
+# ---------------------------------------------------------------------------
+# ALERTAS GARANTÍA
+# ---------------------------------------------------------------------------
+
+@router.get("/alertas/garantias")
+def garantias_vencidas(
+    session: Session = Depends(get_session),
+):
+    return EquipoService.garantia_vencida(session)
+
+
+# ---------------------------------------------------------------------------
+# MANTENIMIENTOS
+# ---------------------------------------------------------------------------
+
+@router.get("/mantenimientos")
+def mantenimientos(
+    session: Session = Depends(get_session),
+):
+    return EquipoService.mantenimientos_pendientes(session)
+
+
+# ---------------------------------------------------------------------------
+# SIN MANTENIMIENTO
+# ---------------------------------------------------------------------------
+
+@router.get("/sin-mantenimiento")
+def sin_mantenimiento(
+    session: Session = Depends(get_session),
+):
+    return EquipoService.equipos_sin_mantenimiento(session)
+
+
+# ---------------------------------------------------------------------------
+# CONSULTAR POR EMPRESA
+# ---------------------------------------------------------------------------
+
+@router.get("/empresa/{empresa_id}")
+def equipos_empresa(
+    empresa_id: int,
+    session: Session = Depends(get_session),
+):
+    return EquipoService.equipos_por_empresa(
+        session,
+        empresa_id,
+    )
+
+
+# ---------------------------------------------------------------------------
+# CONSULTAR POR USUARIO
+# ---------------------------------------------------------------------------
+
+@router.get("/usuario/{usuario}")
+def equipos_usuario(
+    usuario: str,
+    session: Session = Depends(get_session),
+):
+    return EquipoService.equipos_por_usuario(
+        session,
+        usuario,
+    )
+
+
+# ---------------------------------------------------------------------------
+# CONSULTAR POR ÁREA
+# ---------------------------------------------------------------------------
+
+@router.get("/area/{area}")
+def equipos_area(
+    area: str,
+    session: Session = Depends(get_session),
+):
+    return EquipoService.equipos_por_area(
+        session,
+        area,
+    )
+
+
+# ---------------------------------------------------------------------------
+# BUSCADOR GLOBAL ERP
+# ---------------------------------------------------------------------------
+
+@router.get("/buscar")
+def buscar(
+    texto: str,
+    session: Session = Depends(get_session),
+):
+    return EquipoService.buscar(
+        session,
+        texto,
+    )
 
 # ---------------------------------------------------------------------------
 # EXPORTAR A CSV

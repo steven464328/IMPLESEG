@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-
+from app.routers import dashboard_equipos
 from app.database import init_db
 
 from app.routers import (
