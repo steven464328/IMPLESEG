@@ -34,6 +34,7 @@ app.include_router(gh_asignaciones.router)
 app.include_router(gh_bajas.router)
 app.include_router(recepcion.router)
 app.include_router(etiquetas_usb.router)
+app.include_router(dashboard_equipos.router)
 
 app.mount(
     "/static",

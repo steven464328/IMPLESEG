@@ -42,8 +42,16 @@ class DatosConfiguracion(BaseModel):
     nombre_impresora: str
 
 def get_next_consecutivo(db: Session) -> int:
-    ultimo_registro = db.exec(select(RegistroEtiqueta).order_by(RegistroEtiqueta.fecha_ingreso.desc())).first()
-    return (ultimo_registro.consecutivo + 1) if ultimo_registro else 20000000000
+    ultimo_registro = db.exec(
+        select(RegistroEtiqueta)
+        .order_by(RegistroEtiqueta.fecha.desc())
+    ).first()
+
+    return (
+        ultimo_registro.consecutivo + 1
+        if ultimo_registro
+        else 20000000000
+    )
 
 def generar_zpl_base(consecutivo: int, copias: int, fecha_str: str) -> str:
     return f"""^XA
@@ -69,21 +77,41 @@ async def obtener_estado(db: Session = Depends(get_session)):
 
 @router.get("/api/historial")
 async def obtener_historial(db: Session = Depends(get_session)):
-    registros = db.exec(select(RegistroEtiqueta).order_by(RegistroEtiqueta.consecutivo.desc()).limit(100)).all()
+
+    registros = db.exec(
+        select(RegistroEtiqueta)
+        .order_by(RegistroEtiqueta.consecutivo.desc())
+        .limit(100)
+    ).all()
+
     historial = []
+
     for r in registros:
+
         historial.append({
-            "fecha_hora": r.fecha_ingreso.isoformat(),
-            "tipo_operacion": "IMPRESION" if r.impreso else "ASIGNACION",
+
+            "fecha_hora": r.fecha.isoformat(),
+
+            "tipo_operacion": (
+                "IMPRESION"
+                if r.impreso
+                else "ASIGNACION"
+            ),
+
             "desde_numero": r.consecutivo,
             "hasta_numero": r.consecutivo,
+
             "cantidad": 1,
             "copias": 1,
-            "usuario_nombre": r.nombre_completo,
+
+            "usuario_nombre": r.nombre,
             "usuario_cedula": r.cedula,
-            "cliente_nombre": r.equipo_descripcion,
+
+            "cliente_nombre": r.cliente,
             "cliente_nit": ""
+
         })
+
     return historial
 
 @router.post("/api/imprimir_nueva")
@@ -101,13 +129,21 @@ async def imprimir_nueva(datos: DatosNuevaEtiqueta, db: Session = Depends(get_se
             if not cliente_info: cliente_info = "Sin detalles de cliente"
 
             nuevo_registro = RegistroEtiqueta(
-                consecutivo=consecutivo_actual,
-                cedula=datos.usuario_cedula,
-                nombre_completo=datos.usuario_nombre,
-                equipo_descripcion=cliente_info,
-                fecha_ingreso=fecha_actual,
-                impreso=not datos.solo_asignar
-            )
+
+    consecutivo=consecutivo_actual,
+
+    cedula=datos.usuario_cedula,
+
+    nombre=datos.usuario_nombre,
+
+    cliente=cliente_info,
+
+    fecha=fecha_actual,
+
+    impreso=not datos.solo_asignar,
+
+)
+
             db.add(nuevo_registro)
             if not datos.solo_asignar:
                 zpl_completo += generar_zpl_base(consecutivo_actual, datos.copias, fecha_actual.strftime("%Y-%m-%d"))

@@ -14,4 +14,8 @@ class RegistroEtiqueta(BaseModel, table=True):
 
     nombre: str
 
+    cliente: str = Field(default="")
+
+    impreso: bool = Field(default=False)
+
     fecha: datetime = Field(default_factory=datetime.utcnow)
