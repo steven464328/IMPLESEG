@@ -29,33 +29,20 @@ function money(n) {
 // Carga inicial
 // ---------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
-  cargarFiltros();
-  cargarTabla();
-  cargarDashboard();
 
-  document.getElementById("btnNuevo").addEventListener("click", () => abrirDrawer());
-  document.getElementById("btnCerrarDrawer").addEventListener("click", cerrarDrawer);
-  document.getElementById("btnCancelar").addEventListener("click", cerrarDrawer);
-  document.getElementById("drawerOverlay").addEventListener("click", (e) => {
-    if (e.target.id === "drawerOverlay") cerrarDrawer();
-  });
-  document.getElementById("formEquipo").addEventListener("submit", guardarEquipo);
-  document.getElementById("btnEliminar").addEventListener("click", eliminarEquipo);
-  document.getElementById("btnExport").addEventListener("click", () => {
-    window.location.href = `${API}/exportar/csv`;
-  });
-  document.getElementById("btnLimpiarFiltros").addEventListener("click", () => {
-    document.getElementById("fBuscar").value = "";
-    document.getElementById("fEmpresa").value = "";
-    document.getElementById("fArea").value = "";
-    document.getElementById("fTipo").value = "";
-    document.getElementById("fEstado").value = "";
+    cargarDashboard();
     cargarTabla();
-  });
 
-  ["fBuscar", "fEmpresa", "fArea", "fTipo", "fEstado"].forEach((id) => {
-    document.getElementById(id).addEventListener("input", debounce(cargarTabla, 300));
-  });
+    const btnNuevo = document.getElementById("btnNuevo");
+    if (btnNuevo) {
+        btnNuevo.addEventListener("click", () => abrirDrawer());
+    }
+
+    const form = document.getElementById("formEquipo");
+    if (form) {
+        form.addEventListener("submit", guardarEquipo);
+    }
+
 });
 
 function debounce(fn, delay) {
@@ -243,4 +230,366 @@ async function eliminarEquipo() {
   } else {
     toast("No se pudo eliminar el registro");
   }
+}
+
+// =====================================================
+// GRÁFICAS
+// =====================================================
+
+function renderBarChart(containerId, datos) {
+
+    const contenedor =
+        document.getElementById(containerId);
+
+    if (!contenedor) return;
+
+    const registros =
+        Object.entries(datos || {});
+
+    if (!registros.length) {
+
+        contenedor.innerHTML = `
+            <p class="empty-state">
+                Sin información
+            </p>
+        `;
+
+        return;
+
+    }
+
+    const maximo = Math.max(
+        ...registros.map(r => r[1]),
+        1
+    );
+
+    contenedor.innerHTML = registros.map(
+
+        ([nombre, cantidad]) => `
+
+        <div class="bar-row">
+
+            <span class="label">
+
+                ${nombre}
+
+            </span>
+
+            <div class="bar-track">
+
+                <div
+                    class="bar-fill"
+                    style="width:${(cantidad/maximo)*100}%">
+
+                </div>
+
+            </div>
+
+            <span class="count">
+
+                ${cantidad}
+
+            </span>
+
+        </div>
+
+    `).join("");
+
+}
+
+
+// =====================================================
+// DRAWER
+// =====================================================
+
+async function abrirDrawer(id = null) {
+
+    equipoEditandoId = id;
+
+    document
+        .getElementById("formEquipo")
+        ?.reset();
+
+    document
+        .getElementById("btnEliminar")
+        .style.display =
+            id ? "inline-block" : "none";
+
+    document
+        .getElementById("drawerTitle")
+        .textContent =
+
+        id
+
+            ? "Editar hoja de vida"
+
+            : "Nueva hoja de vida";
+
+
+    if (id) {
+
+        const res = await fetch(
+            `${API}/${id}`
+        );
+
+        const equipo =
+            await res.json();
+
+        Object.keys(equipo).forEach(
+
+            campo => {
+
+                const control =
+                    document.getElementById(
+                        `f_${campo}`
+                    );
+
+                if (control)
+                    control.value =
+                        equipo[campo] ?? "";
+
+            }
+
+        );
+
+    }
+
+    document
+        .getElementById("drawerOverlay")
+        ?.classList.add("open");
+
+}
+
+
+function cerrarDrawer() {
+
+    document
+        .getElementById("drawerOverlay")
+        ?.classList.remove("open");
+
+}
+
+
+// =====================================================
+// FORMULARIO
+// =====================================================
+
+function recolectarDatosFormulario() {
+
+    const campos = [
+
+        "empresa",
+        "equipo",
+        "codigo",
+        "nombre_equipo",
+        "tipo_equipo",
+        "area",
+        "usuario_asignado",
+        "estado_equipo",
+
+        "marca",
+        "modelo_equipo",
+        "serial",
+
+        "cpu",
+        "procesador",
+        "memoria",
+        "modelo_ram",
+        "mainboard",
+
+        "tipo_disco",
+        "tamano_disco",
+
+        "ip",
+        "mac",
+        "dominio",
+        "anydesk_id",
+
+        "sistema_operativo",
+
+        "office",
+        "office_licencia",
+
+        "antivirus",
+        "antivirus_vigencia",
+
+        "fecha_ultimo_mantenimiento",
+
+        "observacion_general",
+        "observacion_estado",
+        "observaciones_finales",
+
+    ];
+
+    const datos = {};
+
+    campos.forEach(campo => {
+
+        const control =
+            document.getElementById(
+                `f_${campo}`
+            );
+
+        if (
+
+            control &&
+            control.value !== ""
+
+        ) {
+
+            datos[campo] =
+                control.value;
+
+        }
+
+    });
+
+    return datos;
+
+}
+
+
+// =====================================================
+// GUARDAR
+// =====================================================
+
+async function guardarEquipo(e) {
+
+    e.preventDefault();
+
+    const datos =
+        recolectarDatosFormulario();
+
+    let respuesta;
+
+    if (equipoEditandoId) {
+
+        respuesta = await fetch(
+
+            `${API}/${equipoEditandoId}`,
+
+            {
+
+                method: "PUT",
+
+                headers: {
+
+                    "Content-Type":
+                    "application/json",
+
+                },
+
+                body: JSON.stringify(
+                    datos
+                ),
+
+            }
+
+        );
+
+    }
+
+    else {
+
+        respuesta = await fetch(
+
+            API,
+
+            {
+
+                method: "POST",
+
+                headers: {
+
+                    "Content-Type":
+                    "application/json",
+
+                },
+
+                body: JSON.stringify(
+                    datos
+                ),
+
+            }
+
+        );
+
+    }
+
+    if (!respuesta.ok) {
+
+        const error =
+            await respuesta.json();
+
+        toast(
+            error.detail
+            || "No fue posible guardar."
+        );
+
+        return;
+
+    }
+
+    toast("Registro guardado");
+
+    cerrarDrawer();
+
+    cargarTabla();
+
+    cargarDashboard();
+
+    cargarFiltros();
+
+}
+
+
+// =====================================================
+// ELIMINAR
+// =====================================================
+
+async function eliminarEquipo() {
+
+    if (!equipoEditandoId)
+        return;
+
+    if (
+
+        !confirm(
+            "¿Eliminar este equipo?"
+        )
+
+    ) return;
+
+    const res = await fetch(
+
+        `${API}/${equipoEditandoId}`,
+
+        {
+
+            method: "DELETE",
+
+        }
+
+    );
+
+    if (res.ok) {
+
+        toast("Equipo eliminado");
+
+        cerrarDrawer();
+
+        cargarTabla();
+
+        cargarDashboard();
+
+    }
+
+    else {
+
+        toast(
+            "No fue posible eliminar."
+        );
+
+    }
+
 }

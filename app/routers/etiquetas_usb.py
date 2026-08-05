@@ -168,13 +168,20 @@ async def imprimir_rango(datos: DatosRangoEtiqueta, db: Session = Depends(get_se
             consecutivo_actual = primer_consecutivo + i
             fecha_actual = datetime.now()
             nuevo_registro = RegistroEtiqueta(
-                consecutivo=consecutivo_actual,
-                cedula=datos.usuario_cedula,
-                nombre_completo=datos.usuario_nombre,
-                equipo_descripcion="Impresión por Rango",
-                fecha_ingreso=fecha_actual,
-                impreso=True
-            )
+
+    consecutivo=consecutivo_actual,
+
+    cedula=datos.usuario_cedula,
+
+    nombre=datos.usuario_nombre,
+
+    cliente="Impresión por Rango",
+
+    fecha=fecha_actual,
+
+    impreso=True,
+
+)
             db.add(nuevo_registro)
             zpl_completo += generar_zpl_base(consecutivo_actual, datos.copias, fecha_actual.strftime("%Y-%m-%d"))
 
@@ -201,13 +208,20 @@ async def configurar(datos: DatosConfiguracion, db: Session = Depends(get_sessio
     try:
         nuevo_valor_requerido = datos.nuevo_consecutivo
         registro_ajuste = RegistroEtiqueta(
-            consecutivo=nuevo_valor_requerido - 1,
-            cedula="000000",
-            nombre_completo="SISTEMA",
-            equipo_descripcion="Ajuste Manual de Consecutivo",
-            fecha_ingreso=datetime.now(),
-            impreso=False
-        )
+
+    consecutivo=nuevo_valor_requerido - 1,
+
+    cedula="000000",
+
+    nombre="SISTEMA",
+
+    cliente="Ajuste Manual de Consecutivo",
+
+    fecha=datetime.now(),
+
+    impreso=False,
+
+)
         db.add(registro_ajuste)
         db.commit()
         return {"status": "ok", "mensaje": f"Consecutivo ajustado a {nuevo_valor_requerido}"}

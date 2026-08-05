@@ -1,150 +1,145 @@
-from typing import Optional
-from datetime import datetime, date
+from datetime import datetime
+from typing import Any, Optional
 
-from sqlmodel import Field
+from sqlalchemy import Column
+from sqlalchemy.types import JSON
+from sqlmodel import Field, SQLModel
 
-from app.models.base import BaseModel
 
-
-class Equipo(BaseModel, table=True):
+class Equipo(SQLModel, table=True):
     """
-    Hojas de Vida de Equipos.
+    Modelo principal de Hojas de Vida de Equipos.
+    Compatible con la estructura actual de la tabla 'equipos'
+    en la base de datos SQLite.
     """
 
     __tablename__ = "equipos"
 
-    empresa_id: Optional[int] = Field(
-        default=None,
-        foreign_key="empresas.id",
-        index=True,
-    )
+    # ==========================================================
+    # CLAVE PRIMARIA
+    # ==========================================================
 
-    # =========================
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # ==========================================================
     # IDENTIFICACIÓN
-    # =========================
+    # ==========================================================
 
-    codigo: str = Field(index=True, unique=True)
+    empresa: str = Field(index=True)
+    equipo: str = Field(index=True)
+    codigo: Optional[str] = Field(default=None, index=True)
 
-    nombre_equipo: str = Field(index=True)
-
-    tipo_equipo: Optional[str] = Field(default=None)
-
-    marca: Optional[str] = Field(default=None)
-
-    modelo: Optional[str] = Field(default=None)
-
-    serial: Optional[str] = Field(default=None, index=True)
-
-    activo_fijo: Optional[str] = Field(default=None)
-
-    hostname: Optional[str] = Field(default=None, index=True)
+    nombre_equipo: Optional[str] = None
+    tipo_equipo: Optional[str] = Field(default=None, index=True)
 
     area: Optional[str] = Field(default=None, index=True)
 
-    sede: Optional[str] = Field(default=None)
-
-    estado_equipo: str = Field(default="ACTIVO")
-
-    criticidad: Optional[str] = Field(default="MEDIA")
-
-    # =========================
-    # USUARIO
-    # =========================
-
+    usuario_servidor: Optional[str] = None
     usuario_asignado: Optional[str] = Field(default=None, index=True)
 
-    cargo_usuario: Optional[str] = Field(default=None)
+    estado_equipo: Optional[str] = Field(default=None, index=True)
 
-    correo_usuario: Optional[str] = Field(default=None)
-
-    # =========================
+    # ==========================================================
     # HARDWARE
-    # =========================
+    # ==========================================================
 
-    procesador: Optional[str] = Field(default=None)
+    marca: Optional[str] = None
+    modelo_equipo: Optional[str] = None
+    serial: Optional[str] = Field(default=None, index=True)
 
-    generacion_procesador: Optional[str] = Field(default=None)
+    cpu: Optional[str] = None
+    procesador: Optional[str] = None
+    memoria: Optional[str] = None
+    modelo_ram: Optional[str] = None
+    mainboard: Optional[str] = None
 
-    memoria_ram: Optional[str] = Field(default=None)
+    tipo_disco: Optional[str] = None
+    tamano_disco: Optional[str] = None
 
-    ram_maxima: Optional[str] = Field(default=None)
+    pantalla_auxiliar: Optional[str] = None
 
-    disco_duro: Optional[str] = Field(default=None)
+    teclado: Optional[str] = None
+    mouse: Optional[str] = None
+    diadema: Optional[str] = None
+    base_refrigerante: Optional[str] = None
 
-    tipo_disco: Optional[str] = Field(default=None)
-
-    tarjeta_grafica: Optional[str] = Field(default=None)
-
-    monitor: Optional[str] = Field(default=None)
-
-    # =========================
-    # SOFTWARE
-    # =========================
-
-    sistema_operativo: Optional[str] = Field(default=None)
-
-    version_so: Optional[str] = Field(default=None)
-
-    office: Optional[str] = Field(default=None)
-
-    licencia_office: Optional[str] = Field(default=None)
-
-    antivirus: Optional[str] = Field(default=None)
-
-    licencia_antivirus: Optional[str] = Field(default=None)
-
-    fecha_vencimiento_antivirus: Optional[date] = Field(default=None)
-
-    # =========================
+    # ==========================================================
     # RED
-    # =========================
+    # ==========================================================
 
-    ip: Optional[str] = Field(default=None)
+    ip: Optional[str] = Field(default=None, index=True)
+    mac: Optional[str] = None
+    dominio: Optional[str] = None
+    anydesk_id: Optional[str] = None
 
-    mac: Optional[str] = Field(default=None)
+    # ==========================================================
+    # SOFTWARE
+    # ==========================================================
 
-    dominio: Optional[str] = Field(default=None)
+    sistema_operativo: Optional[str] = None
 
-    nombre_red: Optional[str] = Field(default=None)
+    antivirus: Optional[str] = None
+    antivirus_vigencia: Optional[str] = None
 
-    # =========================
+    office: Optional[str] = None
+    office_licencia: Optional[str] = None
+    office_serial: Optional[str] = None
+    office_funciones: Optional[str] = None
+
+    programas_instalados: Optional[str] = None
+
+    checklist_software: Optional[Any] = Field(
+        default=None,
+        sa_column=Column(JSON),
+    )
+
+    # ==========================================================
     # COMPRA
-    # =========================
+    # ==========================================================
 
-    proveedor: Optional[str] = Field(default=None)
+    compra_numero: Optional[str] = None
+    compra_factura: Optional[str] = None
+    compra_fecha: Optional[str] = None
 
-    numero_factura: Optional[str] = Field(default=None)
+    compra_productos: Optional[str] = None
+    compra_cantidad: Optional[str] = None
 
-    fecha_compra: Optional[date] = Field(default=None)
+    compra_precio_unitario: Optional[str] = None
+    compra_precio_total: Optional[str] = None
 
-    garantia_meses: Optional[int] = Field(default=None)
+    compra_seriales: Optional[str] = None
+    compra_usuarios_relacionados: Optional[str] = None
 
-    fecha_fin_garantia: Optional[date] = Field(default=None)
+    # ==========================================================
+    # MANTENIMIENTO
+    # ==========================================================
 
-    valor_compra: Optional[float] = Field(default=None)
+    fecha_ultimo_mantenimiento: Optional[str] = None
+    fecha_revision_drive: Optional[str] = None
 
-    # =========================
-    # MANTENIMIENTOS
-    # =========================
-
-    proveedor_mantenimiento: Optional[str] = Field(default=None)
-
-    fecha_ultimo_mantenimiento: Optional[datetime] = Field(default=None)
-
-    proximo_mantenimiento: Optional[datetime] = Field(default=None)
-
-    frecuencia_mantenimiento: Optional[int] = Field(default=6)
-
-    # =========================
-    # BAJA
-    # =========================
-
-    fecha_baja: Optional[date] = Field(default=None)
-
-    motivo_baja: Optional[str] = Field(default=None)
-
-    # =========================
+    # ==========================================================
     # OBSERVACIONES
-    # =========================
+    # ==========================================================
 
-    observaciones: Optional[str] = Field(default=None)
+    observacion_general: Optional[str] = None
+    observacion_estado: Optional[str] = None
+    observaciones_finales: Optional[str] = None
+
+    # ==========================================================
+    # DATOS EXTRA
+    # ==========================================================
+
+    extra_data: Optional[Any] = Field(
+        default=None,
+        sa_column=Column(JSON),
+    )
+
+    # ==========================================================
+    # AUDITORÍA
+    # ==========================================================
+
+    creado_en: datetime
+    actualizado_en: datetime
+
+    creado_por: Optional[str] = None
+    actualizado_por: Optional[str] = None
