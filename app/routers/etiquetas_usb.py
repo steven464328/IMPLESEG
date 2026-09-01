@@ -393,10 +393,10 @@ async def imprimir_nueva(
             "hasta": ultimo_consecutivo,
             "cantidad": datos.cantidad,
             "copias": datos.copias,
-            "impreso": True,
+            "impreso": False,
             "impresora": IMPRESORA_POR_DEFECTO,
-            "job_id": job_id,
-            "zpl": None
+            "job_id": None,
+            "zpl": zpl_completo
         }
 
     except HTTPException:
@@ -476,8 +476,8 @@ async def imprimir_rango(
             "cantidad": len(numeros),
             "copias": datos.copias,
             "impresora": IMPRESORA_POR_DEFECTO,
-            "job_id": job_id,
-            "zpl": None
+            "job_id": None,
+            "zpl": zpl_completo
         }
 
     except HTTPException:
@@ -587,7 +587,8 @@ async def reimprimir(
             "cantidad": len(numeros),
             "copias": datos.copias,
             "impresora": IMPRESORA_POR_DEFECTO,
-            "job_id": job_id
+            "job_id": None,
+            "zpl": zpl_completo
         }
 
     except Exception as e:
