@@ -183,7 +183,7 @@ class EquipoService:
 
         return equipo
 
-       @staticmethod
+    @staticmethod
     def eliminar(
         session: Session,
         equipo: Equipo,

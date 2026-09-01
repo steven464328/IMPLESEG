@@ -1,7 +1,7 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from app.routers import dashboard_equipos
+from app.routers import dashboard_equipos, impresoras
 from app.database import init_db
 
 from app.routers import (
@@ -35,6 +35,7 @@ app.include_router(gh_bajas.router)
 app.include_router(recepcion.router)
 app.include_router(etiquetas_usb.router)
 app.include_router(dashboard_equipos.router)
+app.include_router(impresoras.router)
 
 app.mount(
     "/static",
@@ -49,3 +50,4 @@ def index():
 @app.get("/gestion-humana")
 def gestion_humana():
     return FileResponse(os.path.join(BASE_DIR, "templates", "gestion_humana.html"))
+

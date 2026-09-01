@@ -29,3 +29,4 @@ __all__ = [
     "Visitante",
     "RegistroEtiqueta",
 ]
+from .impresora import Impresora

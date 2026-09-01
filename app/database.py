@@ -1,60 +1,67 @@
-"""
-Base de datos del ERP EJ Soluciones.
-
-Compatible con:
-- SQLite (desarrollo)
-- PostgreSQL (producción)
-
-No será necesario modificar el resto del proyecto al cambiar de motor.
+﻿"""
+Conexión PostgreSQL de IMPLESEG ERP.
 """
 
 import os
+from pathlib import Path
 
+from dotenv import load_dotenv
 from sqlmodel import SQLModel, Session, create_engine
 
-# -----------------------------
-# Directorios
-# -----------------------------
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# =========================================================
+# CARGAR .ENV DESDE LA RAÍZ DEL PROYECTO
+# =========================================================
 
-DATA_DIR = os.path.join(BASE_DIR, "data")
+BASE_DIR = Path(__file__).resolve().parent.parent
+ENV_FILE = BASE_DIR / ".env"
 
-os.makedirs(DATA_DIR, exist_ok=True)
+load_dotenv(ENV_FILE)
 
-# -----------------------------
-# Base de datos
-# -----------------------------
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    f"sqlite:///{os.path.join(DATA_DIR,'ej_sistemas.db')}"
-)
+# =========================================================
+# BASE DE DATOS
+# =========================================================
 
-connect_args = {}
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-if DATABASE_URL.startswith("sqlite"):
-    connect_args["check_same_thread"] = False
+if not DATABASE_URL:
+    raise RuntimeError(
+        f"DATABASE_URL no está configurada. "
+        f"Archivo esperado: {ENV_FILE}"
+    )
+
+if not DATABASE_URL.startswith(
+    ("postgresql://", "postgresql+psycopg://")
+):
+    raise RuntimeError(
+        "DATABASE_URL debe utilizar PostgreSQL."
+    )
+
+
+# =========================================================
+# MOTOR POSTGRESQL
+# =========================================================
 
 engine = create_engine(
     DATABASE_URL,
     echo=False,
-    connect_args=connect_args
+    pool_pre_ping=True,
 )
 
-# -----------------------------
-# Inicializar BD
-# -----------------------------
+
+# =========================================================
+# INICIALIZACIÓN
+# =========================================================
 
 def init_db():
-
     SQLModel.metadata.create_all(engine)
 
-# -----------------------------
-# Sesiones
-# -----------------------------
+
+# =========================================================
+# SESIONES
+# =========================================================
 
 def get_session():
-
     with Session(engine) as session:
         yield session

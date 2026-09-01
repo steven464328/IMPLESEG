@@ -1,6 +1,7 @@
-from datetime import datetime
+﻿from datetime import datetime
 
 from sqlmodel import Field
+from sqlalchemy import BigInteger
 
 from app.models.base import BaseModel
 
@@ -8,7 +9,7 @@ from app.models.base import BaseModel
 class RegistroEtiqueta(BaseModel, table=True):
     __tablename__ = "etiquetas"
 
-    consecutivo: int = Field(index=True, unique=True)
+    consecutivo: int = Field(sa_type=BigInteger, index=True, unique=True)
 
     cedula: str
 

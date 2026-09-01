@@ -1,386 +1,76 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IMPLESEG - Sistema de Etiquetas v2.0</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f0f0; }
-        
-        /* Modal de Login */
-        #login-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 9999; display: flex;
-            align-items: center; justify-content: center; backdrop-filter: blur(5px);
-        }
-        
-        /* Estilos tipo aplicación de escritorio */
-        .app-container { background-color: #f0f0f0; min-height: 100vh; padding: 20px; }
-        .header-title { color: #0056b3; font-weight: bold; font-size: 24px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        .counter-text { color: #004d40; font-weight: bold; }
-        
-        /* Pestañas (Tabs) */
-        .tabs { display: flex; border-bottom: 1px solid #ccc; margin-bottom: 20px; }
-        .tab-btn {
-            padding: 8px 16px; background: #e0e0e0; border: 1px solid #ccc; border-bottom: none;
-            margin-right: 2px; cursor: pointer; color: #333; font-size: 14px;
-        }
-        .tab-btn.active { background: #f0f0f0; border-top: 2px solid #0056b3; background-color: white; font-weight: bold; }
-        .tab-content { display: none; background: white; padding: 20px; border: 1px solid #ccc; border-top: none; min-height: 400px;}
-        .tab-content.active { display: block; }
-        
-        /* Botones estilo Windows */
-        .btn-blue { background-color: #1a65a5; color: white; border: 1px solid #0f406b; padding: 10px 20px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 2px 2px 5px rgba(0,0,0,0.2);}
-        .btn-blue:hover { background-color: #144d7d; }
-        .btn-green { background-color: #557940; color: white; border: 1px solid #364d29; padding: 10px 20px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 2px 2px 5px rgba(0,0,0,0.2);}
-        .btn-green:hover { background-color: #405c30; }
-        .btn-red { background-color: #c9302c; color: white; border: 1px solid #ac2925; padding: 6px 12px; font-weight: bold; cursor: pointer; }
-        
-        .input-box { border: 1px solid #ccc; padding: 4px 8px; width: 150px; }
-        .form-row { display: flex; align-items: center; margin-bottom: 15px; gap: 15px; }
-        .form-label { width: 250px; font-size: 14px; color: #333; }
-        
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        th { background-color: #f8f9fa; font-weight: bold; position: sticky; top: 0;}
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IMPLESEG - Impresión USB</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f6f8;color:#1f2937}.wrap{max-width:1500px;margin:0 auto;padding:18px}.top{display:flex;align-items:center;gap:28px;margin-bottom:14px}.top h1{margin:0;color:#075a9b;font-size:27px}.next{font-size:20px}.next b{color:#006b55}.tabs{display:flex;border-bottom:1px solid #cbd5e1}.tab{padding:13px 22px;border:1px solid #cbd5e1;border-bottom:0;background:#e5e7eb;cursor:pointer}.tab.active{background:#fff;font-weight:bold;border-top:3px solid #075a9b}.panel{display:none;background:#fff;border:1px solid #cbd5e1;border-top:0;padding:22px}.panel.active{display:block}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.card{border:1px solid #d7dde5;border-radius:5px;padding:18px;background:#fff}.card h2{font-size:18px;margin:0 0 15px;color:#17365d}.row{display:grid;grid-template-columns:190px 1fr;gap:10px;align-items:center;margin:10px 0}.row label{font-weight:600}.input{width:100%;padding:10px;border:1px solid #aeb7c2;border-radius:4px;font-size:16px}.btn{border:0;border-radius:4px;padding:11px 18px;font-weight:bold;cursor:pointer}.primary{background:#075a9b;color:white}.success{background:#006b55;color:white}.danger{background:#b42318;color:white}.muted{color:#667085}.note{background:#eef6ff;border-left:4px solid #075a9b;padding:12px;margin-top:12px}.status{padding:12px;margin:12px 0;border-radius:4px;display:none}.status.ok{display:block;background:#e8f7ef;color:#075e3d}.status.err{display:block;background:#fff0f0;color:#9b1c1c}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.preview{overflow:auto;background:#e5e7eb;border:1px solid #c4cbd3;padding:22px}.sheet{width:640px;height:200px;background:#fff;display:flex;box-shadow:0 4px 12px #999;margin:auto}.label{width:320px;height:200px;padding:10px 10px 12px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}.label+.label{border-left:1px solid #ddd}.company{font-size:30px;font-weight:800;margin-top:0;line-height:1.05}.barcode{height:58px;width:300px;margin-top:10px;display:flex;align-items:stretch;justify-content:center;overflow:hidden}.barcode i{display:block;height:58px;background:#111}.num{font-size:34px;font-weight:800;margin-top:10px;letter-spacing:.5px}.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}.metric{border:1px solid #d7dde5;padding:14px;text-align:center}.metric b{display:block;font-size:20px;color:#075a9b}.small{font-size:13px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#eef2f7}@media(max-width:900px){.grid,.config-grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column;gap:4px}.tabs{overflow:auto}.metrics{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
+<div class="wrap">
+  <div class="top"><h1>IMPLESEG - Impresión USB</h1><div class="next">Siguiente: <b id="next">—</b></div></div>
+  <div class="tabs">
+    <button class="tab active" data-tab="nueva">Imprimir Nueva</button>
+    <button class="tab" data-tab="rango">Hasta Número</button>
+    <button class="tab" data-tab="reimp">Reimprimir</button>
+    <button class="tab" data-tab="hist">Historial</button>
+    <button class="tab" data-tab="config">Configuración</button>
+  </div>
 
-    <!-- Modal de Autenticación Obligatoria -->
-    <div id="login-modal">
-        <div class="bg-white p-8 rounded-lg shadow-2xl w-96 text-center">
-            <h2 class="text-2xl font-bold text-blue-800 mb-2">Acceso al Sistema</h2>
-            <p class="text-sm text-gray-600 mb-6">Identifíquese para registrar sus impresiones</p>
-            
-            <input type="text" id="login-nombre" placeholder="Su Nombre Completo" class="w-full border p-3 rounded mb-4 focus:outline-none focus:border-blue-500">
-            <input type="number" id="login-cedula" placeholder="Su Cédula" class="w-full border p-3 rounded mb-6 focus:outline-none focus:border-blue-500">
-            
-            <button onclick="iniciarSesion()" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700">Entrar al Módulo</button>
-        </div>
+  <section id="nueva" class="panel active">
+    <div class="grid">
+      <div class="card">
+        <h2>Imprimir nuevo consecutivo</h2>
+        <div class="row"><label>Cantidad de consecutivos</label><input id="cantidad" class="input" type="number" min="1" value="1"></div>
+        <div class="row"><label>Copias</label><input id="copias" class="input" type="number" min="1" value="1"></div>
+        <div class="row"><label>Usuario</label><input id="usuario" class="input" value="Operador"></div>
+        <div class="row"><label>Cédula</label><input id="cedula" class="input"></div>
+        <div class="row"><label>Cliente / Empresa</label><input id="cliente" class="input"></div>
+        <div class="row"><label>NIT / C.C.</label><input id="nit" class="input"></div>
+        <div class="actions"><button class="btn success" onclick="imprimirNueva(false)">Imprimir</button><button class="btn primary" onclick="imprimirNueva(true)">Solo asignar</button><button class="btn" onclick="actualizar()">Actualizar</button></div>
+        <div class="note"><b>Regla del rollo:</b> cada consecutivo imprime el mismo número en la etiqueta izquierda y en la derecha. Una solicitud de 1 consecutivo produce 2 stickers, no 4.</div>
+      </div>
+      <div class="card">
+        <h2>Vista previa</h2>
+        <div class="preview"><div class="sheet"><div class="label"><div class="company">IMPLESEG</div><div class="barcode" id="bar1"></div><div class="num" id="num1">20000000000</div></div><div class="label"><div class="company">IMPLESEG</div><div class="barcode" id="bar2"></div><div class="num" id="num2">20000000000</div></div></div></div>
+        <div class="metrics"><div class="metric"><b>640</b><span>ancho total</span></div><div class="metric"><b>320</b><span>cada etiqueta</span></div><div class="metric"><b>2</b><span>etiquetas por fila</span></div></div>
+      </div>
     </div>
+    <div id="statusNueva" class="status"></div>
+  </section>
 
-    <div class="app-container">
-        <!-- Encabezado -->
-        <div class="flex justify-between items-center mb-2">
-            <div class="header-title">
-                IMPLESEG - Impresion USB
-                <span class="text-black font-normal text-xl ml-2">Siguiente: <span id="lbl-siguiente" class="counter-text">Cargando...</span></span>
-            </div>
-            <div class="flex items-center gap-4">
-                <span id="user-info" class="text-sm text-gray-600 font-bold bg-white px-3 py-1 border rounded shadow-sm">Usuario: No identificado</span>
-                <button onclick="window.location.href='/'" class="text-sm text-gray-500 hover:text-red-500 underline">Volver al Menú</button>
-            </div>
-        </div>
+  <section id="rango" class="panel"><div class="card"><h2>Imprimir hasta número</h2><div class="row"><label>Hasta número</label><input id="hasta" class="input" type="number" min="1"></div><div class="row"><label>Copias</label><input id="copiasRango" class="input" type="number" min="1" value="1"></div><div class="row"><label>Usuario</label><input id="usuarioRango" class="input" value="Operador"></div><div class="row"><label>Cédula</label><input id="cedulaRango" class="input"></div><div class="actions"><button class="btn success" onclick="imprimirRango()">Imprimir rango</button></div><div id="statusRango" class="status"></div></div></section>
 
-        <!-- Pestañas -->
-        <div class="tabs">
-            <button class="tab-btn active" onclick="abrirTab(event, 'tab-nueva')">Imprimir Nueva</button>
-            <button class="tab-btn" onclick="abrirTab(event, 'tab-rango')">Hasta Numero</button>
-            <button class="tab-btn" onclick="abrirTab(event, 'tab-reimprimir')">Reimprimir</button>
-            <button class="tab-btn" onclick="abrirTab(event, 'tab-historial')">Historial</button>
-            <button class="tab-btn" onclick="abrirTab(event, 'tab-config')">Configuracion</button>
-        </div>
+  <section id="reimp" class="panel"><div class="card"><h2>Reimprimir consecutivos</h2><div class="row"><label>Desde</label><input id="desdeReimp" class="input" type="number"></div><div class="row"><label>Hasta</label><input id="hastaReimp" class="input" type="number"></div><div class="row"><label>Copias</label><input id="copiasReimp" class="input" type="number" min="1" value="1"></div><div class="actions"><button class="btn primary" onclick="reimprimir()">Reimprimir</button></div><div id="statusReimp" class="status"></div></div></section>
 
-        <!-- CONTENIDO: Imprimir Nueva -->
-        <div id="tab-nueva" class="tab-content active">
-            <div class="form-row">
-                <div class="form-label">Cantidad de etiquetas (numeros unicos):</div>
-                <input type="number" id="n_cantidad" class="input-box" value="1" min="1">
-            </div>
-            <div class="form-row">
-                <div class="form-label">Copias por etiqueta:</div>
-                <input type="number" id="n_copias" class="input-box" value="2" min="1">
-            </div>
-            
-            <!-- Trazabilidad Nuevo Cliente -->
-            <div class="bg-gray-50 p-4 border rounded mb-6 mt-4 w-1/2">
-                <h4 class="font-bold text-sm text-gray-700 mb-3 border-b pb-1">Trazabilidad de Cliente (Opcional)</h4>
-                <input type="text" id="c_nombre" placeholder="Nombre Empresa o Persona" class="w-full border p-2 mb-2 text-sm">
-                <div class="flex gap-2 mb-2">
-                    <input type="text" id="c_nit" placeholder="NIT / C.C." class="w-1/2 border p-2 text-sm">
-                    <input type="text" id="c_contacto" placeholder="Teléfono" class="w-1/2 border p-2 text-sm">
-                </div>
-                <input type="text" id="c_direccion" placeholder="Dirección" class="w-full border p-2 text-sm">
-            </div>
+  <section id="hist" class="panel"><div class="card"><h2>Historial</h2><div class="actions"><button class="btn primary" onclick="cargarHistorial()">Actualizar historial</button></div><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Operación</th><th>Consecutivo</th><th>Usuario</th><th>Cliente</th></tr></thead><tbody id="histBody"></tbody></table></div></div></section>
 
-            <div class="flex gap-4 mt-6">
-                <button class="btn-blue text-lg px-8" onclick="procesarNueva(false)">Imprimir y Avanzar</button>
-                <button class="btn-green text-lg px-8" onclick="procesarNueva(true)">Asignar sin Imprimir</button>
-            </div>
-            <p class="text-xs text-gray-500 mt-4 italic">'Asignar' reserva numeros y avanza el consecutivo sin enviar nada a la impresora.</p>
-        </div>
-
-        <!-- CONTENIDO: Hasta Numero -->
-        <div id="tab-rango" class="tab-content">
-            <div class="form-row">
-                <div class="form-label">Imprimir hasta el numero (inclusive):</div>
-                <input type="number" id="r_hasta" class="input-box" placeholder="Ej. 20000000010">
-            </div>
-            <div class="form-row">
-                <div class="form-label">Copias por etiqueta:</div>
-                <input type="number" id="r_copias" class="input-box" value="2" min="1">
-            </div>
-            <div class="mt-8">
-                <button class="btn-blue text-lg px-8" onclick="procesarHastaNumero()">Imprimir Rango y Avanzar</button>
-            </div>
-        </div>
-
-        <!-- CONTENIDO: Reimprimir -->
-        <div id="tab-reimprimir" class="tab-content">
-            <p class="text-red-600 font-bold mb-6">ATENCION: Reimprimir NO avanza el consecutivo.</p>
-            <div class="form-row">
-                <div class="form-label">Desde el numero:</div>
-                <input type="number" id="re_desde" class="input-box">
-            </div>
-            <div class="form-row">
-                <div class="form-label">Hasta el numero:</div>
-                <input type="number" id="re_hasta" class="input-box">
-            </div>
-            <div class="form-row">
-                <div class="form-label">Copias por etiqueta:</div>
-                <input type="number" id="re_copias" class="input-box" value="2" min="1">
-            </div>
-            <div class="mt-8">
-                <button class="btn-green text-lg px-8" style="background-color: #004d40; border-color:#00251a;" onclick="procesarReimpresion()">Reimprimir Rango</button>
-            </div>
-        </div>
-
-        <!-- CONTENIDO: Historial -->
-        <div id="tab-historial" class="tab-content">
-            <div class="flex justify-between items-center mb-4">
-                <div class="text-sm">
-                    Total registros: <span id="h_total">0</span> | Filtrar por tipo:
-                    <select id="h_filtro" onchange="cargarHistorial()" class="border ml-2 p-1">
-                        <option value="TODOS">Todos</option>
-                        <option value="IMPRESION">Impresión</option>
-                        <option value="ASIGNACION">Asignación</option>
-                        <option value="REIMPRESION">Reimpresión</option>
-                    </select>
-                </div>
-                <button class="btn-red" onclick="cargarHistorial()">Actualizar tabla</button>
-            </div>
-            <div style="height: 400px; overflow-y: auto; border: 1px solid #ccc;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Fecha / Hora</th>
-                            <th>Tipo</th>
-                            <th>Desde</th>
-                            <th>Hasta</th>
-                            <th>Cantidad</th>
-                            <th>Copias</th>
-                            <th>Usuario (Empleado)</th>
-                            <th>Cliente</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-historial-body">
-                        <!-- Llenado por JS -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- CONTENIDO: Configuración -->
-        <div id="tab-config" class="tab-content">
-            <div class="border p-4 bg-gray-50 mb-6">
-                <h3 class="font-bold text-gray-700 mb-4">Consecutivo manual</h3>
-                <div class="form-row">
-                    <div class="form-label">Numero actual:</div>
-                    <span id="cfg_actual" class="font-bold text-teal-800 text-lg">Cargando...</span>
-                </div>
-                <div class="form-row">
-                    <div class="form-label">Nuevo valor:</div>
-                    <input type="number" id="cfg_nuevo" class="input-box">
-                </div>
-                <p class="text-xs text-red-500 italic mt-4">CUIDADO: cambiar el consecutivo puede generar numeros duplicados.</p>
-            </div>
-            
-            <div class="border p-4 bg-gray-50 mb-6">
-                <h3 class="font-bold text-gray-700 mb-4">Impresora</h3>
-                <div class="form-row">
-                    <div class="form-label">Nombre en Windows:</div>
-                    <input type="text" id="cfg_impresora" class="input-box" style="width: 250px;" value="ZEBRA">
-                </div>
-            </div>
-
-            <div class="text-center mt-8">
-                <button class="btn-green text-lg px-8" style="background-color: #004d40;" onclick="guardarConfiguracion()">Guardar toda la configuracion</button>
-            </div>
-        </div>
+  <section id="config" class="panel">
+    <div class="config-grid">
+      <div class="card"><h2>Consecutivo manual</h2><div class="row"><label>Número actual</label><strong id="actualConfig">—</strong></div><div class="row"><label>Nuevo valor</label><input id="nuevoConsecutivo" class="input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="11" autocomplete="off"></div><div class="note">El valor ingresado será el <b>siguiente consecutivo</b>. Ese número se imprimirá en ambas etiquetas.</div></div>
+      <div class="card"><h2>Impresora</h2><div class="row"><label>Nombre en Windows</label><select id="impresora" class="input"></select></div><div class="muted small">La impresión se envía directamente como ZPL RAW a la impresora seleccionada.</div><div class="actions"><button class="btn primary" onclick="cargarImpresoras()">Actualizar impresoras</button></div></div>
     </div>
-
-    <script>
-        // --- SESIÓN Y USUARIO ---
-        let usuarioActual = { nombre: "", cedula: "" };
-
-        window.onload = () => {
-            const savedUser = localStorage.getItem('impleseg_user');
-            if (savedUser) {
-                usuarioActual = JSON.parse(savedUser);
-                document.getElementById('login-modal').style.display = 'none';
-                document.getElementById('user-info').innerText = `Usuario: ${usuarioActual.nombre}`;
-                actualizarEstado();
-            }
-        };
-
-        function iniciarSesion() {
-            const nom = document.getElementById('login-nombre').value.trim();
-            const ced = document.getElementById('login-cedula').value.trim();
-            if(!nom || !ced) return Swal.fire("Error", "Debe ingresar nombre y cédula", "error");
-            
-            usuarioActual = { nombre: nom, cedula: ced };
-            localStorage.setItem('impleseg_user', JSON.stringify(usuarioActual));
-            document.getElementById('login-modal').style.display = 'none';
-            document.getElementById('user-info').innerText = `Usuario: ${usuarioActual.nombre}`;
-            actualizarEstado();
-        }
-
-        // --- NAVEGACIÓN TABS ---
-        function abrirTab(evt, tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            evt.currentTarget.classList.add('active');
-            if(tabId === 'tab-historial') cargarHistorial();
-        }
-
-        // --- COMUNICACIÓN BACKEND ---
-        async function actualizarEstado() {
-            try {
-                const res = await fetch('/etiquetas/api/estado');
-                const data = await res.json();
-                document.getElementById('lbl-siguiente').innerText = data.consecutivo;
-                document.getElementById('cfg_actual').innerText = data.consecutivo;
-                document.getElementById('cfg_nuevo').value = data.consecutivo;
-                document.getElementById('cfg_impresora').value = data.impresora;
-            } catch (e) { console.error(e); }
-        }
-
-        // FUNCIÓN CLAVE: DESCARGAR ARCHIVO ZPL PARA IMPRIMIR LOCALMENTE
-        function descargarArchivoZPL(zplContent) {
-            if(!zplContent) return;
-            const blob = new Blob([zplContent], { type: 'text/plain' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `etiquetas_impleseg_${new Date().getTime()}.zpl`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            Swal.fire({
-                title: '¡Archivo ZPL Generado!',
-                text: 'Se ha descargado el archivo. Ábrelo o envíalo a tu impresora Zebra.',
-                icon: 'success'
-            });
-        }
-
-        async function enviarPeticion(url, payload, limpiarFuncion) {
-            try {
-                const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-                const data = await res.json();
-                if(res.ok) {
-                    actualizarEstado();
-                    if(limpiarFuncion) limpiarFuncion();
-                    if(data.zpl) descargarArchivoZPL(data.zpl);
-                    else Swal.fire("Éxito", "Operación guardada (Sin impresión)", "success");
-                } else {
-                    Swal.fire("Error", data.detail || "Error en la operación", "error");
-                }
-            } catch (e) {
-                Swal.fire("Error", "Problema de conexión con el servidor", "error");
-            }
-        }
-
-        // --- OPERACIONES ---
-        function procesarNueva(soloAsignar) {
-            const payload = {
-                cantidad: parseInt(document.getElementById('n_cantidad').value),
-                copias: parseInt(document.getElementById('n_copias').value),
-                solo_asignar: soloAsignar,
-                usuario_nombre: usuarioActual.nombre,
-                usuario_cedula: usuarioActual.cedula,
-                c_nombre: document.getElementById('c_nombre').value.trim(),
-                c_nit: document.getElementById('c_nit').value.trim(),
-                c_contacto: document.getElementById('c_contacto').value.trim(),
-                c_direccion: document.getElementById('c_direccion').value.trim()
-            };
-            enviarPeticion('/etiquetas/api/imprimir_nueva', payload, () => {
-                document.getElementById('c_nombre').value = '';
-                document.getElementById('c_nit').value = '';
-                document.getElementById('c_contacto').value = '';
-                document.getElementById('c_direccion').value = '';
-            });
-        }
-
-        function procesarHastaNumero() {
-            const payload = {
-                hasta_numero: parseInt(document.getElementById('r_hasta').value),
-                copias: parseInt(document.getElementById('r_copias').value),
-                usuario_nombre: usuarioActual.nombre,
-                usuario_cedula: usuarioActual.cedula
-            };
-            enviarPeticion('/etiquetas/api/imprimir_rango', payload, () => {
-                document.getElementById('r_hasta').value = '';
-            });
-        }
-
-        function procesarReimpresion() {
-            const payload = {
-                desde_numero: parseInt(document.getElementById('re_desde').value),
-                hasta_numero: parseInt(document.getElementById('re_hasta').value),
-                copias: parseInt(document.getElementById('re_copias').value),
-                usuario_nombre: usuarioActual.nombre,
-                usuario_cedula: usuarioActual.cedula
-            };
-            enviarPeticion('/etiquetas/api/reimprimir', payload, () => {
-                document.getElementById('re_desde').value = '';
-                document.getElementById('re_hasta').value = '';
-            });
-        }
-
-        function guardarConfiguracion() {
-            const payload = {
-                nuevo_consecutivo: parseInt(document.getElementById('cfg_nuevo').value),
-                nombre_impresora: document.getElementById('cfg_impresora').value
-            };
-            enviarPeticion('/etiquetas/api/configurar', payload, null);
-        }
-
-        // --- HISTORIAL ---
-        async function cargarHistorial() {
-            const filtro = document.getElementById('h_filtro').value;
-            const res = await fetch('/etiquetas/api/historial');
-            const data = await res.json();
-            
-            const tbody = document.getElementById('tabla-historial-body');
-            tbody.innerHTML = '';
-            
-            let count = 0;
-            data.forEach(item => {
-                if(filtro !== "TODOS" && item.tipo_operacion !== filtro) return;
-                count++;
-                
-                let fechaFormateada = new Date(item.fecha_hora).toLocaleString('es-CO');
-                let clienteTexto = item.cliente_nombre ? `${item.cliente_nombre} (${item.cliente_nit})` : '-';
-                
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${fechaFormateada}</td>
-                        <td class="font-bold text-gray-700">${item.tipo_operacion}</td>
-                        <td>${item.desde_numero}</td>
-                        <td>${item.hasta_numero}</td>
-                        <td>${item.cantidad}</td>
-                        <td>${item.copias}</td>
-                        <td class="text-xs">${item.usuario_nombre}<br><span class="text-gray-400">${item.usuario_cedula}</span></td>
-                        <td class="text-xs">${clienteTexto}</td>
-                    </tr>
-                `;
-            });
-            document.getElementById('h_total').innerText = count;
-        }
-    </script>
+    <div class="card" style="margin-top:18px"><h2>Diseño de etiqueta</h2><div class="preview"><div class="sheet"><div class="label"><div class="company">IMPLESEG</div><div class="barcode" id="bar3"></div><div class="num" id="num3">20000000000</div></div><div class="label"><div class="company">IMPLESEG</div><div class="barcode" id="bar4"></div><div class="num" id="num4">20000000000</div></div></div></div><div class="note"><b>Calibración física:</b> formato total 640 dots × 200 dots. Cada sticker ocupa 320 dots. Los contenidos de la izquierda están dentro de 10–310 y los de la derecha dentro de 330–630, evitando que una etiqueta invada la otra.</div></div>
+    <div class="actions" style="justify-content:center"><button class="btn success" onclick="guardarConfig()">Guardar toda la configuración</button></div><div id="statusConfig" class="status"></div>
+  </section>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+function status(id,msg,ok=true){const e=$(id);e.textContent=msg;e.className='status '+(ok?'ok':'err')}
+function setPreview(n){const v=String(n??'').replace(/\D/g,'').slice(0,11)||'0';['num1','num2','num3','num4'].forEach(id=>$(id).textContent=v);['bar1','bar2','bar3','bar4'].forEach(id=>crearBarras($(id),v))}
+function crearBarras(el,n){el.innerHTML='';let seed=0;for(const c of n)seed=(seed*31+c.charCodeAt(0))%9973;let x=seed||1;for(let i=0;i<90;i++){x=(x*37+17)%1000;const w=(x%4)+1;const gap=(x%3)+1;const b=document.createElement('i');b.style.width=w+'px';b.style.marginRight=gap+'px';el.appendChild(b)}}
+async function actualizar(){try{const r=await fetch('/etiquetas/api/estado');const d=await r.json();$('next').textContent=d.consecutivo;$('actualConfig').textContent=d.consecutivo;$('nuevoConsecutivo').value=d.consecutivo;setPreview(d.consecutivo);if(d.impresora){await cargarImpresoras(d.impresora)}}catch(e){console.error(e)}}
+async function cargarImpresoras(seleccion){try{const r=await fetch('/etiquetas/api/impresoras');const d=await r.json();const s=$('impresora');s.innerHTML='';(d.impresoras||[]).forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;s.appendChild(o)});if(seleccion&&d.impresoras.includes(seleccion))s.value=seleccion}catch(e){status('statusConfig','No se pudieron cargar las impresoras: '+e,false)}}
+async function imprimirNueva(solo){const body={cantidad:+$('cantidad').value,copias:+$('copias').value,solo_asignar:solo,usuario_nombre:$('usuario').value,usuario_cedula:$('cedula').value,c_nombre:$('cliente').value,c_nit:$('nit').value};try{const r=await fetch('/etiquetas/api/imprimir_nueva',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.detail||'Error');status('statusNueva',d.mensaje,true);await actualizar()}catch(e){status('statusNueva',e.message,false)}}
+async function imprimirRango(){const body={hasta_numero:+$('hasta').value,copias:+$('copiasRango').value,usuario_nombre:$('usuarioRango').value,usuario_cedula:$('cedulaRango').value};try{const r=await fetch('/etiquetas/api/imprimir_rango',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.detail||'Error');status('statusRango',d.mensaje,true);await actualizar()}catch(e){status('statusRango',e.message,false)}}
+async function reimprimir(){const body={desde_numero:+$('desdeReimp').value,hasta_numero:+$('hastaReimp').value,copias:+$('copiasReimp').value,usuario_nombre:'Operador',usuario_cedula:''};try{const r=await fetch('/etiquetas/api/reimprimir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.detail||'Error');status('statusReimp',d.mensaje,true)}catch(e){status('statusReimp',e.message,false)}}
+async function guardarConfig(){const raw=$('nuevoConsecutivo').value.trim();if(!/^\d+$/.test(raw)){status('statusConfig','Ingrese solo numeros, sin puntos ni espacios.',false);return}const n=Number(raw);const actual=Number($('actualConfig').textContent);if(!Number.isSafeInteger(n)||n<=0){status('statusConfig','Ingrese un consecutivo válido.',false);return}if(n===actual){status('statusConfig','El nuevo consecutivo ya es el actual.',false);return}const body={nuevo_consecutivo:n,nombre_impresora:$('impresora').value};try{const r=await fetch('/etiquetas/api/configurar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.detail||'Error');status('statusConfig',d.mensaje,true);await actualizar()}catch(e){status('statusConfig',e.message,false)}}
+async function cargarHistorial(){try{const r=await fetch('/etiquetas/api/historial');const d=await r.json();$('histBody').innerHTML=(d||[]).map(x=>`<tr><td>${new Date(x.fecha_hora).toLocaleString()}</td><td>${x.tipo_operacion}</td><td>${x.desde_numero}</td><td>${x.usuario_nombre||''}</td><td>${x.cliente_nombre||''}</td></tr>`).join('')}catch(e){console.error(e)}}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.tab).classList.add('active');if(b.dataset.tab==='hist')cargarHistorial();if(b.dataset.tab==='config')cargarImpresoras()});
+$('nuevoConsecutivo').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,11);setPreview(e.target.value||0)});
+actualizar();
+</script>
 </body>
 </html>

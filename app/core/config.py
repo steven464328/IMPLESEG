@@ -1,16 +1,16 @@
-"""
-Configuración central del ERP IMPLESEG.
-
-Toda la configuración del sistema debe obtenerse desde este archivo.
-En el futuro leerá automáticamente un archivo .env.
+﻿"""
+Configuración central de IMPLESEG ERP.
 """
 
 from pathlib import Path
 import os
 
-# ===========================
-# RUTAS DEL PROYECTO
-# ===========================
+from dotenv import load_dotenv
+
+
+# =========================================================
+# RUTAS
+# =========================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -21,38 +21,62 @@ TEMPLATES_DIR = APP_DIR / "templates"
 LOGS_DIR = BASE_DIR / "logs"
 UPLOADS_DIR = BASE_DIR / "uploads"
 
-# Crear carpetas si no existen
 for carpeta in [DATA_DIR, LOGS_DIR, UPLOADS_DIR]:
     carpeta.mkdir(parents=True, exist_ok=True)
 
-# ===========================
-# CONFIGURACIÓN GENERAL
-# ===========================
+
+# =========================================================
+# .ENV
+# =========================================================
+
+ENV_FILE = BASE_DIR / ".env"
+
+load_dotenv(ENV_FILE)
+
+
+# =========================================================
+# APLICACIÓN
+# =========================================================
 
 APP_NAME = "IMPLESEG ERP"
 APP_VERSION = "2.0.0"
 
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
 TIMEZONE = "America/Bogota"
 
-SECRET_KEY = os.getenv(
-    "SECRET_KEY",
-    "CAMBIAR_ESTA_CLAVE_EN_PRODUCCION"
-)
+SECRET_KEY = os.getenv("SECRET_KEY")
 
-# ===========================
-# BASE DE DATOS
-# ===========================
+if not SECRET_KEY:
+    raise RuntimeError(
+        f"SECRET_KEY no está configurada. "
+        f"Archivo esperado: {ENV_FILE}"
+    )
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    f"sqlite:///{DATA_DIR / 'ej_sistemas.db'}"
-)
 
-# ===========================
+# =========================================================
+# POSTGRESQL
+# =========================================================
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError(
+        f"DATABASE_URL no está configurada. "
+        f"Archivo esperado: {ENV_FILE}"
+    )
+
+if not DATABASE_URL.startswith(
+    ("postgresql://", "postgresql+psycopg://")
+):
+    raise RuntimeError(
+        "DATABASE_URL debe utilizar PostgreSQL."
+    )
+
+
+# =========================================================
 # EMPRESA
-# ===========================
+# =========================================================
 
 DEFAULT_COMPANY = "IMPLESEG"
 
