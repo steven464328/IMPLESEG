@@ -18,12 +18,21 @@ INFO:     Stopping reloader process [21288]
             align-items: center; justify-content: center; backdrop-filter: blur(5px);
         }
         
-        /* Estilos tipo aplicaciÃ³n de escritorio */
+        /* Estilos tipo aplicación de escritorio */
         .app-container { background-color: #f0f0f0; min-height: 100vh; padding: 20px; }
         .header-title { color: #0056b3; font-weight: bold; font-size: 24px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
         .counter-text { color: #004d40; font-weight: bold; }
+        .counter-updated {
+            animation: counterPulse 0.45s ease;
+        }
+
+        @keyframes counterPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.10); }
+            100% { transform: scale(1); }
+        }
         
-        /* PestaÃ±as (Tabs) */
+        /* Pestañas (Tabs) */
         .tabs { display: flex; border-bottom: 1px solid #ccc; margin-bottom: 20px; }
         .tab-btn {
             padding: 8px 16px; background: #e0e0e0; border: 1px solid #ccc; border-bottom: none;
@@ -47,20 +56,185 @@ INFO:     Stopping reloader process [21288]
         table { width: 100%; border-collapse: collapse; font-size: 12px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
         th { background-color: #f8f9fa; font-weight: bold; position: sticky; top: 0;}
+
+        /* ============================================================
+           VISTA PREVIA DE LAS DOS ETIQUETAS
+           ============================================================ */
+
+        .btn-preview {
+            background-color: #6b7280;
+            color: white;
+            border: 1px solid #4b5563;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .btn-preview:hover {
+            background-color: #4b5563;
+        }
+
+        .preview-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            background: rgba(0,0,0,0.65);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .preview-modal.show {
+            display: flex;
+        }
+
+        .preview-window {
+            width: min(980px, 96vw);
+            max-height: 94vh;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            padding: 22px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+        }
+
+        .preview-title {
+            color: #0056b3;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .preview-subtitle {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 18px;
+        }
+
+        .label-sheet-preview {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            background: #e5e7eb;
+            border: 1px solid #bbb;
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        .label-preview {
+            position: relative;
+            width: 320px;
+            min-width: 320px;
+            height: 200px;
+            background: white;
+            border: 1px solid #999;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .label-company {
+            position: absolute;
+            top: 13px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 27px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .label-barcode {
+            position: absolute;
+            top: 61px;
+            left: 18px;
+            right: 18px;
+            height: 62px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .barcode-bars {
+            width: 278px;
+            height: 55px;
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .barcode-bars span {
+            display: block;
+            height: 55px;
+            background: #111;
+            margin-right: 1px;
+            flex: 0 0 auto;
+        }
+
+        .label-number {
+            position: absolute;
+            left: 0;
+            bottom: 13px;
+            width: 100%;
+            text-align: center;
+            font-size: 25px;
+            font-weight: bold;
+        }
+
+        .preview-info {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+        }
+
+        .preview-info-box {
+            min-width: 160px;
+            border: 1px solid #ddd;
+            background: #fafafa;
+            padding: 10px 14px;
+            text-align: center;
+        }
+
+        .preview-info-label {
+            display: block;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .preview-info-value {
+            display: block;
+            color: #111;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 3px;
+        }
+
+        .preview-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
     </style>
 </head>
 <body>
 
-    <!-- Modal de AutenticaciÃ³n Obligatoria -->
+    <!-- Modal de Autenticación Obligatoria -->
     <div id="login-modal">
         <div class="bg-white p-8 rounded-lg shadow-2xl w-96 text-center">
             <h2 class="text-2xl font-bold text-blue-800 mb-2">Acceso al Sistema</h2>
-            <p class="text-sm text-gray-600 mb-6">IdentifÃquese para registrar sus impresiones</p>
+            <p class="text-sm text-gray-600 mb-6">Identifíquese para registrar sus impresiones</p>
             
             <input type="text" id="login-nombre" placeholder="Su Nombre Completo" class="w-full border p-3 rounded mb-4 focus:outline-none focus:border-blue-500">
-            <input type="number" id="login-cedula" placeholder="Su CÃ©dula" class="w-full border p-3 rounded mb-6 focus:outline-none focus:border-blue-500">
+            <input type="number" id="login-cedula" placeholder="Su Cédula" class="w-full border p-3 rounded mb-6 focus:outline-none focus:border-blue-500">
             
-            <button onclick="iniciarSesion()" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700">Entrar al MÃ³dulo</button>
+            <button onclick="iniciarSesion()" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700">Entrar al Módulo</button>
         </div>
     </div>
 
@@ -68,28 +242,28 @@ INFO:     Stopping reloader process [21288]
         <!-- Encabezado -->
         <div class="flex justify-between items-center mb-2">
             <div class="header-title">
-                IMPLESEG - Impresion USB
+                IMPLESEG - Impresión USB
                 <span class="text-black font-normal text-xl ml-2">Siguiente: <span id="lbl-siguiente" class="counter-text">Cargando...</span></span>
             </div>
             <div class="flex items-center gap-4">
                 <span id="user-info" class="text-sm text-gray-600 font-bold bg-white px-3 py-1 border rounded shadow-sm">Usuario: No identificado</span>
-                <button onclick="window.location.href='/'" class="text-sm text-gray-500 hover:text-red-500 underline">Volver al MenÃº</button>
+                <button onclick="window.location.href='/'" class="text-sm text-gray-500 hover:text-red-500 underline">Volver al Menú</button>
             </div>
         </div>
 
-        <!-- PestaÃ±as -->
+        <!-- Pestañas -->
         <div class="tabs">
             <button class="tab-btn active" onclick="abrirTab(event, 'tab-nueva')">Imprimir Nueva</button>
             <button class="tab-btn" onclick="abrirTab(event, 'tab-rango')">Hasta Numero</button>
             <button class="tab-btn" onclick="abrirTab(event, 'tab-reimprimir')">Reimprimir</button>
             <button class="tab-btn" onclick="abrirTab(event, 'tab-historial')">Historial</button>
-            <button class="tab-btn" onclick="abrirTab(event, 'tab-config')">Configuracion</button>
+            <button class="tab-btn" onclick="abrirTab(event, 'tab-config')">Configuración</button>
         </div>
 
         <!-- CONTENIDO: Imprimir Nueva -->
         <div id="tab-nueva" class="tab-content active">
             <div class="form-row">
-                <div class="form-label">Cantidad de etiquetas (numeros unicos):</div>
+                <div class="form-label">Cantidad de etiquetas (números unicos):</div>
                 <input type="number" id="n_cantidad" class="input-box" value="1" min="1">
             </div>
             <div class="form-row">
@@ -103,22 +277,31 @@ INFO:     Stopping reloader process [21288]
                 <input type="text" id="c_nombre" placeholder="Nombre Empresa o Persona" class="w-full border p-2 mb-2 text-sm">
                 <div class="flex gap-2 mb-2">
                     <input type="text" id="c_nit" placeholder="NIT / C.C." class="w-1/2 border p-2 text-sm">
-                    <input type="text" id="c_contacto" placeholder="TelÃ©fono" class="w-1/2 border p-2 text-sm">
+                    <input type="text" id="c_contacto" placeholder="Teléfono" class="w-1/2 border p-2 text-sm">
                 </div>
-                <input type="text" id="c_direccion" placeholder="DirecciÃ³n" class="w-full border p-2 text-sm">
+                <input type="text" id="c_direccion" placeholder="Dirección" class="w-full border p-2 text-sm">
             </div>
 
-            <div class="flex gap-4 mt-6">
-                <button class="btn-blue text-lg px-8" onclick="procesarNueva(false)">Imprimir y Avanzar</button>
-                <button class="btn-green text-lg px-8" onclick="procesarNueva(true)">Asignar sin Imprimir</button>
+            <div class="flex gap-4 mt-6 flex-wrap">
+                <button class="btn-blue text-lg px-8" onclick="procesarNueva(false)">
+                    Imprimir y avanzar
+                </button>
+
+                <button class="btn-green text-lg px-8" onclick="procesarNueva(true)">
+                    Asignar sin imprimir
+                </button>
+
+                <button class="btn-preview text-lg px-8" onclick="mostrarVistaPrevia()">
+                    Vista previa
+                </button>
             </div>
-            <p class="text-xs text-gray-500 mt-4 italic">'Asignar' reserva numeros y avanza el consecutivo sin enviar nada a la impresora.</p>
+            <p class="text-xs text-gray-500 mt-4 italic">'Asignar' reserva números y avanza el consecutivo sin enviar nada a la impresora.</p>
         </div>
 
         <!-- CONTENIDO: Hasta Numero -->
         <div id="tab-rango" class="tab-content">
             <div class="form-row">
-                <div class="form-label">Imprimir hasta el numero (inclusive):</div>
+                <div class="form-label">Imprimir hasta el número (inclusive):</div>
                 <input type="number" id="r_hasta" class="input-box" placeholder="Ej. 20000000010">
             </div>
             <div class="form-row">
@@ -134,11 +317,11 @@ INFO:     Stopping reloader process [21288]
         <div id="tab-reimprimir" class="tab-content">
             <p class="text-red-600 font-bold mb-6">ATENCION: Reimprimir NO avanza el consecutivo.</p>
             <div class="form-row">
-                <div class="form-label">Desde el numero:</div>
+                <div class="form-label">Desde el número:</div>
                 <input type="number" id="re_desde" class="input-box">
             </div>
             <div class="form-row">
-                <div class="form-label">Hasta el numero:</div>
+                <div class="form-label">Hasta el número:</div>
                 <input type="number" id="re_hasta" class="input-box">
             </div>
             <div class="form-row">
@@ -157,9 +340,9 @@ INFO:     Stopping reloader process [21288]
                     Total registros: <span id="h_total">0</span> | Filtrar por tipo:
                     <select id="h_filtro" onchange="cargarHistorial()" class="border ml-2 p-1">
                         <option value="TODOS">Todos</option>
-                        <option value="IMPRESION">ImpresiÃ³n</option>
-                        <option value="ASIGNACION">AsignaciÃ³n</option>
-                        <option value="REIMPRESION">ReimpresiÃ³n</option>
+                        <option value="IMPRESION">Impresión</option>
+                        <option value="ASIGNACION">Asignación</option>
+                        <option value="REIMPRESION">Reimpresión</option>
                     </select>
                 </div>
                 <button class="btn-red" onclick="cargarHistorial()">Actualizar tabla</button>
@@ -197,7 +380,7 @@ INFO:     Stopping reloader process [21288]
                     <div class="form-label">Nuevo valor:</div>
                     <input type="number" id="cfg_nuevo" class="input-box">
                 </div>
-                <p class="text-xs text-red-500 italic mt-4">CUIDADO: cambiar el consecutivo puede generar numeros duplicados.</p>
+                <p class="text-xs text-red-500 italic mt-4">CUIDADO: cambiar el consecutivo puede generar números duplicados.</p>
             </div>
             
             <div class="border p-4 bg-gray-50 mb-6">
@@ -209,7 +392,7 @@ INFO:     Stopping reloader process [21288]
             </div>
 
             <div class="text-center mt-8">
-                <button class="btn-green text-lg px-8" style="background-color: #004d40;" onclick="guardarConfiguracion()">Guardar toda la configuracion</button>
+                <button class="btn-green text-lg px-8" style="background-color: #004d40;" onclick="guardarConfiguración()">Guardar toda la configuración</button>
             </div>
         </div>
     </div>
@@ -219,16 +402,38 @@ INFO:     Stopping reloader process [21288]
         let usuarioActual = { nombre: "", cedula: "" };
 
         window.onload = () => {
-            const savedUser = localStorage.getItem('impleseg_user');
+            const savedUser =
+                localStorage.getItem('impleseg_user');
+
             if (savedUser) {
-                usuarioActual = JSON.parse(savedUser);
-                document.getElementById('login-modal').style.display = 'none';
-                document.getElementById('user-info').innerText = `Usuario: ${usuarioActual.nombre}`;
-                actualizarEstado();
-                cargarImpresorasAgente();
-            } else {
-                cargarImpresorasAgente();
+                try {
+                    usuarioActual =
+                        JSON.parse(savedUser);
+
+                    document.getElementById(
+                        'login-modal'
+                    ).style.display = 'none';
+
+                    document.getElementById(
+                        'user-info'
+                    ).innerText =
+                        `Usuario: ${usuarioActual.nombre}`;
+
+                } catch (e) {
+                    localStorage.removeItem(
+                        'impleseg_user'
+                    );
+                }
             }
+
+            actualizarEstado();
+            cargarImpresorasAgente();
+
+            // Sincronización automática entre todos los computadores.
+            setInterval(
+                actualizarEstadoAutomatico,
+                2000
+            );
         };
 
         function iniciarSesion() {
@@ -253,17 +458,149 @@ INFO:     Stopping reloader process [21288]
             if(tabId === 'tab-config') cargarImpresorasAgente();
         }
 
-        // --- COMUNICACIÃ“N BACKEND ---
+        // --- COMUNICACIÓN CON EL SERVIDOR ---
+
+        let ultimoConsecutivoMostrado = null;
+        let actualizandoEstado = false;
+
         async function actualizarEstado() {
             try {
-                const res = await fetch('/etiquetas/api/estado');
+                const res = await fetch('/etiquetas/api/estado', {
+                    cache: 'no-store'
+                });
+
+                if (!res.ok) {
+                    throw new Error('No se pudo consultar el estado.');
+                }
+
                 const data = await res.json();
-                document.getElementById('lbl-siguiente').innerText = data.consecutivo;
-                document.getElementById('cfg_actual').innerText = data.consecutivo;
-                document.getElementById('cfg_nuevo').value = data.consecutivo;
-                document.getElementById('cfg_impresora').value = data.impresora;
-            } catch (e) { console.error(e); }
+
+                actualizarContadorVisual(data.consecutivo);
+
+                const cfgActual =
+                    document.getElementById('cfg_actual');
+
+                if (cfgActual) {
+                    cfgActual.innerText = data.consecutivo;
+                }
+
+                const cfgNuevo =
+                    document.getElementById('cfg_nuevo');
+
+                if (
+                    cfgNuevo &&
+                    document.activeElement !== cfgNuevo &&
+                    !cfgNuevo.dataset.editado
+                ) {
+                    cfgNuevo.value = data.consecutivo;
+                }
+
+            } catch (e) {
+                console.error(
+                    'Error actualizando estado:',
+                    e
+                );
+            }
         }
+
+        async function actualizarEstadoAutomatico() {
+            if (actualizandoEstado) {
+                return;
+            }
+
+            actualizandoEstado = true;
+
+            try {
+                const res = await fetch(
+                    '/etiquetas/api/estado',
+                    { cache: 'no-store' }
+                );
+
+                if (!res.ok) {
+                    throw new Error(
+                        'Estado no disponible.'
+                    );
+                }
+
+                const data = await res.json();
+
+                actualizarContadorVisual(
+                    data.consecutivo
+                );
+
+                const cfgActual =
+                    document.getElementById(
+                        'cfg_actual'
+                    );
+
+                if (cfgActual) {
+                    cfgActual.innerText =
+                        data.consecutivo;
+                }
+
+            } catch (e) {
+                console.warn(
+                    'No fue posible actualizar el contador:',
+                    e
+                );
+            } finally {
+                actualizandoEstado = false;
+            }
+        }
+
+        function actualizarContadorVisual(numero) {
+            const elemento =
+                document.getElementById(
+                    'lbl-siguiente'
+                );
+
+            if (!elemento) {
+                return;
+            }
+
+            const anterior =
+                ultimoConsecutivoMostrado;
+
+            elemento.innerText = String(numero);
+
+            if (
+                anterior !== null &&
+                String(anterior) !== String(numero)
+            ) {
+                elemento.classList.remove(
+                    'counter-updated'
+                );
+
+                void elemento.offsetWidth;
+
+                elemento.classList.add(
+                    'counter-updated'
+                );
+            }
+
+            ultimoConsecutivoMostrado =
+                numero;
+        }
+
+        document.addEventListener(
+            'DOMContentLoaded',
+            function() {
+                const campo =
+                    document.getElementById(
+                        'cfg_nuevo'
+                    );
+
+                if (campo) {
+                    campo.addEventListener(
+                        'input',
+                        function() {
+                            this.dataset.editado =
+                                'true';
+                        }
+                    );
+                }
+            }
+        );
 
         // ============================================================
         // AGENTE LOCAL DE IMPRESION
@@ -367,13 +704,13 @@ INFO:     Stopping reloader process [21288]
             return data;
         }
 
-        async function confirmarImpresion(desde, hasta) {
+        async function confirmarImpresión(desde, hasta) {
             const res = await fetch('/etiquetas/api/marcar_impresion', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
-                    desde_numero: desde,
-                    hasta_numero: hasta
+                    desde_número: desde,
+                    hasta_número: hasta
                 })
             });
 
@@ -420,7 +757,7 @@ INFO:     Stopping reloader process [21288]
                             data.desde !== undefined &&
                             data.hasta !== undefined
                         ) {
-                            await confirmarImpresion(
+                            await confirmarImpresión(
                                 data.desde,
                                 data.hasta
                             );
@@ -433,13 +770,13 @@ INFO:     Stopping reloader process [21288]
                             "success"
                         );
 
-                    } catch (errorImpresion) {
+                    } catch (errorImpresión) {
                         descargarArchivoZPL(data.zpl);
 
                         Swal.fire(
                             "Impresora local no disponible",
                             "Se descargó el ZPL como respaldo.\n\n" +
-                            errorImpresion.message,
+                            errorImpresión.message,
                             "warning"
                         );
                     }
@@ -484,7 +821,7 @@ INFO:     Stopping reloader process [21288]
 
         function procesarHastaNumero() {
             const payload = {
-                hasta_numero: parseInt(document.getElementById('r_hasta').value),
+                hasta_número: parseInt(document.getElementById('r_hasta').value),
                 copias: parseInt(document.getElementById('r_copias').value),
                 usuario_nombre: usuarioActual.nombre,
                 usuario_cedula: usuarioActual.cedula
@@ -496,8 +833,8 @@ INFO:     Stopping reloader process [21288]
 
         function procesarReimpresion() {
             const payload = {
-                desde_numero: parseInt(document.getElementById('re_desde').value),
-                hasta_numero: parseInt(document.getElementById('re_hasta').value),
+                desde_número: parseInt(document.getElementById('re_desde').value),
+                hasta_número: parseInt(document.getElementById('re_hasta').value),
                 copias: parseInt(document.getElementById('re_copias').value),
                 usuario_nombre: usuarioActual.nombre,
                 usuario_cedula: usuarioActual.cedula
@@ -508,7 +845,7 @@ INFO:     Stopping reloader process [21288]
             });
         }
 
-        function guardarConfiguracion() {
+        function guardarConfiguración() {
             const payload = {
                 nuevo_consecutivo: parseInt(document.getElementById('cfg_nuevo').value),
                 nombre_impresora: document.getElementById('cfg_impresora').value
@@ -537,8 +874,8 @@ INFO:     Stopping reloader process [21288]
                     <tr>
                         <td>${fechaFormateada}</td>
                         <td class="font-bold text-gray-700">${item.tipo_operacion}</td>
-                        <td>${item.desde_numero}</td>
-                        <td>${item.hasta_numero}</td>
+                        <td>${item.desde_número}</td>
+                        <td>${item.hasta_número}</td>
                         <td>${item.cantidad}</td>
                         <td>${item.copias}</td>
                         <td class="text-xs">${item.usuario_nombre}<br><span class="text-gray-400">${item.usuario_cedula}</span></td>
@@ -548,7 +885,348 @@ INFO:     Stopping reloader process [21288]
             });
             document.getElementById('h_total').innerText = count;
         }
-    </script>
+    
+        // ============================================================
+        // VISTA PREVIA
+        // ============================================================
+
+        function obtenerDatosVistaPrevia() {
+            const cantidad =
+                parseInt(
+                    document.getElementById(
+                        'n_cantidad'
+                    ).value
+                ) || 1;
+
+            const copias =
+                parseInt(
+                    document.getElementById(
+                        'n_copias'
+                    ).value
+                ) || 1;
+
+            const consecutivo =
+                parseInt(
+                    document.getElementById(
+                        'lbl-siguiente'
+                    ).innerText
+                ) || 20000000000;
+
+            return {
+                cantidad,
+                copias,
+                consecutivo
+            };
+        }
+
+        function crearCodigoBarras(numero) {
+            const contenedor =
+                document.createElement('div');
+
+            contenedor.className =
+                'barcode-bars';
+
+            const patrones = [
+                2,1,1,3,1,2,2,1,
+                1,2,3,1,2,1,1,3,
+                2,1,2,1,1,2,3,1,
+                2,1,1,2,3,1,2,1
+            ];
+
+            const texto = String(numero);
+            let indice = 0;
+
+            for (const digito of texto) {
+
+                const repeticiones =
+                    (parseInt(digito) % 3) + 2;
+
+                for (
+                    let i = 0;
+                    i < repeticiones;
+                    i++
+                ) {
+                    const span =
+                        document.createElement(
+                            'span'
+                        );
+
+                    const ancho =
+                        patrones[
+                            (
+                                indice +
+                                parseInt(digito)
+                            ) %
+                            patrones.length
+                        ];
+
+                    span.style.width =
+                        (ancho + 1) + 'px';
+
+                    contenedor.appendChild(
+                        span
+                    );
+
+                    indice++;
+                }
+            }
+
+            return contenedor;
+        }
+
+        function actualizarVistaPrevia() {
+
+            const datos =
+                obtenerDatosVistaPrevia();
+
+            const ultimo =
+                datos.consecutivo +
+                datos.cantidad -
+                1;
+
+            document.getElementById(
+                'preview-first'
+            ).innerText =
+                datos.consecutivo;
+
+            document.getElementById(
+                'preview-quantity'
+            ).innerText =
+                datos.cantidad;
+
+            document.getElementById(
+                'preview-copies'
+            ).innerText =
+                datos.copias;
+
+            document.getElementById(
+                'preview-number-left'
+            ).innerText =
+                datos.consecutivo;
+
+            document.getElementById(
+                'preview-number-right'
+            ).innerText =
+                datos.consecutivo;
+
+            const left =
+                document.getElementById(
+                    'preview-barcode-left'
+                );
+
+            const right =
+                document.getElementById(
+                    'preview-barcode-right'
+                );
+
+            left.innerHTML = '';
+            right.innerHTML = '';
+
+            left.appendChild(
+                crearCodigoBarras(
+                    datos.consecutivo
+                )
+            );
+
+            right.appendChild(
+                crearCodigoBarras(
+                    datos.consecutivo
+                )
+            );
+
+            document.getElementById(
+                'preview-range'
+            ).innerText =
+                datos.cantidad === 1
+                    ? `Se generará el consecutivo ${datos.consecutivo}`
+                    : `Rango: ${datos.consecutivo} a ${ultimo}`;
+        }
+
+        function mostrarVistaPrevia() {
+            actualizarVistaPrevia();
+
+            document.getElementById(
+                'preview-modal'
+            ).classList.add('show');
+        }
+
+        function cerrarVistaPrevia() {
+            document.getElementById(
+                'preview-modal'
+            ).classList.remove('show');
+        }
+
+        document.addEventListener(
+            'keydown',
+            function(evento) {
+                if (evento.key === 'Escape') {
+                    cerrarVistaPrevia();
+                }
+            }
+        );
+
+        document.addEventListener(
+            'DOMContentLoaded',
+            function() {
+
+                ['n_cantidad', 'n_copias']
+                    .forEach(function(id) {
+
+                        const campo =
+                            document.getElementById(
+                                id
+                            );
+
+                        if (campo) {
+                            campo.addEventListener(
+                                'input',
+                                function() {
+
+                                    const modal =
+                                        document.getElementById(
+                                            'preview-modal'
+                                        );
+
+                                    if (
+                                        modal &&
+                                        modal.classList.contains(
+                                            'show'
+                                        )
+                                    ) {
+                                        actualizarVistaPrevia();
+                                    }
+                                }
+                            );
+                        }
+                    });
+            }
+        );
+
+</script>
+
+    <!-- ==========================================================
+         VISTA PREVIA DE LAS DOS ETIQUETAS
+         ========================================================== -->
+    <div id="preview-modal" class="preview-modal">
+        <div class="preview-window">
+
+            <div class="preview-title">
+                Vista previa de las etiquetas
+            </div>
+
+            <div class="preview-subtitle">
+                Representación aproximada de la fila física:
+                dos etiquetas de 50 x 25 mm.
+            </div>
+
+            <div class="label-sheet-preview">
+
+                <div class="label-preview">
+                    <div class="label-company">IMPLESEG</div>
+
+                    <div class="label-barcode">
+                        <div
+                            id="preview-barcode-left"
+                            class="barcode-bars"
+                        ></div>
+                    </div>
+
+                    <div
+                        id="preview-number-left"
+                        class="label-number"
+                    >
+                        20000000000
+                    </div>
+                </div>
+
+                <div class="label-preview">
+                    <div class="label-company">IMPLESEG</div>
+
+                    <div class="label-barcode">
+                        <div
+                            id="preview-barcode-right"
+                            class="barcode-bars"
+                        ></div>
+                    </div>
+
+                    <div
+                        id="preview-number-right"
+                        class="label-number"
+                    >
+                        20000000000
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="preview-info">
+
+                <div class="preview-info-box">
+                    <span class="preview-info-label">
+                        Primer consecutivo
+                    </span>
+
+                    <span
+                        id="preview-first"
+                        class="preview-info-value"
+                    >
+                        --
+                    </span>
+                </div>
+
+                <div class="preview-info-box">
+                    <span class="preview-info-label">
+                        Números únicos
+                    </span>
+
+                    <span
+                        id="preview-quantity"
+                        class="preview-info-value"
+                    >
+                        1
+                    </span>
+                </div>
+
+                <div class="preview-info-box">
+                    <span class="preview-info-label">
+                        Copias por número
+                    </span>
+
+                    <span
+                        id="preview-copies"
+                        class="preview-info-value"
+                    >
+                        2
+                    </span>
+                </div>
+
+            </div>
+
+            <div class="text-center mt-3 text-sm text-gray-600">
+                <span id="preview-range">
+                    Número único
+                </span>
+            </div>
+
+            <div class="preview-actions">
+                <button
+                    class="btn-preview"
+                    onclick="actualizarVistaPrevia()"
+                >
+                    Actualizar
+                </button>
+
+                <button
+                    class="btn-red"
+                    onclick="cerrarVistaPrevia()"
+                >
+                    Cerrar
+                </button>
+            </div>
+
+        </div>
+    </div>
+
 </body>
 </html>
 (venv) PS C:\Users\Usuario\Desktop\TRABAJOS\ej_sistemas_hojas_de_vida> 

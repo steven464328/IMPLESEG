@@ -95,97 +95,54 @@ def reservar_consecutivos(db: Session, cantidad: int) -> list[int]:
 
 def generar_etiqueta_individual(consecutivo: int) -> str:
     """
-    Genera UNA fila física del rollo con DOS etiquetas TUFFMARK VOID.
+    GEOMETRIA FISICA VERIFICADA EN LA ZEBRA:
+    - TUFFMARK VOID 50 x 25 mm por etiqueta.
+    - Dos etiquetas por fila.
+    - Zebra ZT230 200 dpi.
+    - Ancho total de impresión: 640 dots.
+    - Alto: 200 dots.
+    - Mismo consecutivo en ambas etiquetas.
 
-    Especificación física:
-        - 50 x 25 mm cada etiqueta.
-        - Ancho total de paso: 102 mm.
-        - 2 columnas al ancho.
-        - Zebra ZT230, 200 dpi.
-        - Orientación 0 grados.
-        - Margen interno aproximado: 2 mm.
-        - Mismo consecutivo en ambas etiquetas.
-
-    A 200 dpi:
-        50 mm ~= 400 dots
-        25 mm ~= 200 dots
-        102 mm ~= 816 dots
-
-    El origen de impresión se desplaza 3.5 mm hacia la izquierda
-    mediante ^LS-28 para compensar el offset físico de la impresora.
+    No modificar esta geometría sin una nueva prueba física.
     """
 
     consecutivo = str(consecutivo)
 
-    ANCHO_ETIQUETA = 400
-    ALTO_ETIQUETA = 200
-    GAP = 16
-    ANCHO_PASO = 816
+    return f"""^XA
+^PW640
+^LL200
+^MD25
+^PR3
+^LH0,0
 
-    X_IZQUIERDA = 0
-    X_DERECHA = ANCHO_ETIQUETA + GAP
+^FO25,20
+^A0N,30,30
+^FDIMPLESEG^FS
 
-    OFFSET_X = -28
+^FO25,65
+^BY2,2,45
+^BCN,45,N,N,N
+^FD{consecutivo}^FS
 
-    MARGEN = 16
-    ANCHO_CONTENIDO = ANCHO_ETIQUETA - (MARGEN * 2)
+^FO25,130
+^A0N,24,24
+^FD{consecutivo}^FS
 
-    Y_IMPLESEG = 4
-    Y_BARRAS = 52
-    Y_NUMERO = 153
+^FO345,20
+^A0N,30,30
+^FDIMPLESEG^FS
 
-    FUENTE_IMPLESEG = 48
-    FUENTE_NUMERO = 34
+^FO345,65
+^BY2,2,45
+^BCN,45,N,N,N
+^FD{consecutivo}^FS
 
-    ALTURA_BARRAS = 74
-    X_BARRAS_IZQUIERDA = 42
-    X_BARRAS_DERECHA = X_BARRAS_IZQUIERDA + X_DERECHA
+^FO345,130
+^A0N,24,24
+^FD{consecutivo}^FS
 
-    zpl = (
-        f"^XA\n"
-        f"^PW{ANCHO_PASO}\n"
-        f"^LL{ALTO_ETIQUETA}\n"
-        "^LH0,0\n"
-        f"^LS{OFFSET_X}\n"
-        "^LT0\n"
-        "^MNY\n"
-        "^MD25\n"
-        "^PR3\n"
-        "\n"
-        f"^FO{X_IZQUIERDA + MARGEN},{Y_IMPLESEG}\n"
-        f"^A0N,{FUENTE_IMPLESEG},{FUENTE_IMPLESEG}\n"
-        f"^FB{ANCHO_CONTENIDO},1,0,C\n"
-        "^FDIMPLESEG^FS\n"
-        "\n"
-        f"^FO{X_BARRAS_IZQUIERDA},{Y_BARRAS}\n"
-        f"^BY2,2,{ALTURA_BARRAS}\n"
-        f"^BCN,{ALTURA_BARRAS},N,N,N\n"
-        f"^FD{consecutivo}^FS\n"
-        "\n"
-        f"^FO{X_IZQUIERDA + MARGEN},{Y_NUMERO}\n"
-        f"^A0N,{FUENTE_NUMERO},{FUENTE_NUMERO}\n"
-        f"^FB{ANCHO_CONTENIDO},1,0,C\n"
-        f"^FD{consecutivo}^FS\n"
-        "\n"
-        f"^FO{X_DERECHA + MARGEN},{Y_IMPLESEG}\n"
-        f"^A0N,{FUENTE_IMPLESEG},{FUENTE_IMPLESEG}\n"
-        f"^FB{ANCHO_CONTENIDO},1,0,C\n"
-        "^FDIMPLESEG^FS\n"
-        "\n"
-        f"^FO{X_BARRAS_DERECHA},{Y_BARRAS}\n"
-        f"^BY2,2,{ALTURA_BARRAS}\n"
-        f"^BCN,{ALTURA_BARRAS},N,N,N\n"
-        f"^FD{consecutivo}^FS\n"
-        "\n"
-        f"^FO{X_DERECHA + MARGEN},{Y_NUMERO}\n"
-        f"^A0N,{FUENTE_NUMERO},{FUENTE_NUMERO}\n"
-        f"^FB{ANCHO_CONTENIDO},1,0,C\n"
-        f"^FD{consecutivo}^FS\n"
-        "\n"
-        "^XZ\n"
-    )
-
-    return zpl
+^XZ
+"""
 
 
 def generar_zpl(consecutivos: list[int], copias: int) -> str:
@@ -632,19 +589,6 @@ async def configurar(
             text("SELECT setval('etiquetas_consecutivo_seq', :valor, true)"),
             {"valor": datos.nuevo_consecutivo - 1}
         )
-
-        db.add(RegistroEtiqueta(
-            consecutivo=datos.nuevo_consecutivo - 1,
-            cedula="SISTEMA",
-            nombre="SISTEMA",
-            cliente=(
-                f"Ajuste Manual de Consecutivo: "
-                f"{actual} -> {datos.nuevo_consecutivo}"
-            ),
-            fecha=datetime.now(),
-            impreso=False,
-        ))
-
         if datos.nombre_impresora:
             impresora_actual = datos.nombre_impresora.strip()
 
