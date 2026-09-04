@@ -1,5 +1,3 @@
-INFO:     Stopping reloader process [21288]
-(venv) PS C:\Users\Usuario\Desktop\TRABAJOS\ej_sistemas_hojas_de_vida> Get-Content .\app\templates\recepcion_etiquetas.html -Raw
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -247,6 +245,7 @@ INFO:     Stopping reloader process [21288]
             </div>
             <div class="flex items-center gap-4">
                 <span id="user-info" class="text-sm text-gray-600 font-bold bg-white px-3 py-1 border rounded shadow-sm">Usuario: No identificado</span>
+                <span id="agent-status" class="text-xs font-bold px-3 py-1 border rounded bg-yellow-50 text-yellow-700">Agente: verificando...</span>
                 <button onclick="window.location.href='/'" class="text-sm text-gray-500 hover:text-red-500 underline">Volver al Menú</button>
             </div>
         </div>
@@ -254,7 +253,7 @@ INFO:     Stopping reloader process [21288]
         <!-- Pestañas -->
         <div class="tabs">
             <button class="tab-btn active" onclick="abrirTab(event, 'tab-nueva')">Imprimir Nueva</button>
-            <button class="tab-btn" onclick="abrirTab(event, 'tab-rango')">Hasta Numero</button>
+            <button class="tab-btn" onclick="abrirTab(event, 'tab-rango')">Hasta Número</button>
             <button class="tab-btn" onclick="abrirTab(event, 'tab-reimprimir')">Reimprimir</button>
             <button class="tab-btn" onclick="abrirTab(event, 'tab-historial')">Historial</button>
             <button class="tab-btn" onclick="abrirTab(event, 'tab-config')">Configuración</button>
@@ -291,14 +290,14 @@ INFO:     Stopping reloader process [21288]
                     Asignar sin imprimir
                 </button>
 
-                <button class="btn-preview text-lg px-8" onclick="mostrarVistaPrevia()">
+                <button type="button" class="btn-preview text-lg px-8" onclick="mostrarVistaPrevia()">
                     Vista previa
                 </button>
             </div>
             <p class="text-xs text-gray-500 mt-4 italic">'Asignar' reserva números y avanza el consecutivo sin enviar nada a la impresora.</p>
         </div>
 
-        <!-- CONTENIDO: Hasta Numero -->
+        <!-- CONTENIDO: Hasta Número -->
         <div id="tab-rango" class="tab-content">
             <div class="form-row">
                 <div class="form-label">Imprimir hasta el número (inclusive):</div>
@@ -315,7 +314,7 @@ INFO:     Stopping reloader process [21288]
 
         <!-- CONTENIDO: Reimprimir -->
         <div id="tab-reimprimir" class="tab-content">
-            <p class="text-red-600 font-bold mb-6">ATENCION: Reimprimir NO avanza el consecutivo.</p>
+            <p class="text-red-600 font-bold mb-6">ATENCIÓN: Reimprimir NO avanza el consecutivo.</p>
             <div class="form-row">
                 <div class="form-label">Desde el número:</div>
                 <input type="number" id="re_desde" class="input-box">
@@ -368,7 +367,7 @@ INFO:     Stopping reloader process [21288]
             </div>
         </div>
 
-        <!-- CONTENIDO: ConfiguraciÃ³n -->
+        <!-- CONTENIDO: Configuración -->
         <div id="tab-config" class="tab-content">
             <div class="border p-4 bg-gray-50 mb-6">
                 <h3 class="font-bold text-gray-700 mb-4">Consecutivo manual</h3>
@@ -398,7 +397,7 @@ INFO:     Stopping reloader process [21288]
     </div>
 
     <script>
-        // --- SESIÃ“N Y USUARIO ---
+        // --- SESIÓN Y USUARIO ---
         let usuarioActual = { nombre: "", cedula: "" };
 
         window.onload = () => {
@@ -439,7 +438,7 @@ INFO:     Stopping reloader process [21288]
         function iniciarSesion() {
             const nom = document.getElementById('login-nombre').value.trim();
             const ced = document.getElementById('login-cedula').value.trim();
-            if(!nom || !ced) return Swal.fire("Error", "Debe ingresar nombre y cÃ©dula", "error");
+            if(!nom || !ced) return Swal.fire("Error", "Debe ingresar nombre y cédula", "error");
             
             usuarioActual = { nombre: nom, cedula: ced };
             localStorage.setItem('impleseg_user', JSON.stringify(usuarioActual));
@@ -448,7 +447,7 @@ INFO:     Stopping reloader process [21288]
             actualizarEstado();
         }
 
-        // --- NAVEGACIÃ“N TABS ---
+        // --- NAVEGACIÓN TABS ---
         function abrirTab(evt, tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -607,20 +606,9 @@ INFO:     Stopping reloader process [21288]
         // ============================================================
         const AGENTE_IMPRESION = 'http://127.0.0.1:8765';
 
-        function descargarArchivoZPL(zplContent) {
-            if(!zplContent) return;
-            const blob = new Blob([zplContent], { type: 'text/plain' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `etiquetas_impleseg_${new Date().getTime()}.zpl`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(link.href);
-        }
-
         async function cargarImpresorasAgente() {
             const select = document.getElementById('cfg_impresora');
+            const estadoAgente = document.getElementById('agent-status');
 
             try {
                 const res = await fetch(`${AGENTE_IMPRESION}/printers`);
@@ -628,6 +616,11 @@ INFO:     Stopping reloader process [21288]
 
                 if(!res.ok || data.status !== 'ok') {
                     throw new Error(data.detail || 'No fue posible consultar el agente.');
+                }
+
+                if (estadoAgente) {
+                    estadoAgente.textContent = `Agente: conectado (${data.cantidad || 0} impresora(s))`;
+                    estadoAgente.className = 'text-xs font-bold px-3 py-1 border rounded bg-green-50 text-green-700';
                 }
 
                 const guardada = localStorage.getItem('impleseg_impresora_local');
@@ -665,6 +658,10 @@ INFO:     Stopping reloader process [21288]
             } catch (e) {
                 select.innerHTML =
                     '<option value="">Agente no disponible</option>';
+                if (estadoAgente) {
+                    estadoAgente.textContent = 'Agente: no disponible';
+                    estadoAgente.className = 'text-xs font-bold px-3 py-1 border rounded bg-red-50 text-red-700';
+                }
                 console.warn('Agente de impresión:', e);
             }
         }
@@ -709,8 +706,8 @@ INFO:     Stopping reloader process [21288]
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
-                    desde_número: desde,
-                    hasta_número: hasta
+                    desde_numero: desde,
+                    hasta_numero: hasta
                 })
             });
 
@@ -726,6 +723,35 @@ INFO:     Stopping reloader process [21288]
             return data;
         }
 
+        function mensajeError(error, predeterminado = "Error desconocido.") {
+            if (error === null || error === undefined) {
+                return predeterminado;
+            }
+
+            if (typeof error === "string") {
+                return error;
+            }
+
+            if (error.message && typeof error.message === "string") {
+                return error.message;
+            }
+
+            if (error.detail) {
+                if (typeof error.detail === "string") {
+                    return error.detail;
+                }
+                try {
+                    return JSON.stringify(error.detail);
+                } catch (_) {}
+            }
+
+            try {
+                return JSON.stringify(error);
+            } catch (_) {
+                return predeterminado;
+            }
+        }
+
         async function enviarPeticion(url, payload, limpiarFuncion) {
             try {
                 const res = await fetch(url, {
@@ -734,65 +760,75 @@ INFO:     Stopping reloader process [21288]
                     body: JSON.stringify(payload)
                 });
 
-                const data = await res.json();
+                const data = await res.json().catch(() => ({}));
 
                 if(!res.ok) {
                     Swal.fire(
                         "Error",
-                        data.detail || "Error en la operación",
+                        mensajeError(data.detail || data, "Error en la operación."),
                         "error"
                     );
                     return;
                 }
 
-                actualizarEstado();
+                // SOLO ASIGNAR: el servidor no envía ZPL.
+                if (!data.zpl) {
+                    if (limpiarFuncion) limpiarFuncion();
+                    await actualizarEstado();
 
-                if(limpiarFuncion) limpiarFuncion();
-
-                if(data.zpl) {
-                    try {
-                        const job = await imprimirConAgente(data.zpl);
-
-                        if(
-                            data.desde !== undefined &&
-                            data.hasta !== undefined
-                        ) {
-                            await confirmarImpresión(
-                                data.desde,
-                                data.hasta
-                            );
-                        }
-
-                        Swal.fire(
-                            "Impresión enviada",
-                            `Impresora: ${job.impresora || 'local'} | ` +
-                            `Job: ${job.job_id || 'OK'}`,
-                            "success"
-                        );
-
-                    } catch (errorImpresión) {
-                        descargarArchivoZPL(data.zpl);
-
-                        Swal.fire(
-                            "Impresora local no disponible",
-                            "Se descargó el ZPL como respaldo.\n\n" +
-                            errorImpresión.message,
-                            "warning"
-                        );
-                    }
-
-                } else {
                     Swal.fire(
-                        "Éxito",
-                        data.mensaje || "Operación guardada",
+                        "Operación completada",
+                        data.mensaje || "Los números fueron asignados correctamente.",
                         "success"
                     );
+                    return;
                 }
+
+                // IMPRESIÓN: el ZPL se envía ÚNICAMENTE al agente local.
+                // No se descarga ningún archivo de respaldo.
+                let job;
+                try {
+                    job = await imprimirConAgente(data.zpl);
+                } catch (errorImpresión) {
+                    Swal.fire({
+                        icon: "error",
+                        title: "No se pudo imprimir",
+                        html:
+                            "No se pudo comunicar con la impresora local de este PC.<br><br>" +
+                            "Verifique que <b>agente_impresion_windows.py</b> esté abierto y que la impresora Zebra esté disponible.<br><br>" +
+                            "<span style=\"color:#666\">Detalle: " +
+                            mensajeError(errorImpresión, "Error de conexión con el agente.") +
+                            "</span>"
+                    });
+                    return;
+                }
+
+                // El registro solo se marca como impreso después de que el agente
+                // haya aceptado el trabajo.
+                if(
+                    data.desde !== undefined &&
+                    data.hasta !== undefined
+                ) {
+                    await confirmarImpresión(
+                        data.desde,
+                        data.hasta
+                    );
+                }
+
+                if (limpiarFuncion) limpiarFuncion();
+                await actualizarEstado();
+
+                Swal.fire(
+                    "Impresión enviada",
+                    `Impresora: ${job.impresora || job.printer || 'local'} | ` +
+                    `Trabajo: ${job.job_id || job.jobId || 'ACEPTADO'}`,
+                    "success"
+                );
 
             } catch (e) {
                 Swal.fire(
                     "Error",
-                    "Problema de conexión con el servidor: " + e.message,
+                    "Problema de conexión con el servidor: " + mensajeError(e),
                     "error"
                 );
             }
@@ -1056,6 +1092,13 @@ INFO:     Stopping reloader process [21288]
             ).classList.remove('show');
         }
 
+        document.addEventListener('click', function(evento) {
+            const modal = document.getElementById('preview-modal');
+            if (modal && evento.target === modal) {
+                cerrarVistaPrevia();
+            }
+        });
+
         document.addEventListener(
             'keydown',
             function(evento) {
@@ -1229,4 +1272,3 @@ INFO:     Stopping reloader process [21288]
 
 </body>
 </html>
-(venv) PS C:\Users\Usuario\Desktop\TRABAJOS\ej_sistemas_hojas_de_vida> 
