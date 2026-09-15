@@ -145,7 +145,54 @@ def reservar_consecutivos(
 # ----------------------------------------------------------
 ANCHO_ETIQUETA = 400   # 400 dots = 2.0" a 200dpi
 ALTO_ETIQUETA = 200    # 200 dots = 1.0" a 200dpi
-MARGEN = 24            # ~3 mm de margen interno
+MARGEN = 24            # ~3 mm de margen interno de seguridad
+
+# Módulo del código de barras (grosor de barra angosta, en dots).
+# Coincide con ^BY en generar_etiqueta_individual.
+MODULO_BARRAS = 2
+
+# Factores empíricos de ancho por caracter de la fuente escalable
+# de Zebra (Font 0), como fracción de la altura de fuente.
+# Las letras (IMPLESEG) son un poco más anchas que los dígitos.
+FACTOR_ANCHO_LETRAS = 0.62
+FACTOR_ANCHO_DIGITOS = 0.55
+
+
+def ancho_texto_dots(texto: str, alto_fuente: int, factor: float) -> int:
+    """Ancho aproximado (en dots) de un texto en Font 0 de Zebra."""
+    return round(len(texto) * alto_fuente * factor)
+
+
+def ancho_barcode_code128_dots(datos: str, modulo: int) -> int:
+    """
+    Ancho aproximado (en dots) de un código Code 128 en modo
+    automático (^BCN,...,N). Si los datos son numéricos y de
+    longitud par, el firmware usa el subconjunto C (2 dígitos
+    por codeword); si no, asume 1 caracter por codeword
+    (subconjunto B), que es el peor caso (más ancho).
+
+    total_modulos = inicio(11) + datos(11 c/u) + check(11) + parada(13)
+    """
+    if datos.isdigit() and len(datos) % 2 == 0:
+        codewords_datos = len(datos) // 2
+    else:
+        codewords_datos = len(datos)
+
+    total_modulos = 11 + (11 * codewords_datos) + 11 + 13
+
+    return total_modulos * modulo
+
+
+def centrar_x(x_base: int, ancho_bloque: int, ancho_contenido: int) -> int:
+    """
+    Calcula el X inicial (^FO) para que 'ancho_contenido' quede
+    centrado dentro de una etiqueta que arranca en x_base y mide
+    ancho_bloque dots útiles (ya descontado el margen).
+    Si el contenido es más ancho que el bloque, no se recorta
+    hacia afuera: se ancla al margen izquierdo del bloque.
+    """
+    desplazamiento = max(0, (ancho_bloque - ancho_contenido) // 2)
+    return x_base + MARGEN + desplazamiento
 
 
 def generar_etiqueta_individual(
@@ -162,21 +209,16 @@ def generar_etiqueta_individual(
       Code 128 y el consecutivo, TODO CENTRADO.
 
     CORRECCION (2026-09-15):
-    La versión anterior posicionaba cada campo con un
-    ^FO (X,Y) fijo, calculado "a ojo" para un ancho de
-    texto puntual. Eso hacía que, según la cantidad de
-    dígitos del consecutivo o una mínima variación de
-    calibración del rodillo, el texto quedara descentrado
-    o se corriera hacia el borde/línea de troquelado
-    (visible sobre todo en la etiqueta derecha).
-
-    Ahora cada campo usa ^FB (Field Block) con
-    justificación centrada (C). ^FB centra automáticamente
-    el contenido dentro del ancho indicado, sin importar
-    cuántos caracteres tenga el consecutivo, así que el
-    texto y el código de barras SIEMPRE quedan centrados
-    dentro de su propia etiqueta física y nunca invaden la
-    etiqueta vecina.
+    Primero se intentó centrar con ^FB (Field Block), pero el
+    firmware de esta ZT230 no lo respeta para estos campos y el
+    contenido queda pegado al borde izquierdo. Por eso se volvió
+    a posicionar cada campo con ^FO explícito (como el código
+    original), pero calculando el ancho real de cada texto y del
+    código de barras (ancho_texto_dots / ancho_barcode_code128_dots)
+    en vez de usar números fijos "a ojo". Así el centrado es
+    matemático y se ajusta solo si cambia la cantidad de dígitos
+    del consecutivo, en vez de depender de una calibración manual
+    que solo servía para una longitud de número puntual.
     """
 
     consecutivo = str(consecutivo)
@@ -184,14 +226,9 @@ def generar_etiqueta_individual(
     ancho_total = ANCHO_ETIQUETA * 2
     ancho_bloque = ANCHO_ETIQUETA - (MARGEN * 2)
 
-    def bloque(x_base: int, y: int, alto_letra: int, contenido: str) -> str:
-        # ^FB{ancho},{lineas},{espaciado},{justificacion},{sangria}
-        # justificacion "C" = centrado dentro del bloque
-        return (
-            f"^FO{x_base + MARGEN},{y}"
-            f"^FB{ancho_bloque},1,0,C,0"
-            f"{contenido}^FS\n"
-        )
+    ancho_titulo = ancho_texto_dots("IMPLESEG", 42, FACTOR_ANCHO_LETRAS)
+    ancho_numero = ancho_texto_dots(consecutivo, 40, FACTOR_ANCHO_DIGITOS)
+    ancho_barras = ancho_barcode_code128_dots(consecutivo, MODULO_BARRAS)
 
     partes = ["^XA",
               f"^PW{ancho_total}",
@@ -206,23 +243,30 @@ def generar_etiqueta_individual(
 
     for x_base in (0, ANCHO_ETIQUETA):
 
+        x_titulo = centrar_x(x_base, ancho_bloque, ancho_titulo)
+        x_barras = centrar_x(x_base, ancho_bloque, ancho_barras)
+        x_numero = centrar_x(x_base, ancho_bloque, ancho_numero)
+
         # Título "IMPLESEG"
         partes.append(
-            bloque(x_base, 10, 42, "^A0N,42,42^FDIMPLESEG")
+            f"^FO{x_titulo},10\n"
+            f"^A0N,42,42\n"
+            f"^FDIMPLESEG^FS"
         )
 
-        # Código de barras Code 128 (sin línea de interpretación
-        # propia: el número se dibuja aparte, también centrado)
+        # Código de barras Code 128
         partes.append(
-            bloque(
-                x_base, 55, 60,
-                f"^BY2,2,60^BCN,60,N,N,N^FD{consecutivo}"
-            )
+            f"^FO{x_barras},55\n"
+            f"^BY{MODULO_BARRAS},2,60\n"
+            f"^BCN,60,N,N,N\n"
+            f"^FD{consecutivo}^FS"
         )
 
         # Consecutivo legible debajo del código de barras
         partes.append(
-            bloque(x_base, 132, 40, f"^A0N,40,40^FD{consecutivo}")
+            f"^FO{x_numero},132\n"
+            f"^A0N,40,40\n"
+            f"^FD{consecutivo}^FS"
         )
 
     partes.append("^XZ\n")
