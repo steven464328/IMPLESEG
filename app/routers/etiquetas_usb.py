@@ -77,6 +77,7 @@ class DatosConfirmarImpresion(BaseModel):
 def get_next_consecutivo(
     db: Session
 ) -> int:
+
     from sqlalchemy import text
 
     siguiente = db.exec(
@@ -101,8 +102,6 @@ def reservar_consecutivos(
             "La cantidad debe ser mayor que cero."
         )
 
-    # Bloqueo central para evitar duplicados
-    # cuando trabajan varios usuarios al mismo tiempo.
     db.execute(
         text(
             "SELECT pg_advisory_xact_lock(874512)"
@@ -139,54 +138,58 @@ def generar_etiqueta_individual(
 
     - Ancho total: 800 dots
     - Alto: 200 dots
-    - Dos etiquetas fisicas.
-    - Etiqueta izquierda: 0 a 399
-    - Etiqueta derecha: 400 a 799
+    - Dos etiquetas fisicas
+    - Cada etiqueta: 400 x 200 dots
 
-    Cada etiqueta recibe SUS PROPIAS coordenadas.
-    El contenido de la izquierda no puede invadir
-    el campo de la derecha.
-
-    Contenido de cada etiqueta:
+    Cada etiqueta contiene:
     - IMPLESEG
     - Codigo de barras Code 128
-    - Consecutivo numerico
+    - Consecutivo
 
-    Ubuntu genera ZPL.
-    El agente Windows realiza la impresion.
+    IMPORTANTE:
+    La posicion del texto es explicita para evitar
+    el desplazamiento visual hacia la izquierda.
     """
 
     consecutivo = str(consecutivo)
 
     ANCHO_TOTAL = 800
-    ANCHO_ETIQUETA = 400
     ALTO_ETIQUETA = 200
+    ANCHO_ETIQUETA = 400
 
-    # --------------------------------------------------------
-    # POSICIONES DEL CODIGO DE BARRAS
-    # --------------------------------------------------------
-    #
-    # Cada etiqueta tiene 400 dots.
-    #
-    # El codigo ocupa aproximadamente 200 dots
-    # con BY=2.
-    #
-    # 400 - 200 = 200
-    # 200 / 2 = 100
-    #
-    # Por eso:
-    # izquierda = X100
-    # derecha   = X500
-    #
-    # De esta forma cada codigo queda centrado
-    # dentro de su propia etiqueta.
-    #
+    # ========================================================
+    # IZQUIERDA
+    # ========================================================
 
+    # Texto superior.
+    # Centro visual buscado: aproximadamente X=220.
+    X_TITULO_IZQUIERDA = 105
+
+    # Codigo de barras.
     X_BARCODE_IZQUIERDA = 100
+
+    # Numero inferior.
+    # Se desplaza ligeramente a la derecha respecto
+    # al centro matematico para compensar el ancho visual.
+    X_NUMERO_IZQUIERDA = 112
+
+    # ========================================================
+    # DERECHA
+    # ========================================================
+
+    X_TITULO_DERECHA = (
+        ANCHO_ETIQUETA
+        + X_TITULO_IZQUIERDA
+    )
 
     X_BARCODE_DERECHA = (
         ANCHO_ETIQUETA
         + X_BARCODE_IZQUIERDA
+    )
+
+    X_NUMERO_DERECHA = (
+        ANCHO_ETIQUETA
+        + X_NUMERO_IZQUIERDA
     )
 
     return f"""^XA
@@ -199,9 +202,8 @@ def generar_etiqueta_individual(
 ^LT0
 ^MNY
 
-^FO0,10
-^A0N,40,40
-^FB{ANCHO_ETIQUETA},1,0,C
+^FO{X_TITULO_IZQUIERDA},10
+^A0N,42,42
 ^FDIMPLESEG^FS
 
 ^FO{X_BARCODE_IZQUIERDA},55
@@ -209,15 +211,13 @@ def generar_etiqueta_individual(
 ^BCN,60,N,N,N
 ^FD{consecutivo}^FS
 
-^FO0,132
-^A0N,38,38
-^FB{ANCHO_ETIQUETA},1,0,C
+^FO{X_NUMERO_IZQUIERDA},132
+^A0N,40,40
 ^FD{consecutivo}^FS
 
 
-^FO{ANCHO_ETIQUETA},10
-^A0N,40,40
-^FB{ANCHO_ETIQUETA},1,0,C
+^FO{X_TITULO_DERECHA},10
+^A0N,42,42
 ^FDIMPLESEG^FS
 
 ^FO{X_BARCODE_DERECHA},55
@@ -225,9 +225,8 @@ def generar_etiqueta_individual(
 ^BCN,60,N,N,N
 ^FD{consecutivo}^FS
 
-^FO{ANCHO_ETIQUETA},132
-^A0N,38,38
-^FB{ANCHO_ETIQUETA},1,0,C
+^FO{X_NUMERO_DERECHA},132
+^A0N,40,40
 ^FD{consecutivo}^FS
 
 ^XZ
@@ -238,13 +237,13 @@ def generar_zpl(
     consecutivos: list[int],
     copias: int
 ) -> str:
+
     """
     Genera todo el trabajo ZPL.
 
-    Un consecutivo genera una fila fisica
-    con dos etiquetas:
-    - izquierda
-    - derecha
+    Un consecutivo genera una fila fisica:
+    - etiqueta izquierda
+    - etiqueta derecha
 
     'copias' repite la fila completa.
     """
@@ -270,11 +269,12 @@ def generar_zpl(
 def preparar_trabajo_impresion(
     zpl: str
 ) -> dict:
+
     """
     Ubuntu genera el ZPL.
 
     El navegador entrega el ZPL al agente
-    de impresion de Windows.
+    local de Windows, que realiza la impresion.
     """
 
     if not zpl:
@@ -300,6 +300,7 @@ def preparar_trabajo_impresion(
 async def vista_etiquetas(
     request: Request
 ):
+
     return templates.TemplateResponse(
         "recepcion_etiquetas.html",
         {
@@ -312,7 +313,9 @@ async def vista_etiquetas(
 # ESTADO
 # ============================================================
 
-@router.get("/api/estado")
+@router.get(
+    "/api/estado"
+)
 async def obtener_estado(
     db: Session = Depends(get_session)
 ):
@@ -331,7 +334,9 @@ async def obtener_estado(
 # HISTORIAL
 # ============================================================
 
-@router.get("/api/historial")
+@router.get(
+    "/api/historial"
+)
 async def obtener_historial(
     db: Session = Depends(get_session)
 ):
@@ -477,8 +482,6 @@ async def imprimir_nueva(
 
                 fecha=datetime.now(),
 
-                # El agente Windows confirma
-                # posteriormente la impresion.
                 impreso=False,
             )
 
@@ -704,13 +707,21 @@ async def imprimir_rango(
                 f"{datos.hasta_numero}"
             ),
 
-            "desde": numeros[0],
+            "desde": (
+                numeros[0]
+            ),
 
-            "hasta": numeros[-1],
+            "hasta": (
+                numeros[-1]
+            ),
 
-            "cantidad": len(numeros),
+            "cantidad": (
+                len(numeros)
+            ),
 
-            "copias": datos.copias,
+            "copias": (
+                datos.copias
+            ),
 
             "impresora": (
                 IMPRESORA_POR_DEFECTO
@@ -956,9 +967,6 @@ async def configurar(
                 )
             )
 
-        # Si queremos que el siguiente
-        # consecutivo sea N, la secuencia
-        # debe quedar en N-1.
         db.execute(
             text(
                 "SELECT setval("
