@@ -95,50 +95,66 @@ def reservar_consecutivos(db: Session, cantidad: int) -> list[int]:
 
 def generar_etiqueta_individual(consecutivo: int) -> str:
     """
-    GEOMETRIA FISICA VERIFICADA EN LA ZEBRA:
+    FORMATO FISICO VALIDADO EN PRUEBA DIRECTA CON LA ZEBRA ZT230.
+
+    Material:
     - TUFFMARK VOID 50 x 25 mm por etiqueta.
-    - Dos etiquetas por fila.
+    - Dos etiquetas horizontales por fila.
     - Zebra ZT230 200 dpi.
-    - Ancho total de impresión: 640 dots.
+
+    Geometria validada:
+    - Ancho total ZPL: 800 dots.
     - Alto: 200 dots.
+    - Una etiqueta ocupa 400 dots.
+    - Izquierda: X=0..399.
+    - Derecha: X=400..799.
     - Mismo consecutivo en ambas etiquetas.
 
-    No modificar esta geometría sin una nueva prueba física.
+    El diseno deja margen interno para mantener texto, barras y numero
+    dentro de cada etiqueta y evitar invadir la etiqueta vecina.
     """
 
     consecutivo = str(consecutivo)
 
+    ANCHO_ETIQUETA = 400
+    ANCHO_TOTAL = 800
+    ALTO_ETIQUETA = 200
+
     return f"""^XA
-^PW640
-^LL200
+^PW{ANCHO_TOTAL}
+^LL{ALTO_ETIQUETA}
 ^MD25
 ^PR3
 ^LH0,0
 
-^FO25,20
-^A0N,30,30
+^FO20,15
+^A0N,32,32
+^FB360,1,0,C
 ^FDIMPLESEG^FS
 
-^FO25,65
-^BY2,2,45
-^BCN,45,N,N,N
+^FO45,55
+^BY2,2,55
+^BCN,55,N,N,N
 ^FD{consecutivo}^FS
 
-^FO25,130
-^A0N,24,24
-^FD{consecutivo}^FS
-
-^FO345,20
+^FO20,135
 ^A0N,30,30
+^FB360,1,0,C
+^FD{consecutivo}^FS
+
+^FO420,15
+^A0N,32,32
+^FB360,1,0,C
 ^FDIMPLESEG^FS
 
-^FO345,65
-^BY2,2,45
-^BCN,45,N,N,N
+^FO445,55
+^BY2,2,55
+^BCN,55,N,N,N
 ^FD{consecutivo}^FS
 
-^FO345,130
-^A0N,24,24
+^FO420,135
+^A0N,30,30
+^FB360,1,0,C
 ^FD{consecutivo}^FS
 
 ^XZ
