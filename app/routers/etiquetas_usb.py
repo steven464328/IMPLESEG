@@ -130,107 +130,104 @@ def reservar_consecutivos(
 # ZPL
 # ============================================================
 
+# ----------------------------------------------------------
+# CALIBRACION FISICA DEL ROLLO DE ETIQUETAS
+# ----------------------------------------------------------
+# Ajustar SOLO estos 4 valores si en el futuro cambia el
+# rollo de etiquetas (otro proveedor, otro tamaño físico).
+# A 203 dpi (ZT230 200dpi), 1 mm ~= 8 dots.
+#
+# ANCHO_ETIQUETA: ancho de UNA sola etiqueta física (dots)
+# ALTO_ETIQUETA : alto de UNA sola etiqueta física (dots)
+# MARGEN        : margen de seguridad interno para que el
+#                 texto/código nunca toque el borde o la
+#                 línea de troquelado entre las dos etiquetas
+# ----------------------------------------------------------
+ANCHO_ETIQUETA = 400   # 400 dots = 2.0" a 200dpi
+ALTO_ETIQUETA = 200    # 200 dots = 1.0" a 200dpi
+MARGEN = 24            # ~3 mm de margen interno
+
+
 def generar_etiqueta_individual(
     consecutivo: int
 ) -> str:
     """
     FORMATO FISICO PARA ZEBRA ZT230 200 DPI
 
-    - Ancho total: 800 dots
-    - Alto: 200 dots
-    - Dos etiquetas fisicas
-    - Cada etiqueta: 400 x 200 dots
+    - Ancho total: 2 x ANCHO_ETIQUETA (dos etiquetas físicas
+      una junto a la otra, separadas por la línea de
+      troquelado del rollo)
+    - Alto: ALTO_ETIQUETA
+    - Cada etiqueta contiene: IMPLESEG, código de barras
+      Code 128 y el consecutivo, TODO CENTRADO.
 
-    Cada etiqueta contiene:
-    - IMPLESEG
-    - Codigo de barras Code 128
-    - Consecutivo
+    CORRECCION (2026-09-15):
+    La versión anterior posicionaba cada campo con un
+    ^FO (X,Y) fijo, calculado "a ojo" para un ancho de
+    texto puntual. Eso hacía que, según la cantidad de
+    dígitos del consecutivo o una mínima variación de
+    calibración del rodillo, el texto quedara descentrado
+    o se corriera hacia el borde/línea de troquelado
+    (visible sobre todo en la etiqueta derecha).
 
-    IMPORTANTE:
-    La posicion del texto es explicita para evitar
-    el desplazamiento visual hacia la izquierda.
+    Ahora cada campo usa ^FB (Field Block) con
+    justificación centrada (C). ^FB centra automáticamente
+    el contenido dentro del ancho indicado, sin importar
+    cuántos caracteres tenga el consecutivo, así que el
+    texto y el código de barras SIEMPRE quedan centrados
+    dentro de su propia etiqueta física y nunca invaden la
+    etiqueta vecina.
     """
 
     consecutivo = str(consecutivo)
 
-    ANCHO_TOTAL = 800
-    ALTO_ETIQUETA = 200
-    ANCHO_ETIQUETA = 400
+    ancho_total = ANCHO_ETIQUETA * 2
+    ancho_bloque = ANCHO_ETIQUETA - (MARGEN * 2)
 
-    # ========================================================
-    # IZQUIERDA
-    # ========================================================
+    def bloque(x_base: int, y: int, alto_letra: int, contenido: str) -> str:
+        # ^FB{ancho},{lineas},{espaciado},{justificacion},{sangria}
+        # justificacion "C" = centrado dentro del bloque
+        return (
+            f"^FO{x_base + MARGEN},{y}"
+            f"^FB{ancho_bloque},1,0,C,0"
+            f"{contenido}^FS\n"
+        )
 
-    # Texto superior.
-    # Centro visual buscado: aproximadamente X=220.
-    X_TITULO_IZQUIERDA = 105
+    partes = ["^XA",
+              f"^PW{ancho_total}",
+              f"^LL{ALTO_ETIQUETA}",
+              "^MD20",
+              "^PR3",
+              "^LH0,0",
+              "^LS0",
+              "^LT0",
+              "^MNY",
+              ""]
 
-    # Codigo de barras.
-    X_BARCODE_IZQUIERDA = 100
+    for x_base in (0, ANCHO_ETIQUETA):
 
-    # Numero inferior.
-    # Se desplaza ligeramente a la derecha respecto
-    # al centro matematico para compensar el ancho visual.
-    X_NUMERO_IZQUIERDA = 112
+        # Título "IMPLESEG"
+        partes.append(
+            bloque(x_base, 10, 42, "^A0N,42,42^FDIMPLESEG")
+        )
 
-    # ========================================================
-    # DERECHA
-    # ========================================================
+        # Código de barras Code 128 (sin línea de interpretación
+        # propia: el número se dibuja aparte, también centrado)
+        partes.append(
+            bloque(
+                x_base, 55, 60,
+                f"^BY2,2,60^BCN,60,N,N,N^FD{consecutivo}"
+            )
+        )
 
-    X_TITULO_DERECHA = (
-        ANCHO_ETIQUETA
-        + X_TITULO_IZQUIERDA
-    )
+        # Consecutivo legible debajo del código de barras
+        partes.append(
+            bloque(x_base, 132, 40, f"^A0N,40,40^FD{consecutivo}")
+        )
 
-    X_BARCODE_DERECHA = (
-        ANCHO_ETIQUETA
-        + X_BARCODE_IZQUIERDA
-    )
+    partes.append("^XZ\n")
 
-    X_NUMERO_DERECHA = (
-        ANCHO_ETIQUETA
-        + X_NUMERO_IZQUIERDA
-    )
-
-    return f"""^XA
-^PW{ANCHO_TOTAL}
-^LL{ALTO_ETIQUETA}
-^MD20
-^PR3
-^LH0,0
-^LS0
-^LT0
-^MNY
-
-^FO{X_TITULO_IZQUIERDA},10
-^A0N,42,42
-^FDIMPLESEG^FS
-
-^FO{X_BARCODE_IZQUIERDA},55
-^BY2,2,60
-^BCN,60,N,N,N
-^FD{consecutivo}^FS
-
-^FO{X_NUMERO_IZQUIERDA},132
-^A0N,40,40
-^FD{consecutivo}^FS
-
-
-^FO{X_TITULO_DERECHA},10
-^A0N,42,42
-^FDIMPLESEG^FS
-
-^FO{X_BARCODE_DERECHA},55
-^BY2,2,60
-^BCN,60,N,N,N
-^FD{consecutivo}^FS
-
-^FO{X_NUMERO_DERECHA},132
-^A0N,40,40
-^FD{consecutivo}^FS
-
-^XZ
-"""
+    return "\n".join(partes)
 
 
 def generar_zpl(
