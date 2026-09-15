@@ -133,9 +133,17 @@ def reservar_consecutivos(
 # ----------------------------------------------------------
 # CALIBRACION FISICA DEL ROLLO DE ETIQUETAS
 # ----------------------------------------------------------
-# Ajustar SOLO estos 4 valores si en el futuro cambia el
-# rollo de etiquetas (otro proveedor, otro tamaño físico).
-# A 203 dpi (ZT230 200dpi), 1 mm ~= 8 dots.
+# Etiqueta física: TUFFMARK VOID 50mm x 25mm (par de etiquetas
+# por fila en el rollo, cada una de 50mm x 25mm).
+#
+# La ZT230 se vende como "200dpi" pero su resolución real es
+# 203 dpi -> 203/25.4 = 7.9921 dots/mm.
+#   50 mm x 7.9921 = 399.6 -> 400 dots de ancho por etiqueta
+#   25 mm x 7.9921 = 199.8 -> 200 dots de alto por etiqueta
+#
+# Si en el futuro cambia el rollo (otro proveedor u otro
+# tamaño), solo hay que recalcular estos 3 valores con la
+# misma fórmula (mm x 7.9921, redondeado al entero más cercano).
 #
 # ANCHO_ETIQUETA: ancho de UNA sola etiqueta física (dots)
 # ALTO_ETIQUETA : alto de UNA sola etiqueta física (dots)
@@ -143,8 +151,8 @@ def reservar_consecutivos(
 #                 texto/código nunca toque el borde o la
 #                 línea de troquelado entre las dos etiquetas
 # ----------------------------------------------------------
-ANCHO_ETIQUETA = 400   # 400 dots = 2.0" a 200dpi
-ALTO_ETIQUETA = 200    # 200 dots = 1.0" a 200dpi
+ANCHO_ETIQUETA = 400   # 50 mm a 203dpi (TUFFMARK VOID 50x25mm)
+ALTO_ETIQUETA = 200    # 25 mm a 203dpi (TUFFMARK VOID 50x25mm)
 MARGEN = 24            # ~3 mm de margen interno de seguridad
 
 # Módulo del código de barras (grosor de barra angosta, en dots).
@@ -154,8 +162,16 @@ MODULO_BARRAS = 2
 # Factores empíricos de ancho por caracter de la fuente escalable
 # de Zebra (Font 0), como fracción de la altura de fuente.
 # Las letras (IMPLESEG) son un poco más anchas que los dígitos.
-FACTOR_ANCHO_LETRAS = 0.62
-FACTOR_ANCHO_DIGITOS = 0.55
+#
+# CALIBRADO (2026-09-15) con una impresión real: se midió en
+# píxeles el ancho que la impresora realmente dibujó para
+# "IMPLESEG" (^A0N,42,42) y para un consecutivo de 8 dígitos
+# (^A0N,40,40) en la etiqueta física, y se despejó el factor.
+# Los valores anteriores (0.62 / 0.55) sobrestimaban el ancho
+# real, por eso el título y el número quedaban recostados a la
+# izquierda en vez de centrados.
+FACTOR_ANCHO_LETRAS = 0.47
+FACTOR_ANCHO_DIGITOS = 0.43
 
 
 def ancho_texto_dots(texto: str, alto_fuente: int, factor: float) -> int:
@@ -1063,3 +1079,4 @@ async def configurar(
             status_code=500,
             detail=str(e)
         )
+    
