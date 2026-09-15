@@ -9,15 +9,8 @@ from datetime import datetime
 from app.database import get_session
 from app.models import RegistroEtiqueta
 
-
-router = APIRouter(
-    prefix="/etiquetas",
-    tags=["Control Etiquetas"]
-)
-
-templates = Jinja2Templates(
-    directory="app/templates"
-)
+router = APIRouter(prefix="/etiquetas", tags=["Control Etiquetas"])
+templates = Jinja2Templates(directory="app/templates")
 
 
 # ============================================================
@@ -25,7 +18,6 @@ templates = Jinja2Templates(
 # ============================================================
 
 IMPRESORA_POR_DEFECTO = "ZDesigner ZT230-200dpi ZPL"
-
 impresora_actual = IMPRESORA_POR_DEFECTO
 
 
@@ -65,11 +57,6 @@ class DatosConfiguracion(BaseModel):
     nombre_impresora: str
 
 
-class DatosConfirmarImpresion(BaseModel):
-    desde_numero: int
-    hasta_numero: int
-
-
 # ============================================================
 # CONSECUTIVOS
 # ============================================================
@@ -99,8 +86,8 @@ def reservar_consecutivos(
             "La cantidad debe ser mayor que cero."
         )
 
-    # Evita que dos usuarios reciban
-    # el mismo bloque de consecutivos.
+    # Bloqueo central para evitar que dos usuarios
+    # reciban el mismo bloque de consecutivos.
     db.execute(
         text(
             "SELECT pg_advisory_xact_lock(874512)"
@@ -133,69 +120,80 @@ def generar_etiqueta_individual(
     consecutivo: int
 ) -> str:
     """
-    Genera una fila física de dos etiquetas.
+    Geometría física para Zebra ZT230 200 dpi.
 
-    Zebra:
-    - ZT230
-    - 200 dpi
-    - Ancho total: 800 dots
+    Rollo:
+    - Ancho total ZPL: 640 dots
     - Alto: 200 dots
-    - Dos etiquetas de aproximadamente 400 dots cada una.
+    - Dos etiquetas por fila
+    - Cada etiqueta: 320 x 200 dots
 
-    Cada etiqueta contiene:
-    - IMPLESEG centrado.
-    - Código de barras centrado.
-    - Consecutivo centrado debajo.
+    Diseño de cada etiqueta:
+    - IMPLESEG centrado
+    - Código Code 128 más grande y centrado
+    - Consecutivo más grande y centrado
 
-    IMPORTANTE:
-    No se utiliza win32print aquí.
-    Ubuntu solamente genera el ZPL.
-    El navegador lo entrega al agente Windows.
+    No se realiza impresión directa desde Ubuntu.
+    Ubuntu genera el ZPL y el navegador lo entrega
+    al agente de impresión de Windows.
     """
 
-    consecutivo_str = str(consecutivo)
+    consecutivo = str(consecutivo)
 
-    ANCHO_TOTAL = 800
+    ANCHO_ETIQUETA = 320
+    ANCHO_TOTAL = 640
     ALTO_ETIQUETA = 200
-    ANCHO_ETIQUETA = 400
+
+    # Posiciones horizontales del código de barras.
+    #
+    # Con BY=3 el código ocupa más espacio horizontal.
+    # Las posiciones están calculadas para centrarlo
+    # dentro de cada área de 320 dots.
+    X_BARCODE_IZQUIERDA = 40
+    X_BARCODE_DERECHA = (
+        ANCHO_ETIQUETA + X_BARCODE_IZQUIERDA
+    )
 
     return f"""^XA
 ^PW{ANCHO_TOTAL}
 ^LL{ALTO_ETIQUETA}
-^MD20
+^MD25
 ^PR3
 ^LH0,0
+^LS0
+^LT0
+^MNY
 
-^FO0,18
-^A0N,30,30
+^FO0,14
+^A0N,38,38
 ^FB{ANCHO_ETIQUETA},1,0,C
 ^FDIMPLESEG^FS
 
-^FO100,58
-^BY2,2,55
+^FO{X_BARCODE_IZQUIERDA},55
+^BY3,2,55
 ^BCN,55,N,N,N
-^FD{consecutivo_str}^FS
+^FD{consecutivo}^FS
 
 ^FO0,132
-^A0N,28,28
+^A0N,34,34
 ^FB{ANCHO_ETIQUETA},1,0,C
-^FD{consecutivo_str}^FS
+^FD{consecutivo}^FS
 
 
-^FO400,18
-^A0N,30,30
+^FO{ANCHO_ETIQUETA},14
+^A0N,38,38
 ^FB{ANCHO_ETIQUETA},1,0,C
 ^FDIMPLESEG^FS
 
-^FO500,58
-^BY2,2,55
+^FO{X_BARCODE_DERECHA},55
+^BY3,2,55
 ^BCN,55,N,N,N
-^FD{consecutivo_str}^FS
+^FD{consecutivo}^FS
 
-^FO400,132
-^A0N,28,28
+^FO{ANCHO_ETIQUETA},132
+^A0N,34,34
 ^FB{ANCHO_ETIQUETA},1,0,C
-^FD{consecutivo_str}^FS
+^FD{consecutivo}^FS
 
 ^XZ
 """
@@ -205,13 +203,13 @@ def generar_zpl(
     consecutivos: list[int],
     copias: int
 ) -> str:
+
     """
     Genera el trabajo ZPL completo.
 
-    Cada consecutivo genera una fila física
-    con dos stickers:
-    - izquierdo
-    - derecho
+    Cada consecutivo genera:
+    - una etiqueta izquierda
+    - una etiqueta derecha
 
     'copias' repite la fila completa.
     """
@@ -241,7 +239,7 @@ def preparar_trabajo_impresion(
     Ubuntu genera el ZPL y lo devuelve al navegador.
 
     El navegador entrega el ZPL al agente local
-    de Windows, quien se comunica con la impresora.
+    de Windows, que es quien conversa con la impresora.
     """
 
     if not zpl:
@@ -284,7 +282,9 @@ async def obtener_estado(
     db: Session = Depends(get_session)
 ):
 
-    siguiente = get_next_consecutivo(db)
+    siguiente = get_next_consecutivo(
+        db
+    )
 
     return {
         "consecutivo": siguiente,
@@ -302,9 +302,7 @@ async def obtener_historial(
 ):
 
     registros = db.exec(
-        select(
-            RegistroEtiqueta
-        )
+        select(RegistroEtiqueta)
         .order_by(
             RegistroEtiqueta.consecutivo.desc()
         )
@@ -313,39 +311,39 @@ async def obtener_historial(
 
     historial = []
 
-    for registro in registros:
+    for r in registros:
 
         historial.append(
             {
-                "fecha_hora": registro.fecha.isoformat(),
+                "fecha_hora": r.fecha.isoformat(),
 
                 "tipo_operacion": (
                     "IMPRESION"
-                    if registro.impreso
+                    if r.impreso
                     else "ASIGNACION"
                 ),
 
                 "desde_numero": (
-                    registro.consecutivo
+                    r.consecutivo
                 ),
 
                 "hasta_numero": (
-                    registro.consecutivo
+                    r.consecutivo
                 ),
 
                 "cantidad": 1,
                 "copias": 1,
 
                 "usuario_nombre": (
-                    registro.nombre
+                    r.nombre
                 ),
 
                 "usuario_cedula": (
-                    registro.cedula
+                    r.cedula
                 ),
 
                 "cliente_nombre": (
-                    registro.cliente
+                    r.cliente
                 ),
 
                 "cliente_nit": ""
@@ -371,7 +369,8 @@ async def imprimir_nueva(
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    "La cantidad debe ser mayor que cero."
+                    "La cantidad debe ser "
+                    "mayor que cero."
                 )
             )
 
@@ -379,7 +378,8 @@ async def imprimir_nueva(
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    "Las copias deben ser mayores que cero."
+                    "Las copias deben ser "
+                    "mayores que cero."
                 )
             )
 
@@ -404,11 +404,13 @@ async def imprimir_nueva(
         )
 
         if datos.c_nit:
+
             cliente_info += (
                 f" - NIT: {datos.c_nit}"
             )
 
         if not cliente_info:
+
             cliente_info = (
                 "Sin detalles de cliente"
             )
@@ -428,7 +430,9 @@ async def imprimir_nueva(
                 impreso=False,
             )
 
-            db.add(nuevo_registro)
+            db.add(
+                nuevo_registro
+            )
 
         # --------------------------------------------------------
         # SOLO ASIGNAR
@@ -502,6 +506,7 @@ async def imprimir_nueva(
             ),
 
             "job_id": None,
+
             "zpl": zpl_completo
         }
 
@@ -532,6 +537,16 @@ async def imprimir_rango(
 
     try:
 
+        if datos.copias <= 0:
+
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Las copias deben ser "
+                    "mayores que cero."
+                )
+            )
+
         siguiente = get_next_consecutivo(
             db
         )
@@ -544,7 +559,7 @@ async def imprimir_rango(
                     "El número 'hasta' debe ser "
                     "mayor o igual al "
                     f"consecutivo actual "
-                    f"({siguiente})"
+                    f"({siguiente})."
                 )
             )
 
@@ -574,7 +589,9 @@ async def imprimir_rango(
                 impreso=False,
             )
 
-            db.add(nuevo_registro)
+            db.add(
+                nuevo_registro
+            )
 
         # --------------------------------------------------------
         # GENERAR ZPL
@@ -632,7 +649,14 @@ async def imprimir_rango(
 # CONFIRMAR IMPRESION DESDE EL AGENTE WINDOWS
 # ============================================================
 
-@router.post("/api/marcar_impresion")
+class DatosConfirmarImpresion(BaseModel):
+    desde_numero: int
+    hasta_numero: int
+
+
+@router.post(
+    "/api/marcar_impresion"
+)
 async def marcar_impresion(
     datos: DatosConfirmarImpresion,
     db: Session = Depends(get_session)
@@ -642,6 +666,7 @@ async def marcar_impresion(
         datos.desde_numero
         > datos.hasta_numero
     ):
+
         raise HTTPException(
             status_code=400,
             detail=(
@@ -653,7 +678,9 @@ async def marcar_impresion(
     try:
 
         registros = db.exec(
-            select(RegistroEtiqueta).where(
+            select(
+                RegistroEtiqueta
+            ).where(
                 RegistroEtiqueta.consecutivo
                 >= datos.desde_numero,
 
@@ -666,7 +693,9 @@ async def marcar_impresion(
 
             registro.impreso = True
 
-            db.add(registro)
+            db.add(
+                registro
+            )
 
         db.commit()
 
@@ -678,8 +707,13 @@ async def marcar_impresion(
                 "por el agente local."
             ),
 
-            "desde": datos.desde_numero,
-            "hasta": datos.hasta_numero,
+            "desde": (
+                datos.desde_numero
+            ),
+
+            "hasta": (
+                datos.hasta_numero
+            ),
 
             "cantidad_actualizada": (
                 len(registros)
@@ -710,11 +744,22 @@ async def reimprimir(
         datos.desde_numero
         > datos.hasta_numero
     ):
+
         raise HTTPException(
             status_code=400,
             detail=(
-                "El número 'desde' no puede "
-                "ser mayor que 'hasta'"
+                "El número desde no puede "
+                "ser mayor que hasta."
+            )
+        )
+
+    if datos.copias <= 0:
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Las copias deben ser "
+                "mayores que cero."
             )
         )
 
@@ -747,8 +792,13 @@ async def reimprimir(
                 f"{datos.hasta_numero}"
             ),
 
-            "desde": datos.desde_numero,
-            "hasta": datos.hasta_numero,
+            "desde": (
+                datos.desde_numero
+            ),
+
+            "hasta": (
+                datos.hasta_numero
+            ),
 
             "cantidad": len(numeros),
             "copias": datos.copias,
@@ -758,6 +808,7 @@ async def reimprimir(
             ),
 
             "job_id": None,
+
             "zpl": zpl_completo
         }
 
@@ -809,35 +860,22 @@ async def configurar(
                 )
             )
 
-        # --------------------------------------------------------
-        # AJUSTAR SECUENCIA POSTGRESQL
-        # --------------------------------------------------------
-        #
-        # Si queremos que el próximo número
-        # sea N, PostgreSQL debe quedar
-        # en N-1.
-        #
-
+        # Si el siguiente número deseado es N,
+        # PostgreSQL debe quedar con last_value = N-1.
         db.execute(
             text(
-                """
-                SELECT setval(
-                    'etiquetas_consecutivo_seq',
-                    :valor,
-                    true
-                )
-                """
+                "SELECT setval("
+                "'etiquetas_consecutivo_seq', "
+                ":valor, "
+                "true)"
             ),
             {
                 "valor": (
-                    datos.nuevo_consecutivo - 1
+                    datos.nuevo_consecutivo
+                    - 1
                 )
             }
         )
-
-        # --------------------------------------------------------
-        # IMPRESORA
-        # --------------------------------------------------------
 
         if datos.nombre_impresora:
 
