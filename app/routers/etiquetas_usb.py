@@ -182,19 +182,20 @@ def ancho_texto_dots(texto: str, alto_fuente: int, factor: float) -> int:
 def ancho_barcode_code128_dots(datos: str, modulo: int) -> int:
     """
     Ancho aproximado (en dots) de un código Code 128 en modo
-    automático (^BCN,...,N). Si los datos son numéricos y de
-    longitud par, el firmware usa el subconjunto C (2 dígitos
-    por codeword); si no, asume 1 caracter por codeword
-    (subconjunto B), que es el peor caso (más ancho).
+    automático (^BCN,...,N).
+
+    CORRECCION (2026-09-15): se había asumido que, para datos
+    numéricos de longitud par, el firmware comprime en el
+    subconjunto C (2 dígitos por codeword). Una impresión real
+    mostró que esta ZT230 en realidad NO comprime: usa el
+    subconjunto B (1 caracter por codeword), que es más ancho.
+    Con el supuesto de subconjunto C el ancho salía subestimado,
+    así que el código quedaba corrido hacia la derecha, con un
+    hueco grande a la izquierda dentro de la etiqueta.
 
     total_modulos = inicio(11) + datos(11 c/u) + check(11) + parada(13)
     """
-    if datos.isdigit() and len(datos) % 2 == 0:
-        codewords_datos = len(datos) // 2
-    else:
-        codewords_datos = len(datos)
-
-    total_modulos = 11 + (11 * codewords_datos) + 11 + 13
+    total_modulos = 11 + (11 * len(datos)) + 11 + 13
 
     return total_modulos * modulo
 
@@ -1079,4 +1080,3 @@ async def configurar(
             status_code=500,
             detail=str(e)
         )
-    
