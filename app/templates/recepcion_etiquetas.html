@@ -402,7 +402,7 @@
 
         window.onload = () => {
             const savedUser =
-                localStorage.getItem('impleseg_user');
+                sessionStorage.getItem('impleseg_user');
 
             if (savedUser) {
                 try {
@@ -419,7 +419,7 @@
                         `Usuario: ${usuarioActual.nombre}`;
 
                 } catch (e) {
-                    localStorage.removeItem(
+                    sessionStorage.removeItem(
                         'impleseg_user'
                     );
                 }
@@ -441,7 +441,7 @@
             if(!nom || !ced) return Swal.fire("Error", "Debe ingresar nombre y cédula", "error");
             
             usuarioActual = { nombre: nom, cedula: ced };
-            localStorage.setItem('impleseg_user', JSON.stringify(usuarioActual));
+            sessionStorage.setItem('impleseg_user', JSON.stringify(usuarioActual));
             document.getElementById('login-modal').style.display = 'none';
             document.getElementById('user-info').innerText = `Usuario: ${usuarioActual.nombre}`;
             actualizarEstado();
@@ -618,13 +618,37 @@
                     throw new Error(data.detail || 'No fue posible consultar el agente.');
                 }
 
+                // El agente devuelve objetos con nombre, driver y puerto.
+                // El selector necesita trabajar con el nombre de la impresora.
+                const impresorasRaw = Array.isArray(data.impresoras)
+                    ? data.impresoras
+                    : [];
+
+                const impresoras = impresorasRaw
+                    .map(item => {
+                        if (typeof item === 'string') {
+                            return item.trim();
+                        }
+
+                        if (item && typeof item === 'object') {
+                            return String(
+                                item.name ||
+                                item.pPrinterName ||
+                                item.printer ||
+                                ''
+                            ).trim();
+                        }
+
+                        return '';
+                    })
+                    .filter(Boolean);
+
                 if (estadoAgente) {
-                    estadoAgente.textContent = `Agente: conectado (${data.cantidad || 0} impresora(s))`;
+                    estadoAgente.textContent = `Agente: conectado (${impresoras.length} impresora(s))`;
                     estadoAgente.className = 'text-xs font-bold px-3 py-1 border rounded bg-green-50 text-green-700';
                 }
 
                 const guardada = localStorage.getItem('impleseg_impresora_local');
-                const impresoras = data.impresoras || [];
 
                 select.innerHTML = '';
 
