@@ -99,12 +99,12 @@ def reservar_consecutivos(
     from sqlalchemy import text
 
     if cantidad <= 0:
+
         raise ValueError(
             "La cantidad debe ser mayor que cero."
         )
 
-    # Bloqueo para evitar duplicados
-    # entre usuarios simultáneos.
+    # Evita duplicados entre usuarios simultáneos.
     db.execute(
         text(
             "SELECT pg_advisory_xact_lock(874512)"
@@ -130,26 +130,29 @@ def reservar_consecutivos(
 
 
 # ============================================================
-# ZPL
+# GENERACION ZPL
 # ============================================================
 
 def generar_etiqueta_individual(
     consecutivo: int
 ) -> str:
     """
-    Genera una fila fisica con DOS etiquetas.
+    GENERA UNA FILA FISICA CON DOS ETIQUETAS IDENTICAS.
 
-    Geometria ya verificada:
-    - Ancho total: 800 dots.
-    - Alto: 200 dots.
-    - Etiqueta izquierda: 400 dots.
-    - Etiqueta derecha: 400 dots.
+    Referencia visual:
+    - IMPLESEG centrado.
+    - Codigo de barras centrado.
+    - Numero centrado.
 
-    Ajuste actual:
-    - Codigo de barras mantiene la posicion que ya esta centrada.
-    - IMPLESEG se centra mediante ^FB en cada mitad.
-    - Consecutivo se centra mediante ^FB en cada mitad.
-    - No se cambia el tamaño ni la separacion fisica.
+    Geometria:
+    - 800 dots de ancho total.
+    - 200 dots de alto.
+    - 400 dots para cada etiqueta.
+
+    La etiqueta derecha utiliza exactamente el mismo diseño
+    de la izquierda desplazado 400 dots.
+
+    Esto evita que una etiqueta dependa de la otra.
     """
 
     consecutivo = str(consecutivo)
@@ -158,47 +161,49 @@ def generar_etiqueta_individual(
     ANCHO_ETIQUETA = 400
     ALTO_ETIQUETA = 200
 
-    # --------------------------------------------------------
-    # CODIGOS DE BARRAS
-    # --------------------------------------------------------
-    #
-    # Estas posiciones ya funcionan correctamente.
-    # NO se modifican.
-    #
+    # ========================================================
+    # POSICIONES
+    # ========================================================
 
-    X_BARCODE_IZQUIERDA = 110
-
-    X_BARCODE_DERECHA = (
-        ANCHO_ETIQUETA
-        + X_BARCODE_IZQUIERDA
-    )
-
-    # --------------------------------------------------------
-    # TEXTO
-    # --------------------------------------------------------
+    # Diseño interno de la etiqueta izquierda.
     #
-    # Cada texto ocupa exactamente la mitad de la impresion.
-    # ^FB ... C realiza el centrado horizontal real del texto.
+    # Estas posiciones corresponden al formato que ya se
+    # observa correctamente en la etiqueta individual.
     #
 
     X_TEXTO_IZQUIERDA = 0
+    X_BARCODE_IZQUIERDA = 110
+
+    # La derecha es una copia EXACTA de la izquierda,
+    # desplazada 400 dots.
+    #
 
     X_TEXTO_DERECHA = (
-        ANCHO_ETIQUETA
+        X_TEXTO_IZQUIERDA
+        + ANCHO_ETIQUETA
     )
 
-    ANCHO_TEXTO = ANCHO_ETIQUETA
+    X_BARCODE_DERECHA = (
+        X_BARCODE_IZQUIERDA
+        + ANCHO_ETIQUETA
+    )
 
-    # --------------------------------------------------------
+    # ========================================================
     # POSICIONES VERTICALES
-    # --------------------------------------------------------
-    #
-    # Se conservan porque la posicion vertical ya esta correcta.
-    #
+    # ========================================================
 
     Y_TITULO = 20
     Y_BARCODE = 65
     Y_NUMERO = 142
+
+    # ========================================================
+    # TAMAÑOS
+    # ========================================================
+
+    FUENTE_TITULO = 42
+    FUENTE_NUMERO = 40
+
+    ALTURA_BARCODE = 60
 
     return f"""^XA
 ^PW{ANCHO_TOTAL}
@@ -211,34 +216,34 @@ def generar_etiqueta_individual(
 ^MNY
 
 ^FO{X_TEXTO_IZQUIERDA},{Y_TITULO}
-^A0N,42,42
-^FB{ANCHO_TEXTO},1,0,C
+^A0N,{FUENTE_TITULO},{FUENTE_TITULO}
+^FB{ANCHO_ETIQUETA},1,0,C
 ^FDIMPLESEG^FS
 
 ^FO{X_BARCODE_IZQUIERDA},{Y_BARCODE}
-^BY2,2,60
-^BCN,60,N,N,N
+^BY2,2,{ALTURA_BARCODE}
+^BCN,{ALTURA_BARCODE},N,N,N
 ^FD{consecutivo}^FS
 
 ^FO{X_TEXTO_IZQUIERDA},{Y_NUMERO}
-^A0N,40,40
-^FB{ANCHO_TEXTO},1,0,C
+^A0N,{FUENTE_NUMERO},{FUENTE_NUMERO}
+^FB{ANCHO_ETIQUETA},1,0,C
 ^FD{consecutivo}^FS
 
 
 ^FO{X_TEXTO_DERECHA},{Y_TITULO}
-^A0N,42,42
-^FB{ANCHO_TEXTO},1,0,C
+^A0N,{FUENTE_TITULO},{FUENTE_TITULO}
+^FB{ANCHO_ETIQUETA},1,0,C
 ^FDIMPLESEG^FS
 
 ^FO{X_BARCODE_DERECHA},{Y_BARCODE}
-^BY2,2,60
-^BCN,60,N,N,N
+^BY2,2,{ALTURA_BARCODE}
+^BCN,{ALTURA_BARCODE},N,N,N
 ^FD{consecutivo}^FS
 
 ^FO{X_TEXTO_DERECHA},{Y_NUMERO}
-^A0N,40,40
-^FB{ANCHO_TEXTO},1,0,C
+^A0N,{FUENTE_NUMERO},{FUENTE_NUMERO}
+^FB{ANCHO_ETIQUETA},1,0,C
 ^FD{consecutivo}^FS
 
 ^XZ
@@ -249,18 +254,17 @@ def generar_zpl(
     consecutivos: list[int],
     copias: int
 ) -> str:
-
     """
     Genera el trabajo ZPL completo.
 
-    Cada consecutivo genera una fila fisica:
-    - etiqueta izquierda
-    - etiqueta derecha
+    Cada consecutivo genera:
+        etiqueta izquierda + etiqueta derecha
 
-    'copias' repite la fila completa.
+    Las copias repiten la fila completa.
     """
 
     if copias <= 0:
+
         raise ValueError(
             "Las copias deben ser mayores que cero."
         )
@@ -275,16 +279,16 @@ def generar_zpl(
 
 
 # ============================================================
-# IMPRESION
+# PREPARAR IMPRESION
 # ============================================================
 
 def preparar_trabajo_impresion(
     zpl: str
 ) -> dict:
     """
-    Ubuntu genera el ZPL y lo devuelve al navegador.
+    Ubuntu genera el ZPL.
 
-    El navegador lo entrega al agente local de Windows,
+    El navegador lo entrega al agente local Windows,
     que realiza la impresion en la Zebra.
     """
 
@@ -444,16 +448,13 @@ async def imprimir_nueva(
                 )
             )
 
-        # ----------------------------------------------------
-        # RESERVAR CONSECUTIVOS
-        # ----------------------------------------------------
-
         numeros = reservar_consecutivos(
             db,
             datos.cantidad
         )
 
         primer_consecutivo = numeros[0]
+
         ultimo_consecutivo = numeros[-1]
 
         # ----------------------------------------------------
@@ -477,7 +478,7 @@ async def imprimir_nueva(
             )
 
         # ----------------------------------------------------
-        # REGISTRAR CONSECUTIVOS
+        # REGISTRAR
         # ----------------------------------------------------
 
         for consecutivo_actual in numeros:
@@ -486,14 +487,19 @@ async def imprimir_nueva(
                 consecutivo=(
                     consecutivo_actual
                 ),
+
                 cedula=(
                     datos.usuario_cedula
                 ),
+
                 nombre=(
                     datos.usuario_nombre
                 ),
+
                 cliente=cliente_info,
+
                 fecha=datetime.now(),
+
                 impreso=False,
             )
 
@@ -599,6 +605,7 @@ async def imprimir_nueva(
     except HTTPException:
 
         db.rollback()
+
         raise
 
     except Exception as e:
@@ -662,36 +669,33 @@ async def imprimir_rango(
             cantidad
         )
 
-        # ----------------------------------------------------
-        # REGISTRAR
-        # ----------------------------------------------------
-
         for consecutivo_actual in numeros:
 
             nuevo_registro = RegistroEtiqueta(
                 consecutivo=(
                     consecutivo_actual
                 ),
+
                 cedula=(
                     datos.usuario_cedula
                 ),
+
                 nombre=(
                     datos.usuario_nombre
                 ),
+
                 cliente=(
                     "Impresión por Rango"
                 ),
+
                 fecha=datetime.now(),
+
                 impreso=False,
             )
 
             db.add(
                 nuevo_registro
             )
-
-        # ----------------------------------------------------
-        # GENERAR ZPL
-        # ----------------------------------------------------
 
         zpl_completo = generar_zpl(
             numeros,
@@ -741,6 +745,7 @@ async def imprimir_rango(
     except HTTPException:
 
         db.rollback()
+
         raise
 
     except Exception as e:
@@ -1016,6 +1021,7 @@ async def configurar(
     except HTTPException:
 
         db.rollback()
+
         raise
 
     except Exception as e:
