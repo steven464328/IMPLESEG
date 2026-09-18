@@ -618,37 +618,13 @@
                     throw new Error(data.detail || 'No fue posible consultar el agente.');
                 }
 
-                // El agente devuelve objetos con nombre, driver y puerto.
-                // El selector necesita trabajar con el nombre de la impresora.
-                const impresorasRaw = Array.isArray(data.impresoras)
-                    ? data.impresoras
-                    : [];
-
-                const impresoras = impresorasRaw
-                    .map(item => {
-                        if (typeof item === 'string') {
-                            return item.trim();
-                        }
-
-                        if (item && typeof item === 'object') {
-                            return String(
-                                item.name ||
-                                item.pPrinterName ||
-                                item.printer ||
-                                ''
-                            ).trim();
-                        }
-
-                        return '';
-                    })
-                    .filter(Boolean);
-
                 if (estadoAgente) {
-                    estadoAgente.textContent = `Agente: conectado (${impresoras.length} impresora(s))`;
+                    estadoAgente.textContent = `Agente: conectado (${data.cantidad || 0} impresora(s))`;
                     estadoAgente.className = 'text-xs font-bold px-3 py-1 border rounded bg-green-50 text-green-700';
                 }
 
                 const guardada = localStorage.getItem('impleseg_impresora_local');
+                const impresoras = data.impresoras || [];
 
                 select.innerHTML = '';
 
