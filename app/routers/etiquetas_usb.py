@@ -103,6 +103,8 @@ def reservar_consecutivos(
             "La cantidad debe ser mayor que cero."
         )
 
+    # Bloqueo para evitar duplicados
+    # entre usuarios simultáneos.
     db.execute(
         text(
             "SELECT pg_advisory_xact_lock(874512)"
@@ -137,21 +139,17 @@ def generar_etiqueta_individual(
     """
     Genera una fila fisica con DOS etiquetas.
 
-    Geometria:
+    Geometria ya verificada:
     - Ancho total: 800 dots.
     - Alto: 200 dots.
     - Etiqueta izquierda: 400 dots.
     - Etiqueta derecha: 400 dots.
 
-    Diseño:
-    - IMPLESEG centrado.
-    - Codigo de barras centrado.
-    - Consecutivo centrado.
-
     Ajuste actual:
-    El codigo de barras se desplaza 10 dots hacia la derecha
-    dentro de cada etiqueta para quedar visualmente centrado.
-    La posicion vertical se conserva porque ya funciona.
+    - Codigo de barras mantiene la posicion que ya esta centrada.
+    - IMPLESEG se centra mediante ^FB en cada mitad.
+    - Consecutivo se centra mediante ^FB en cada mitad.
+    - No se cambia el tamaño ni la separacion fisica.
     """
 
     consecutivo = str(consecutivo)
@@ -161,46 +159,42 @@ def generar_etiqueta_individual(
     ALTO_ETIQUETA = 200
 
     # --------------------------------------------------------
-    # TITULO
-    # --------------------------------------------------------
-
-    X_TITULO_IZQUIERDA = 105
-    X_TITULO_DERECHA = (
-        ANCHO_ETIQUETA
-        + X_TITULO_IZQUIERDA
-    )
-
-    # --------------------------------------------------------
-    # CODIGO DE BARRAS
+    # CODIGOS DE BARRAS
     # --------------------------------------------------------
     #
-    # Ajuste final de centrado:
-    #
-    # Izquierda:  X=110
-    # Derecha:    X=510
-    #
-    # Las dos posiciones son simetricas.
+    # Estas posiciones ya funcionan correctamente.
+    # NO se modifican.
     #
 
     X_BARCODE_IZQUIERDA = 110
+
     X_BARCODE_DERECHA = (
         ANCHO_ETIQUETA
         + X_BARCODE_IZQUIERDA
     )
 
     # --------------------------------------------------------
-    # NUMERO
+    # TEXTO
     # --------------------------------------------------------
+    #
+    # Cada texto ocupa exactamente la mitad de la impresion.
+    # ^FB ... C realiza el centrado horizontal real del texto.
+    #
 
-    X_NUMERO_IZQUIERDA = 112
-    X_NUMERO_DERECHA = (
+    X_TEXTO_IZQUIERDA = 0
+
+    X_TEXTO_DERECHA = (
         ANCHO_ETIQUETA
-        + X_NUMERO_IZQUIERDA
     )
+
+    ANCHO_TEXTO = ANCHO_ETIQUETA
 
     # --------------------------------------------------------
     # POSICIONES VERTICALES
     # --------------------------------------------------------
+    #
+    # Se conservan porque la posicion vertical ya esta correcta.
+    #
 
     Y_TITULO = 20
     Y_BARCODE = 65
@@ -216,8 +210,9 @@ def generar_etiqueta_individual(
 ^LT0
 ^MNY
 
-^FO{X_TITULO_IZQUIERDA},{Y_TITULO}
+^FO{X_TEXTO_IZQUIERDA},{Y_TITULO}
 ^A0N,42,42
+^FB{ANCHO_TEXTO},1,0,C
 ^FDIMPLESEG^FS
 
 ^FO{X_BARCODE_IZQUIERDA},{Y_BARCODE}
@@ -225,13 +220,15 @@ def generar_etiqueta_individual(
 ^BCN,60,N,N,N
 ^FD{consecutivo}^FS
 
-^FO{X_NUMERO_IZQUIERDA},{Y_NUMERO}
+^FO{X_TEXTO_IZQUIERDA},{Y_NUMERO}
 ^A0N,40,40
+^FB{ANCHO_TEXTO},1,0,C
 ^FD{consecutivo}^FS
 
 
-^FO{X_TITULO_DERECHA},{Y_TITULO}
+^FO{X_TEXTO_DERECHA},{Y_TITULO}
 ^A0N,42,42
+^FB{ANCHO_TEXTO},1,0,C
 ^FDIMPLESEG^FS
 
 ^FO{X_BARCODE_DERECHA},{Y_BARCODE}
@@ -239,8 +236,9 @@ def generar_etiqueta_individual(
 ^BCN,60,N,N,N
 ^FD{consecutivo}^FS
 
-^FO{X_NUMERO_DERECHA},{Y_NUMERO}
+^FO{X_TEXTO_DERECHA},{Y_NUMERO}
 ^A0N,40,40
+^FB{ANCHO_TEXTO},1,0,C
 ^FD{consecutivo}^FS
 
 ^XZ
@@ -255,9 +253,9 @@ def generar_zpl(
     """
     Genera el trabajo ZPL completo.
 
-    Cada consecutivo genera una fila fisica con:
-    - una etiqueta izquierda
-    - una etiqueta derecha
+    Cada consecutivo genera una fila fisica:
+    - etiqueta izquierda
+    - etiqueta derecha
 
     'copias' repite la fila completa.
     """
@@ -286,11 +284,12 @@ def preparar_trabajo_impresion(
     """
     Ubuntu genera el ZPL y lo devuelve al navegador.
 
-    El navegador entrega el ZPL al agente local de Windows,
+    El navegador lo entrega al agente local de Windows,
     que realiza la impresion en la Zebra.
     """
 
     if not zpl:
+
         raise RuntimeError(
             "El trabajo ZPL esta vacio."
         )
@@ -455,7 +454,6 @@ async def imprimir_nueva(
         )
 
         primer_consecutivo = numeros[0]
-
         ultimo_consecutivo = numeros[-1]
 
         # ----------------------------------------------------
@@ -479,7 +477,7 @@ async def imprimir_nueva(
             )
 
         # ----------------------------------------------------
-        # REGISTRAR
+        # REGISTRAR CONSECUTIVOS
         # ----------------------------------------------------
 
         for consecutivo_actual in numeros:
@@ -488,19 +486,14 @@ async def imprimir_nueva(
                 consecutivo=(
                     consecutivo_actual
                 ),
-
                 cedula=(
                     datos.usuario_cedula
                 ),
-
                 nombre=(
                     datos.usuario_nombre
                 ),
-
                 cliente=cliente_info,
-
                 fecha=datetime.now(),
-
                 impreso=False,
             )
 
@@ -669,33 +662,36 @@ async def imprimir_rango(
             cantidad
         )
 
+        # ----------------------------------------------------
+        # REGISTRAR
+        # ----------------------------------------------------
+
         for consecutivo_actual in numeros:
 
             nuevo_registro = RegistroEtiqueta(
                 consecutivo=(
                     consecutivo_actual
                 ),
-
                 cedula=(
                     datos.usuario_cedula
                 ),
-
                 nombre=(
                     datos.usuario_nombre
                 ),
-
                 cliente=(
                     "Impresión por Rango"
                 ),
-
                 fecha=datetime.now(),
-
                 impreso=False,
             )
 
             db.add(
                 nuevo_registro
             )
+
+        # ----------------------------------------------------
+        # GENERAR ZPL
+        # ----------------------------------------------------
 
         zpl_completo = generar_zpl(
             numeros,
