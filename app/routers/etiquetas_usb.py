@@ -104,7 +104,8 @@ def reservar_consecutivos(
             "La cantidad debe ser mayor que cero."
         )
 
-    # Evita duplicados entre usuarios simultáneos.
+    # Bloqueo para evitar duplicados
+    # cuando trabajan varios usuarios.
     db.execute(
         text(
             "SELECT pg_advisory_xact_lock(874512)"
@@ -130,29 +131,30 @@ def reservar_consecutivos(
 
 
 # ============================================================
-# GENERACION ZPL
+# ZPL
 # ============================================================
 
 def generar_etiqueta_individual(
     consecutivo: int
 ) -> str:
     """
-    GENERA UNA FILA FISICA CON DOS ETIQUETAS IDENTICAS.
-
-    Referencia visual:
-    - IMPLESEG centrado.
-    - Codigo de barras centrado.
-    - Numero centrado.
+    Genera una fila fisica con DOS etiquetas.
 
     Geometria:
-    - 800 dots de ancho total.
-    - 200 dots de alto.
-    - 400 dots para cada etiqueta.
+    - Ancho total: 800 dots.
+    - Alto: 200 dots.
+    - Etiqueta izquierda: 400 dots.
+    - Etiqueta derecha: 400 dots.
 
-    La etiqueta derecha utiliza exactamente el mismo diseño
-    de la izquierda desplazado 400 dots.
+    DISEÑO:
+    - IMPLESEG centrado visualmente.
+    - Codigo de barras centrado.
+    - Consecutivo centrado visualmente.
 
-    Esto evita que una etiqueta dependa de la otra.
+    IMPORTANTE:
+    El codigo de barras NO se modifica.
+    Solamente se corrige el centrado horizontal
+    de IMPLESEG y del numero.
     """
 
     consecutivo = str(consecutivo)
@@ -162,35 +164,46 @@ def generar_etiqueta_individual(
     ALTO_ETIQUETA = 200
 
     # ========================================================
-    # POSICIONES
+    # POSICIONES HORIZONTALES
     # ========================================================
-
-    # Diseño interno de la etiqueta izquierda.
     #
-    # Estas posiciones corresponden al formato que ya se
-    # observa correctamente en la etiqueta individual.
+    # El código de barras ya está visualmente centrado.
+    # Se conserva.
     #
 
-    X_TEXTO_IZQUIERDA = 0
     X_BARCODE_IZQUIERDA = 110
 
-    # La derecha es una copia EXACTA de la izquierda,
-    # desplazada 400 dots.
+    X_BARCODE_DERECHA = (
+        ANCHO_ETIQUETA
+        + X_BARCODE_IZQUIERDA
+    )
+
+    # --------------------------------------------------------
+    # TEXTOS
+    # --------------------------------------------------------
+    #
+    # El desplazamiento de 35 dots corrige la diferencia
+    # visual que queda entre el centro del texto y el centro
+    # visual del código de barras.
     #
 
+    X_TEXTO_IZQUIERDA = 35
+
     X_TEXTO_DERECHA = (
-        X_TEXTO_IZQUIERDA
-        + ANCHO_ETIQUETA
+        ANCHO_ETIQUETA
+        + X_TEXTO_IZQUIERDA
     )
 
-    X_BARCODE_DERECHA = (
-        X_BARCODE_IZQUIERDA
-        + ANCHO_ETIQUETA
-    )
+    # El bloque permanece con 400 dots de ancho.
+    # Esto mantiene el mismo campo completo de la etiqueta.
+    ANCHO_TEXTO = ANCHO_ETIQUETA
 
     # ========================================================
     # POSICIONES VERTICALES
     # ========================================================
+    #
+    # Se conservan porque la posición vertical ya funciona.
+    #
 
     Y_TITULO = 20
     Y_BARCODE = 65
@@ -202,7 +215,6 @@ def generar_etiqueta_individual(
 
     FUENTE_TITULO = 42
     FUENTE_NUMERO = 40
-
     ALTURA_BARCODE = 60
 
     return f"""^XA
@@ -217,7 +229,7 @@ def generar_etiqueta_individual(
 
 ^FO{X_TEXTO_IZQUIERDA},{Y_TITULO}
 ^A0N,{FUENTE_TITULO},{FUENTE_TITULO}
-^FB{ANCHO_ETIQUETA},1,0,C
+^FB{ANCHO_TEXTO},1,0,C
 ^FDIMPLESEG^FS
 
 ^FO{X_BARCODE_IZQUIERDA},{Y_BARCODE}
@@ -227,13 +239,13 @@ def generar_etiqueta_individual(
 
 ^FO{X_TEXTO_IZQUIERDA},{Y_NUMERO}
 ^A0N,{FUENTE_NUMERO},{FUENTE_NUMERO}
-^FB{ANCHO_ETIQUETA},1,0,C
+^FB{ANCHO_TEXTO},1,0,C
 ^FD{consecutivo}^FS
 
 
 ^FO{X_TEXTO_DERECHA},{Y_TITULO}
 ^A0N,{FUENTE_TITULO},{FUENTE_TITULO}
-^FB{ANCHO_ETIQUETA},1,0,C
+^FB{ANCHO_TEXTO},1,0,C
 ^FDIMPLESEG^FS
 
 ^FO{X_BARCODE_DERECHA},{Y_BARCODE}
@@ -243,7 +255,7 @@ def generar_etiqueta_individual(
 
 ^FO{X_TEXTO_DERECHA},{Y_NUMERO}
 ^A0N,{FUENTE_NUMERO},{FUENTE_NUMERO}
-^FB{ANCHO_ETIQUETA},1,0,C
+^FB{ANCHO_TEXTO},1,0,C
 ^FD{consecutivo}^FS
 
 ^XZ
@@ -254,11 +266,12 @@ def generar_zpl(
     consecutivos: list[int],
     copias: int
 ) -> str:
+
     """
     Genera el trabajo ZPL completo.
 
     Cada consecutivo genera:
-        etiqueta izquierda + etiqueta derecha
+    una etiqueta izquierda y una derecha.
 
     Las copias repiten la fila completa.
     """
@@ -279,16 +292,17 @@ def generar_zpl(
 
 
 # ============================================================
-# PREPARAR IMPRESION
+# IMPRESION
 # ============================================================
 
 def preparar_trabajo_impresion(
     zpl: str
 ) -> dict:
+
     """
     Ubuntu genera el ZPL.
 
-    El navegador lo entrega al agente local Windows,
+    El navegador lo entrega al agente local de Windows,
     que realiza la impresion en la Zebra.
     """
 
@@ -454,11 +468,10 @@ async def imprimir_nueva(
         )
 
         primer_consecutivo = numeros[0]
-
         ultimo_consecutivo = numeros[-1]
 
         # ----------------------------------------------------
-        # INFORMACION DEL CLIENTE
+        # CLIENTE
         # ----------------------------------------------------
 
         cliente_info = (
@@ -605,7 +618,6 @@ async def imprimir_nueva(
     except HTTPException:
 
         db.rollback()
-
         raise
 
     except Exception as e:
@@ -745,7 +757,6 @@ async def imprimir_rango(
     except HTTPException:
 
         db.rollback()
-
         raise
 
     except Exception as e:
@@ -1021,7 +1032,6 @@ async def configurar(
     except HTTPException:
 
         db.rollback()
-
         raise
 
     except Exception as e:
