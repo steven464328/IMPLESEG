@@ -103,8 +103,6 @@ def reservar_consecutivos(
             "La cantidad debe ser mayor que cero."
         )
 
-    # Bloqueo para evitar que dos usuarios
-    # reciban simultaneamente el mismo consecutivo.
     db.execute(
         text(
             "SELECT pg_advisory_xact_lock(874512)"
@@ -139,69 +137,70 @@ def generar_etiqueta_individual(
     """
     Genera una fila fisica con DOS etiquetas.
 
-    Geometria verificada:
-    - Ancho total: 800 dots
-    - Alto total: 200 dots
-    - Etiqueta izquierda: 400 dots
-    - Etiqueta derecha: 400 dots
+    Geometria:
+    - Ancho total: 800 dots.
+    - Alto: 200 dots.
+    - Etiqueta izquierda: 400 dots.
+    - Etiqueta derecha: 400 dots.
+
+    Diseño:
+    - IMPLESEG centrado.
+    - Codigo de barras centrado.
+    - Consecutivo centrado.
 
     Ajuste actual:
-    - La etiqueta izquierda conserva su posicion horizontal.
-    - La etiqueta derecha se desplaza ligeramente hacia la derecha.
-    - Todos los elementos bajan 10 dots para evitar el corte superior.
-    - El tamaño del contenido se conserva para no alterar
-      el resultado que ya funciona.
+    El codigo de barras se desplaza 10 dots hacia la derecha
+    dentro de cada etiqueta para quedar visualmente centrado.
+    La posicion vertical se conserva porque ya funciona.
     """
 
     consecutivo = str(consecutivo)
 
     ANCHO_TOTAL = 800
-    ALTO_ETIQUETA = 200
     ANCHO_ETIQUETA = 400
+    ALTO_ETIQUETA = 200
 
     # --------------------------------------------------------
-    # ETIQUETA IZQUIERDA
+    # TITULO
     # --------------------------------------------------------
 
     X_TITULO_IZQUIERDA = 105
-    X_BARCODE_IZQUIERDA = 100
-    X_NUMERO_IZQUIERDA = 112
-
-    # --------------------------------------------------------
-    # ETIQUETA DERECHA
-    # --------------------------------------------------------
-    #
-    # Solo se desplaza horizontalmente la derecha.
-    # Ajuste moderado para conservar seguridad respecto
-    # al borde y al espacio central.
-    #
-
-    AJUSTE_HORIZONTAL_DERECHA = 35
-
     X_TITULO_DERECHA = (
         ANCHO_ETIQUETA
         + X_TITULO_IZQUIERDA
-        + AJUSTE_HORIZONTAL_DERECHA
     )
 
+    # --------------------------------------------------------
+    # CODIGO DE BARRAS
+    # --------------------------------------------------------
+    #
+    # Ajuste final de centrado:
+    #
+    # Izquierda:  X=110
+    # Derecha:    X=510
+    #
+    # Las dos posiciones son simetricas.
+    #
+
+    X_BARCODE_IZQUIERDA = 110
     X_BARCODE_DERECHA = (
         ANCHO_ETIQUETA
         + X_BARCODE_IZQUIERDA
-        + AJUSTE_HORIZONTAL_DERECHA
     )
 
+    # --------------------------------------------------------
+    # NUMERO
+    # --------------------------------------------------------
+
+    X_NUMERO_IZQUIERDA = 112
     X_NUMERO_DERECHA = (
         ANCHO_ETIQUETA
         + X_NUMERO_IZQUIERDA
-        + AJUSTE_HORIZONTAL_DERECHA
     )
 
     # --------------------------------------------------------
     # POSICIONES VERTICALES
     # --------------------------------------------------------
-    #
-    # Bajamos todos los elementos 10 dots.
-    #
 
     Y_TITULO = 20
     Y_BARCODE = 65
@@ -287,7 +286,7 @@ def preparar_trabajo_impresion(
     """
     Ubuntu genera el ZPL y lo devuelve al navegador.
 
-    El navegador lo entrega al agente local de Windows,
+    El navegador entrega el ZPL al agente local de Windows,
     que realiza la impresion en la Zebra.
     """
 
@@ -390,6 +389,7 @@ async def obtener_historial(
                 ),
 
                 "cantidad": 1,
+
                 "copias": 1,
 
                 "usuario_nombre": (
@@ -455,6 +455,7 @@ async def imprimir_nueva(
         )
 
         primer_consecutivo = numeros[0]
+
         ultimo_consecutivo = numeros[-1]
 
         # ----------------------------------------------------
@@ -478,7 +479,7 @@ async def imprimir_nueva(
             )
 
         # ----------------------------------------------------
-        # REGISTRAR CONSECUTIVOS
+        # REGISTRAR
         # ----------------------------------------------------
 
         for consecutivo_actual in numeros:
@@ -487,14 +488,19 @@ async def imprimir_nueva(
                 consecutivo=(
                     consecutivo_actual
                 ),
+
                 cedula=(
                     datos.usuario_cedula
                 ),
+
                 nombre=(
                     datos.usuario_nombre
                 ),
+
                 cliente=cliente_info,
+
                 fecha=datetime.now(),
+
                 impreso=False,
             )
 
@@ -663,36 +669,33 @@ async def imprimir_rango(
             cantidad
         )
 
-        # ----------------------------------------------------
-        # REGISTRAR
-        # ----------------------------------------------------
-
         for consecutivo_actual in numeros:
 
             nuevo_registro = RegistroEtiqueta(
                 consecutivo=(
                     consecutivo_actual
                 ),
+
                 cedula=(
                     datos.usuario_cedula
                 ),
+
                 nombre=(
                     datos.usuario_nombre
                 ),
+
                 cliente=(
                     "Impresión por Rango"
                 ),
+
                 fecha=datetime.now(),
+
                 impreso=False,
             )
 
             db.add(
                 nuevo_registro
             )
-
-        # ----------------------------------------------------
-        # GENERAR ZPL
-        # ----------------------------------------------------
 
         zpl_completo = generar_zpl(
             numeros,
