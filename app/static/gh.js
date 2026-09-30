@@ -163,7 +163,11 @@ function showInvForm(parent, itemId) {
     } catch (e) { toast(e.message, false); }
   };
   var tw = parent.querySelector('.table-panel');
-  parent.insertBefore(f, tw);
+  if (tw && tw.parentNode) {
+    tw.parentNode.insertBefore(f, tw);
+  } else {
+    parent.appendChild(f);
+  }
 }
 
 // ---------------------------------------------------------------
