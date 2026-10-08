@@ -3,6 +3,7 @@ Gestión Humana > Baja de activos (formato F-GT-BAJA-01).
 Al registrar una baja se descuenta definitivamente el stock del inventario y se almacena la firma.
 """
 from typing import Optional, List, Dict, Any
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -36,8 +37,11 @@ class BajaPayload(BaseModel):
 
 @router.get("", response_model=List[Baja])
 def listar(session: Session = Depends(get_session)):
-    resultados = session.exec(select(Baja)).all()
-    return sorted(resultados, key=lambda b: getattr(b, "id", 0) or 0, reverse=True)
+    try:
+        resultados = session.exec(select(Baja)).all()
+        return sorted(resultados, key=lambda b: getattr(b, "id", 0) or 0, reverse=True)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error consultando bajas: {str(e)}")
 
 
 @router.get("/{baja_id}", response_model=Baja)
@@ -69,18 +73,18 @@ def crear(payload: BajaPayload, session: Session = Depends(get_session)):
             fecha=fecha_actual_texto(), 
             item_id=payload.itemId,
             nombre=payload.nombre, 
-            categoria=payload.categoria, 
-            marca=payload.marca,
-            modelo=payload.modelo, 
-            serial=payload.serial, 
+            categoria=payload.categoria or "", 
+            marca=payload.marca or "",
+            modelo=payload.modelo or "", 
+            serial=payload.serial or "", 
             cantidad=payload.cantidad,
             motivo=payload.motivo, 
             disposicion=payload.disposicion, 
-            entidad=payload.entidad,
+            entidad=payload.entidad or "",
             responsable_nombre=payload.responsNombre, 
-            responsable_cargo=payload.responsCargo,
-            area=payload.area, 
-            observaciones=payload.observaciones, 
+            responsable_cargo=payload.responsCargo or "",
+            area=payload.area or "", 
+            observaciones=payload.observaciones or "", 
             firma=payload.firma or "",
             status="registrado", 
             config=payload.config or {},
