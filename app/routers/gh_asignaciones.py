@@ -136,16 +136,16 @@ def crear(payload: CrearAsignacionPayload, session: Session = Depends(get_sessio
                                -abs(int(it.get("cantidad") or 1)), payload.nombre)
 
         asignacion = Asignacion(
-            codigo=codigo, 
-            nombre=payload.nombre, 
-            cedula=payload.cedula, 
+            codigo=codigo,
+            nombre=payload.nombre,
+            cedula=payload.cedula,
             cargo=payload.cargo,
-            area=payload.area, 
-            fecha=fecha_actual_texto(), 
+            area=payload.area,
+            fecha=fecha_actual_texto(),
             items=items_dict,
-            firma_recibe=payload.firmaRecibe or "", 
+            firma_recibe=payload.firmaRecibe or "",
             firma_entrega=payload.firmaEntrega or "",
-            status="activo", 
+            status="activo",
             doc_url=payload.docUrl or "",
         )
         session.add(asignacion)
@@ -168,7 +168,7 @@ def actualizar(asignacion_id: int, payload: ActualizarAsignacionPayload,
         if not a:
             raise HTTPException(status_code=404, detail="Acta no encontrada")
 
-        items_anteriores = a.items or []
+        items_anteriores = getattr(a, "items", []) or []
         items_nuevos = [it.dict() for it in payload.items]
 
         nombres_anteriores = {it["herramienta"] for it in items_anteriores if "herramienta" in it}
