@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // EJ Soluciones · Gestión Humana (F-SGI-GH-12)
-// Código completo funcional con ordenamiento descendente de ítems,
-// firmas de recepción integradas y formato único de fecha/hora.
+// Lógica corregida: Firma directa sin novedades forzadas + 
+// Inserción de herramientas al inicio + Manejo de fechas.
 // ═══════════════════════════════════════════════════════════════
 
 var API_INV = "/api/gh/inventario";
@@ -37,12 +37,13 @@ function fechaHoraActual() {
 
 function formatearFechaBonita(f) {
   if (!f) return fechaHoraActual();
-  if (f.indexOf('/') > -1) return f;
-  var pts = f.split('T')[0].split('-');
+  if (typeof f === 'string' && f.indexOf('/') > -1) return f;
+  var str = String(f).split('T')[0];
+  var pts = str.split('-');
   if (pts.length === 3) {
     return pts[2] + '/' + pts[1] + '/' + pts[0];
   }
-  return f;
+  return String(f);
 }
 
 function todayISO() { 
@@ -127,13 +128,14 @@ function vDash() {
     var rc = ce('div', 'gh-card'); rc.innerHTML = '<div class="sh"><div class="sn">📌</div>Actividad reciente</div>';
     var rows = '';
     ASN.slice().reverse().slice(0, 8).forEach(function (a) {
-      rows += '<tr><td><b>' + esc(a.nombre) + '</b><br><span style="color:var(--text-faint);font-size:10.5px">CC ' + esc(a.cedula) + '</span></td><td>' + esc(a.area || '—') + '</td><td style="text-align:center">' + (a.items || []).length + '</td><td style="font-size:11px;color:var(--text-dim)">' + esc(a.fecha) + '</td><td>' + badgeEstadoAsn(a.status) + '</td></tr>';
+      rows += '<tr><td><b>' + esc(a.nombre) + '</b><br><span style="color:var(--text-faint);font-size:10.5px">CC ' + esc(a.cedula) + '</span></td><td>' + esc(a.area || '—') + '</td><td style="text-align:center">' + (a.items || []).length + '</td><td style="font-size:11px;color:var(--text-dim)">' + esc(formatearFechaBonita(a.fecha)) + '</td><td>' + badgeEstadoAsn(a.status) + '</td></tr>';
     });
     rc.innerHTML += '<table class="data-table"><thead><tr><th>Colaborador</th><th>Área</th><th>Equipos</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>' + rows + '</tbody></table>';
     el.appendChild(rc);
   }
   return el;
 }
+
 function statCard(v, l, tone) { return '<div class="stat-card ' + (tone === 'ok' ? '' : tone === 'warn' ? 'stat-warning' : '') + '"><span class="stat-label">' + l + '</span><span class="stat-value">' + v + '</span></div>'; }
 function barChart(dict) {
   var entries = Object.entries(dict); if (!entries.length) return '<p style="color:var(--text-faint);font-size:13px">Sin datos aún.</p>';
@@ -224,7 +226,7 @@ function vNew() {
   var bAI = ce('button', 'btn btn-ghost'); bAI.style.marginBottom = '14px'; bAI.textContent = '+ Agregar herramienta';
   var iCont = ce('div'); c2.appendChild(bAI); c2.appendChild(iCont); el.appendChild(c2);
   
-  // AL AGREGAR, SE INSERTA AL PRINCIPIO (UNSHIFT) PARA QUE LA NUEVA QUEDE ARRIBA
+  // INSERCIÓN ARRIBA (DE PRIMERA EN LA LISTA)
   bAI.onclick = function () { 
     nItems.unshift({ herramienta: '', marca: '', serialOriginal: '', cantidad: 1, estado: 'Bueno', obs: '', fecha: fechaHoraActual() }); 
     renderItems(iCont); 
@@ -276,11 +278,10 @@ function renderItems(cont, onChange) {
   cont.innerHTML = '';
   if (!nItems.length) nItems.push({ herramienta: '', marca: '', serialOriginal: '', cantidad: 1, estado: 'Bueno', obs: '', fecha: fechaHoraActual() });
   
-  var totalCount = nItems.length;
   nItems.forEach(function (it, idx) {
-    var itemNum = totalCount - idx; // Numera de mayor a menor visualmente
     var box = ce('div', 'ibox');
-    var hdr = ce('div', 'ibox-hdr'); hdr.innerHTML = '<b>Herramienta #' + itemNum + '</b>';
+    var hdr = ce('div', 'ibox-hdr'); 
+    hdr.innerHTML = '<b>Herramienta #' + (idx + 1) + '</b>';
     if (nItems.length > 1) {
       var del = ce('button', 'row-btn danger'); del.textContent = 'Quitar';
       del.onclick = function (e) { e.stopPropagation(); nItems.splice(idx, 1); renderItems(cont, onChange); if (onChange) onChange(); };
@@ -408,14 +409,11 @@ function vEdit() {
 
   var title = ce('p', 'gh-title'); title.innerHTML = '✏️ Editar acta: <b>' + esc(a.nombre) + '</b> <span style="font-family:var(--font-mono);font-size:14px;color:var(--text-dim)">' + esc(a.codigo) + '</span>'; el.appendChild(title);
 
-  var alert = ce('div', 'gh-alert gh-alert-purple');
-  alert.innerHTML = 'ℹ️ <b>Modo edición:</b> los equipos que retires se reintegran al inventario; los nuevos se descuentan automáticamente.'; el.appendChild(alert);
-
   var isMissingBaseSig = !a.firma_recibe;
   var bsp1 = null, bsp2 = null;
   if (isMissingBaseSig) {
     var cSigBase = ce('div', 'gh-card'); cSigBase.style.border = '2px dashed var(--warning)';
-    cSigBase.innerHTML = '<div class="gh-alert gh-alert-orange">⏳ <b>Pendiente de firma inicial:</b> esta acta se guardó sin firma del colaborador. Captúrala aquí.</div><div class="sig-grid" id="base-sigs"></div>';
+    cSigBase.innerHTML = '<div class="gh-alert gh-alert-orange">⏳ <b>Pendiente de firma inicial:</b> esta acta se guardó sin firma del colaborador. Captúrala aquí para completar el registro.</div><div class="sig-grid" id="base-sigs"></div>';
     var sgB = cSigBase.querySelector('#base-sigs');
     bsp1 = mkSig('🖊️ Firma inicial colaborador *'); bsp2 = mkSig('🖊️ Firma inicial empresa');
     sgB.appendChild(bsp1.el); sgB.appendChild(bsp2.el);
@@ -438,7 +436,6 @@ function vEdit() {
   var bAI2 = ce('button', 'btn btn-ghost'); bAI2.style.marginBottom = '14px'; bAI2.textContent = '+ Agregar herramienta';
   var eCont = ce('div'); c2.appendChild(bAI2); c2.appendChild(eCont); el.appendChild(c2);
   
-  // AL AGREGAR EN EDICIÓN, TAMBIÉN INSERTA AL PRINCIPIO
   bAI2.onclick = function () { 
     nItems.unshift({ herramienta: '', marca: '', serialOriginal: '', cantidad: 1, estado: 'Bueno', obs: '', fecha: fechaHoraActual() }); 
     renderItems(eCont, updateReasonsUI); 
@@ -447,15 +444,23 @@ function vEdit() {
 
   var c3 = ce('div', 'gh-card'); c3.id = 'reasons-container'; el.appendChild(c3);
   var tempReasons = {};
+  
   function updateReasonsUI() {
     var rc = ge('reasons-container'); if (!rc) return;
     rc.querySelectorAll('.dyn-nota').forEach(function (ta) { tempReasons[ta.getAttribute('data-herr')] = ta.value; });
     var validEdits = nItems.filter(function (i) { return i.herramienta.trim(); });
     var removed = originalItems.filter(function (o) { return !validEdits.some(function (e) { return e.herramienta === o.herramienta; }); });
     var added = validEdits.filter(function (e) { return !originalItems.some(function (o) { return o.herramienta === e.herramienta; }); });
+    
     var html = '<div class="sh"><div class="sn">3</div>Novedades y cambios</div>';
+    
+    // SI SOLO SE FIRMA Y NO HAY RETIROS NI ADICIONES, NO EXIGE NOVEDADES
     if (!removed.length && !added.length) {
-      html += '<div class="gh-alert" style="background:#0d9488;color:#a7f3d0">No se detectan retiros ni nuevos equipos. Si solo editas datos, justifica abajo (opcional si solo vas a firmar).</div><label class="lbl-field">Razón de la modificación<textarea class="dyn-nota" data-herr="Modificación General" rows="2"></textarea></label>';
+      if (isMissingBaseSig) {
+        html += '<div class="gh-alert gh-alert-purple">✍️ <b>Completar Firma:</b> estás registrando la firma inicial de este acta. No es necesario ingresar novedades.</div>';
+      } else {
+        html += '<div class="gh-alert" style="background:#0d9488;color:#a7f3d0">Sin cambios en la lista de equipos. Puedes guardar directamente.</div>';
+      }
     } else {
       removed.forEach(function (r) { html += '<div style="margin-bottom:12px;padding:12px;background:var(--danger-dim);border-left:3px solid var(--danger);border-radius:8px"><label class="lbl-field" style="color:var(--danger)">🔴 Equipo retirado: ' + esc(r.herramienta) + '<textarea class="dyn-nota" data-herr="' + esc(r.herramienta) + ' (Retirado)" rows="2" placeholder="Razón del retiro (obligatorio)"></textarea></label></div>'; });
       added.forEach(function (a2) { html += '<div style="margin-bottom:12px;padding:12px;background:var(--accent-dim);border-left:3px solid var(--accent);border-radius:8px"><label class="lbl-field" style="color:var(--accent)">🟢 Equipo asignado: ' + esc(a2.herramienta) + '<textarea class="dyn-nota" data-herr="' + esc(a2.herramienta) + ' (Asignado)" rows="2">Se asigna nuevo equipo.</textarea></label></div>'; });
@@ -477,7 +482,7 @@ function vEdit() {
 
   var ff = ce('div', 'gh-ffooter');
   var bCan = ce('button', 'btn btn-ghost'); bCan.textContent = 'Cancelar'; bCan.onclick = function () { VIEW = 'list'; render(); };
-  var bSv = ce('button', 'btn btn-primary'); bSv.textContent = 'Guardar cambio y PDF';
+  var bSv = ce('button', 'btn btn-primary'); bSv.textContent = 'Guardar y generar PDF';
   bSv.onclick = async function () {
     var nom = ge('ed-nm').value.trim(), ced = ge('ed-cc').value.trim(), car = ge('ed-ca').value.trim(), area = ge('ed-ar').value;
     if (!nom) return toast('El nombre es obligatorio', false);
@@ -491,27 +496,23 @@ function vEdit() {
       if (!val) missingReasons = true;
       notasNuevas.push({ herramienta: herr, nota: val });
     });
-    var isGeneralMod = (notasNuevas.length === 1 && notasNuevas[0].herramienta === 'Modificación General');
-    var hasNotes = notasNuevas.some(function (n) { return n.nota !== ''; });
-    if (isGeneralMod && !hasNotes) missingReasons = false;
-    if (missingReasons) return toast('Debes llenar todas las razones de cambio/retiro solicitadas', false);
+    
+    if (missingReasons) return toast('Debes llenar las razones del cambio/retiro', false);
 
     var sR_base = bsp1 ? bsp1.getImg() : null;
     var sE_base = bsp2 ? bsp2.getImg() : null;
 
-    if (isMissingBaseSig && !sR_base && !confirm('Aún no registras la firma inicial. ¿Continuar sin ella?')) return;
-    
     var sER = spE1.getImg();
     var sEE = spE2.getImg();
 
-    var hasChanges = (!isGeneralMod || hasNotes);
-    if (hasChanges && !sER) return toast('La firma del colaborador es obligatoria para certificar este cambio', false);
-
     var payload = {
       nombre: nom, cedula: ced, cargo: car, area: area, items: valid,
-      nuevosHistoriales: hasChanges ? notasNuevas.filter(function (n) { return n.nota !== ''; }).map(function (n) { return { herramienta: n.herramienta, nota: n.nota, firmaR: sER || '', firmaE: sEE || '' }; }) : [],
+      nuevosHistoriales: notasNuevas.filter(function (n) { return n.nota !== ''; }).map(function (n) { return { herramienta: n.herramienta, nota: n.nota, firmaR: sER || '', firmaE: sEE || '' }; }),
     };
-    if (isMissingBaseSig) { payload.firmaR_base = sR_base || ''; payload.firmaE_base = sE_base || ''; }
+    
+    // Si se capturaron las firmas de base, se envían para actualizar el acta
+    if (sR_base) payload.firmaR_base = sR_base;
+    if (sE_base) payload.firmaE_base = sE_base;
 
     try {
       var r = await apiPut(API_ASN + '/' + a.id, payload);
