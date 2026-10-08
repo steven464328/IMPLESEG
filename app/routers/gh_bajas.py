@@ -1,8 +1,8 @@
 """
 Gestión Humana > Baja de activos (formato F-GT-BAJA-01).
-Al registrar una baja se descuenta definitivamente el stock del inventario.
+Al registrar una baja se descuenta definitivamente el stock del inventario y se almacena la firma.
 """
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -30,14 +30,14 @@ class BajaPayload(BaseModel):
     responsCargo: Optional[str] = ""
     area: Optional[str] = ""
     observaciones: Optional[str] = ""
-    firma: str
-    config: dict = {}
+    firma: Optional[str] = ""
+    config: Dict[str, Any] = {}
 
 
 @router.get("", response_model=List[Baja])
 def listar(session: Session = Depends(get_session)):
     resultados = session.exec(select(Baja)).all()
-    return sorted(resultados, key=lambda b: b.id, reverse=True)
+    return sorted(resultados, key=lambda b: getattr(b, "id", 0) or 0, reverse=True)
 
 
 @router.get("/{baja_id}", response_model=Baja)
@@ -50,25 +50,45 @@ def obtener(baja_id: int, session: Session = Depends(get_session)):
 
 @router.post("", response_model=Baja)
 def crear(payload: BajaPayload, session: Session = Depends(get_session)):
-    codigo = generar_codigo("BAJA")
+    try:
+        codigo = generar_codigo("BAJA")
 
-    if payload.itemId:
-        item = session.get(HerramientaInventario, int(payload.itemId))
-        if item:
-            item.cantidad_stock = max(0, (item.cantidad_stock or 0) - abs(payload.cantidad))
-            item.colaborador = ""
-            session.add(item)
+        if payload.itemId:
+            try:
+                item_id_int = int(payload.itemId)
+                item = session.get(HerramientaInventario, item_id_int)
+                if item:
+                    item.cantidad_stock = max(0, (item.cantidad_stock or 0) - abs(payload.cantidad))
+                    item.colaborador = ""
+                    session.add(item)
+            except ValueError:
+                pass
 
-    baja = Baja(
-        codigo=codigo, fecha=fecha_actual_texto(), item_id=payload.itemId,
-        nombre=payload.nombre, categoria=payload.categoria, marca=payload.marca,
-        modelo=payload.modelo, serial=payload.serial, cantidad=payload.cantidad,
-        motivo=payload.motivo, disposicion=payload.disposicion, entidad=payload.entidad,
-        responsable_nombre=payload.responsNombre, responsable_cargo=payload.responsCargo,
-        area=payload.area, observaciones=payload.observaciones, firma=payload.firma,
-        status="registrado", config=payload.config,
-    )
-    session.add(baja)
-    session.commit()
-    session.refresh(baja)
-    return baja
+        baja = Baja(
+            codigo=codigo, 
+            fecha=fecha_actual_texto(), 
+            item_id=payload.itemId,
+            nombre=payload.nombre, 
+            categoria=payload.categoria, 
+            marca=payload.marca,
+            modelo=payload.modelo, 
+            serial=payload.serial, 
+            cantidad=payload.cantidad,
+            motivo=payload.motivo, 
+            disposicion=payload.disposicion, 
+            entidad=payload.entidad,
+            responsable_nombre=payload.responsNombre, 
+            responsable_cargo=payload.responsCargo,
+            area=payload.area, 
+            observaciones=payload.observaciones, 
+            firma=payload.firma or "",
+            status="registrado", 
+            config=payload.config or {},
+        )
+        session.add(baja)
+        session.commit()
+        session.refresh(baja)
+        return baja
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al registrar la baja: {str(e)}")

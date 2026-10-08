@@ -1,16 +1,15 @@
 """
 Gestión Humana > Asignaciones de herramientas (formato F-SGI-GH-12).
 
-Esta es la lógica más delicada del sistema original, portada 1:1:
+Lógica de negocio:
 - Al CREAR una asignación: se descuenta el stock de cada ítem vinculado al
-  inventario y se marca el colaborador en ese ítem.
+  inventario y se marca el colaborador en ese ítem. Se guardan ambas firmas.
 - Al EDITAR: se detectan automáticamente los ítems retirados (se les
-  devuelve el stock) y los nuevos ítems agregados (se les descuenta), y
-  cada cambio queda anotado en el historial del acta con su propia firma.
+  devuelve el stock) y los nuevos ítems agregados (se les descuenta).
 - Al RECIBIR (recepción/devolución): se reintegra el stock de todos los
-  ítems devueltos y el acta pasa a estado 'devuelto'.
+  ítems devueltos y el acta pasa a estado 'devuelto', asociando la firma del receptor.
 """
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -67,8 +66,8 @@ class ActualizarAsignacionPayload(BaseModel):
 
 
 class RecepcionPayload(BaseModel):
-    items: List[dict]
-    firmaRecibe: str
+    items: List[Dict[str, Any]]
+    firmaRecibe: Optional[str] = ""
     firmaEntrega: Optional[str] = ""
 
 
@@ -111,7 +110,7 @@ def listar(status: Optional[str] = None, q: Optional[str] = None,
         resultados = [a for a in resultados if ql in (a.nombre or "").lower()
                       or ql in (a.cedula or "") or ql in (a.area or "").lower()
                       or ql in (a.codigo or "").lower()]
-    return sorted(resultados, key=lambda a: a.id, reverse=True)
+    return sorted(resultados, key=lambda a: getattr(a, "id", 0) or 0, reverse=True)
 
 
 @router.get("/{asignacion_id}", response_model=Asignacion)
@@ -127,81 +126,96 @@ def obtener(asignacion_id: int, session: Session = Depends(get_session)):
 # ---------------------------------------------------------------------------
 @router.post("", response_model=Asignacion)
 def crear(payload: CrearAsignacionPayload, session: Session = Depends(get_session)):
-    codigo = generar_codigo("ASG")
-    items_dict = [it.dict() for it in payload.items]
+    try:
+        codigo = generar_codigo("ASG")
+        items_dict = [it.dict() for it in payload.items]
 
-    for it in items_dict:
-        if it.get("herramienta"):
-            _ajustar_stock(session, it["herramienta"], it.get("serialOriginal", ""),
-                           -abs(int(it.get("cantidad") or 1)), payload.nombre)
+        for it in items_dict:
+            if it.get("herramienta"):
+                _ajustar_stock(session, it["herramienta"], it.get("serialOriginal", ""),
+                               -abs(int(it.get("cantidad") or 1)), payload.nombre)
 
-    asignacion = Asignacion(
-        codigo=codigo, nombre=payload.nombre, cedula=payload.cedula, cargo=payload.cargo,
-        area=payload.area, fecha=fecha_actual_texto(), items=items_dict,
-        firma_recibe=payload.firmaRecibe or "", firma_entrega=payload.firmaEntrega or "",
-        status="activo", doc_url=payload.docUrl or "",
-    )
-    session.add(asignacion)
-    session.commit()
-    session.refresh(asignacion)
-    return asignacion
+        asignacion = Asignacion(
+            codigo=codigo, 
+            nombre=payload.nombre, 
+            cedula=payload.cedula, 
+            cargo=payload.cargo,
+            area=payload.area, 
+            fecha=fecha_actual_texto(), 
+            items=items_dict,
+            firma_recibe=payload.firmaRecibe or "", 
+            firma_entrega=payload.firmaEntrega or "",
+            status="activo", 
+            doc_url=payload.docUrl or "",
+        )
+        session.add(asignacion)
+        session.commit()
+        session.refresh(asignacion)
+        return asignacion
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Error creando asignación: {str(e)}")
 
 
 # ---------------------------------------------------------------------------
-# ACTUALIZAR (equivalente a updateAsignacion — el más complejo)
+# ACTUALIZAR (equivalente a updateAsignacion)
 # ---------------------------------------------------------------------------
 @router.put("/{asignacion_id}", response_model=Asignacion)
 def actualizar(asignacion_id: int, payload: ActualizarAsignacionPayload,
                session: Session = Depends(get_session)):
-    a = session.get(Asignacion, asignacion_id)
-    if not a:
-        raise HTTPException(status_code=404, detail="Acta no encontrada")
+    try:
+        a = session.get(Asignacion, asignacion_id)
+        if not a:
+            raise HTTPException(status_code=404, detail="Acta no encontrada")
 
-    items_anteriores = a.items or []
-    items_nuevos = [it.dict() for it in payload.items]
+        items_anteriores = a.items or []
+        items_nuevos = [it.dict() for it in payload.items]
 
-    nombres_anteriores = {it["herramienta"] for it in items_anteriores}
-    nombres_nuevos = {it["herramienta"] for it in items_nuevos}
+        nombres_anteriores = {it["herramienta"] for it in items_anteriores if "herramienta" in it}
+        nombres_nuevos = {it["herramienta"] for it in items_nuevos if "herramienta" in it}
 
-    # Ítems retirados -> reintegrar stock, liberar colaborador
-    for it in items_anteriores:
-        if it["herramienta"] not in nombres_nuevos:
-            _ajustar_stock(session, it["herramienta"], it.get("serialOriginal", ""),
-                           abs(int(it.get("cantidad") or 1)), None)
+        # Ítems retirados -> reintegrar stock, liberar colaborador
+        for it in items_anteriores:
+            if it.get("herramienta") and it["herramienta"] not in nombres_nuevos:
+                _ajustar_stock(session, it["herramienta"], it.get("serialOriginal", ""),
+                               abs(int(it.get("cantidad") or 1)), None)
 
-    # Ítems nuevos -> descontar stock, asignar colaborador
-    for it in items_nuevos:
-        if it["herramienta"] not in nombres_anteriores:
-            _ajustar_stock(session, it["herramienta"], it.get("serialOriginal", ""),
-                           -abs(int(it.get("cantidad") or 1)), payload.nombre)
+        # Ítems nuevos -> descontar stock, asignar colaborador
+        for it in items_nuevos:
+            if it.get("herramienta") and it["herramienta"] not in nombres_anteriores:
+                _ajustar_stock(session, it["herramienta"], it.get("serialOriginal", ""),
+                               -abs(int(it.get("cantidad") or 1)), payload.nombre)
 
-    # Anotar historial
-    historial = a.historial or []
-    fecha_mod = fecha_actual_texto()
-    for nh in payload.nuevosHistoriales:
-        if nh.nota:
-            historial.append({
-                "fecha": fecha_mod, "herramienta": nh.herramienta, "nota": nh.nota,
-                "firmaR": nh.firmaR or "", "firmaE": nh.firmaE or "",
-            })
+        # Anotar historial
+        historial = getattr(a, "historial", []) or []
+        fecha_mod = fecha_actual_texto()
+        for nh in payload.nuevosHistoriales:
+            if nh.nota:
+                historial.append({
+                    "fecha": fecha_mod, "herramienta": nh.herramienta, "nota": nh.nota,
+                    "firmaR": nh.firmaR or "", "firmaE": nh.firmaE or "",
+                })
 
-    a.nombre = payload.nombre
-    a.cedula = payload.cedula
-    a.cargo = payload.cargo
-    a.area = payload.area
-    a.items = items_nuevos
-    a.historial = historial
-    a.actualizado_en = datetime.utcnow()
+        a.nombre = payload.nombre
+        a.cedula = payload.cedula
+        a.cargo = payload.cargo
+        a.area = payload.area
+        a.items = items_nuevos
+        a.historial = historial
+        a.actualizado_en = datetime.utcnow()
 
-    if payload.firmaR_base is not None:
-        a.firma_recibe = payload.firmaR_base
-    if payload.firmaE_base is not None:
-        a.firma_entrega = payload.firmaE_base
+        if payload.firmaR_base is not None:
+            a.firma_recibe = payload.firmaR_base
+        if payload.firmaE_base is not None:
+            a.firma_entrega = payload.firmaE_base
 
-    session.add(a)
-    session.commit()
-    session.refresh(a)
-    return a
+        session.add(a)
+        session.commit()
+        session.refresh(a)
+        return a
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Error actualizando asignación: {str(e)}")
 
 
 # ---------------------------------------------------------------------------
@@ -209,29 +223,33 @@ def actualizar(asignacion_id: int, payload: ActualizarAsignacionPayload,
 # ---------------------------------------------------------------------------
 @router.post("/{asignacion_id}/recepcion", response_model=Asignacion)
 def recibir(asignacion_id: int, payload: RecepcionPayload, session: Session = Depends(get_session)):
-    a = session.get(Asignacion, asignacion_id)
-    if not a:
-        raise HTTPException(status_code=404, detail="Acta no encontrada")
+    try:
+        a = session.get(Asignacion, asignacion_id)
+        if not a:
+            raise HTTPException(status_code=404, detail="Acta no encontrada")
 
-    for it in payload.items:
-        _ajustar_stock(session, it.get("herramienta", ""), it.get("serialOriginal", ""),
-                       abs(int(it.get("cantidad") or 1)), None)
+        for it in payload.items:
+            _ajustar_stock(session, it.get("herramienta", ""), it.get("serialOriginal", ""),
+                           abs(int(it.get("cantidad") or 1)), None)
 
-    a.status = "devuelto"
-    a.fecha_dev = datetime.now().strftime("%d/%m/%Y")
-    a.items_dev = payload.items
-    a.firma_recibe_dev = payload.firmaRecibe
-    a.firma_entrega_dev = payload.firmaEntrega or ""
-    a.actualizado_en = datetime.utcnow()
+        a.status = "devuelto"
+        a.fecha_dev = datetime.now().strftime("%d/%m/%Y")
+        a.items_dev = payload.items
+        a.firma_recibe_dev = payload.firmaRecibe or ""
+        a.firma_entrega_dev = payload.firmaEntrega or ""
+        a.actualizado_en = datetime.utcnow()
 
-    session.add(a)
-    session.commit()
-    session.refresh(a)
-    return a
+        session.add(a)
+        session.commit()
+        session.refresh(a)
+        return a
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Error en recepción: {str(e)}")
 
 
 # ---------------------------------------------------------------------------
-# Listar pendientes de recepción (equivalente al filtro de vRec())
+# Listar pendientes de recepción
 # ---------------------------------------------------------------------------
 @router.get("/pendientes/recepcion", response_model=List[Asignacion])
 def pendientes_recepcion(q: Optional[str] = None, session: Session = Depends(get_session)):

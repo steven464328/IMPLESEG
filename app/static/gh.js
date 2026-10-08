@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // EJ Soluciones · Gestión Humana (F-SGI-GH-12)
-// Misma lógica y mismos formatos de PDF del sistema original,
-// ahora hablando con la API propia en vez de Google Apps Script.
+// Código completo corregido: Captura transparente de firmas, 
+// persistencia de actas y comunicación con API FastAPI.
 // ═══════════════════════════════════════════════════════════════
 
 var API_INV = "/api/gh/inventario";
@@ -22,7 +22,7 @@ var nE = {}, nItems = [], sigR = null, sigE = null;
 function ge(id) { return document.getElementById(id); }
 function ce(t, c) { var e = document.createElement(t); if (c) e.className = c; return e; }
 function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-function toast(m, ok) { var t = ge('toast'); t.textContent = m; t.style.borderColor = (ok === false) ? 'var(--danger)' : 'var(--accent)'; t.classList.add('show'); setTimeout(function () { t.classList.remove('show'); }, 3200); }
+function toast(m, ok) { var t = ge('toast'); if(!t) return; t.textContent = m; t.style.borderColor = (ok === false) ? 'var(--danger)' : 'var(--accent)'; t.classList.add('show'); setTimeout(function () { t.classList.remove('show'); }, 3200); }
 function todayISO() { var d = new Date(), m = d.getMonth() + 1, dd = d.getDate(); return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (dd < 10 ? '0' + dd : dd); }
 function resetNew() { nE = { nombre: '', cedula: '', cargo: '', area: AREAS[0] }; nItems = [{ herramienta: '', marca: '', serialOriginal: '', cantidad: 1, estado: 'Bueno', obs: '', fecha: todayISO() }]; sigR = null; sigE = null; }
 
@@ -61,7 +61,7 @@ async function cargarTodo(gotoView) {
 }
 
 function render() {
-  var app = ge('ghApp'); app.innerHTML = '';
+  var app = ge('ghApp'); if(!app) return; app.innerHTML = '';
   if (VIEW === 'dash') app.appendChild(vDash());
   if (VIEW === 'inv') app.appendChild(vInv());
   if (VIEW === 'new') app.appendChild(vNew());
@@ -211,10 +211,22 @@ function vNew() {
     if (!nE.cedula) return toast('La cédula es obligatoria', false);
     var valid = nItems.filter(function (it) { return it.herramienta.trim(); });
     if (!valid.length) return toast('Agrega al menos un equipo', false);
-    if (!sigR && !confirm('No has capturado la firma del colaborador.\n\n¿Guardar de todas formas como pendiente de firma?')) return;
+
+    var fRecibeStr = sp1.getImg() || sigR || '';
+    var fEntregaStr = sp2.getImg() || sigE || '';
+
+    if (!fRecibeStr && !confirm('No has capturado la firma del colaborador.\n\n¿Guardar de todas formas como pendiente de firma?')) return;
 
     try {
-      var r = await apiPost(API_ASN, { nombre: nE.nombre, cedula: nE.cedula, cargo: nE.cargo, area: nE.area, items: valid, firmaRecibe: sigR || '', firmaEntrega: sigE || '' });
+      var r = await apiPost(API_ASN, { 
+        nombre: nE.nombre, 
+        cedula: nE.cedula, 
+        cargo: nE.cargo, 
+        area: nE.area, 
+        items: valid, 
+        firmaRecibe: fRecibeStr, 
+        firmaEntrega: fEntregaStr 
+      });
       toast('Acta guardada: ' + r.codigo + ' ✓');
       printPDF(r);
       await cargarTodo('list');
@@ -363,13 +375,12 @@ function vEdit() {
   alert.innerHTML = 'ℹ️ <b>Modo edición:</b> los equipos que retires se reintegran al inventario; los nuevos se descuentan automáticamente.'; el.appendChild(alert);
 
   var isMissingBaseSig = !a.firma_recibe;
-  var sR_base = null, sE_base = null;
+  var bsp1 = null, bsp2 = null;
   if (isMissingBaseSig) {
     var cSigBase = ce('div', 'gh-card'); cSigBase.style.border = '2px dashed var(--warning)';
     cSigBase.innerHTML = '<div class="gh-alert gh-alert-orange">⏳ <b>Pendiente de firma inicial:</b> esta acta se guardó sin firma del colaborador. Captúrala aquí.</div><div class="sig-grid" id="base-sigs"></div>';
     var sgB = cSigBase.querySelector('#base-sigs');
-    var bsp1 = mkSig('🖊️ Firma inicial colaborador *'); var bsp2 = mkSig('🖊️ Firma inicial empresa');
-    bsp1.on(function (d) { sR_base = d; }); bsp2.on(function (d) { sE_base = d; });
+    bsp1 = mkSig('🖊️ Firma inicial colaborador *'); bsp2 = mkSig('🖊️ Firma inicial empresa');
     sgB.appendChild(bsp1.el); sgB.appendChild(bsp2.el);
     el.appendChild(cSigBase);
   }
@@ -411,9 +422,8 @@ function vEdit() {
   }
 
   var c5 = ce('div', 'gh-card'); c5.innerHTML = '<div class="sh"><div class="sn">4</div>Firmas de constancia del cambio</div>';
-  var sgE = ce('div', 'sig-grid'); var sER = null, sEE = null;
+  var sgE = ce('div', 'sig-grid');
   var spE1 = mkSig('🖊️ Firma colaborador *'); var spE2 = mkSig('🖊️ Firma empresa *');
-  spE1.on(function (d) { sER = d; }); spE2.on(function (d) { sEE = d; });
   sgE.appendChild(spE1.el); sgE.appendChild(spE2.el); c5.appendChild(sgE); el.appendChild(c5);
 
   if (a.historial && a.historial.length) {
@@ -443,13 +453,20 @@ function vEdit() {
     if (isGeneralMod && !hasNotes) missingReasons = false;
     if (missingReasons) return toast('Debes llenar todas las razones de cambio/retiro solicitadas', false);
 
+    var sR_base = bsp1 ? bsp1.getImg() : null;
+    var sE_base = bsp2 ? bsp2.getImg() : null;
+
     if (isMissingBaseSig && !sR_base && !confirm('Aún no registras la firma inicial. ¿Continuar sin ella?')) return;
+    
+    var sER = spE1.getImg();
+    var sEE = spE2.getImg();
+
     var hasChanges = (!isGeneralMod || hasNotes);
     if (hasChanges && !sER) return toast('La firma del colaborador es obligatoria para certificar este cambio', false);
 
     var payload = {
       nombre: nom, cedula: ced, cargo: car, area: area, items: valid,
-      nuevosHistoriales: hasChanges ? notasNuevas.filter(function (n) { return n.nota !== ''; }).map(function (n) { return { herramienta: n.herramienta, nota: n.nota, firmaR: sER, firmaE: sEE }; }) : [],
+      nuevosHistoriales: hasChanges ? notasNuevas.filter(function (n) { return n.nota !== ''; }).map(function (n) { return { herramienta: n.herramienta, nota: n.nota, firmaR: sER || '', firmaE: sEE || '' }; }) : [],
     };
     if (isMissingBaseSig) { payload.firmaR_base = sR_base || ''; payload.firmaE_base = sE_base || ''; }
 
@@ -515,13 +532,15 @@ function showRecForm(parent, a) {
   parent.appendChild(c1);
 
   var c2 = ce('div', 'gh-card'); c2.innerHTML = '<div class="sh"><div class="sn">2</div>Firmas de devolución</div>';
-  var sg2 = ce('div', 'sig-grid'); var sDevR = null, sDevE = null;
+  var sg2 = ce('div', 'sig-grid');
   var sp1 = mkSig('🖊️ Quien entrega (colaborador) *'); var sp2 = mkSig('🖊️ Quien recibe (empresa)');
-  sp1.on(function (d) { sDevR = d; }); sp2.on(function (d) { sDevE = d; });
   sg2.appendChild(sp1.el); sg2.appendChild(sp2.el); c2.appendChild(sg2); parent.appendChild(c2);
 
   var bC = ce('button', 'btn btn-primary'); bC.style.marginTop = '12px'; bC.textContent = '✅ Confirmar reingreso al almacén';
   bC.onclick = async function () {
+    var sDevR = sp1.getImg();
+    var sDevE = sp2.getImg();
+
     if (!sDevR) return toast('La firma del colaborador es obligatoria', false);
     try {
       var r = await apiPost(API_ASN + '/' + a.id + '/recepcion', { items: ri, firmaRecibe: sDevR, firmaEntrega: sDevE || '' });
@@ -581,7 +600,7 @@ function showBajaForm(parent) {
   wrap.appendChild(c4);
 
   var c5 = ce('div', 'gh-card'); c5.innerHTML = '<div class="sh"><div class="sn">5</div>Firma del responsable</div>';
-  var firmaBj = null; var spBj = mkSig('🖊️ Firma del responsable *'); spBj.on(function (d) { firmaBj = d; }); c5.appendChild(spBj.el); wrap.appendChild(c5);
+  var spBj = mkSig('🖊️ Firma del responsable *'); c5.appendChild(spBj.el); wrap.appendChild(c5);
 
   var ff = ce('div', 'gh-ffooter');
   var bCa = ce('button', 'btn btn-ghost'); bCa.textContent = 'Cancelar'; bCa.onclick = function () { wrap.remove(); };
@@ -590,7 +609,10 @@ function showBajaForm(parent) {
     var selEl = ge('bj-s'); if (!selEl.value) return toast('Selecciona un equipo', false);
     var si = INV.find(function (i) { return String(i.id) === selEl.value; }); if (!si) return toast('Equipo no encontrado', false);
     var rn = ge('bj-rn').value.trim(); if (!rn) return toast('El nombre del responsable es obligatorio', false);
+    
+    var firmaBj = spBj.getImg();
     if (!firmaBj) return toast('La firma del responsable es obligatoria', false);
+    
     var cnt = parseInt(ge('bj-q').value) || 1; if (cnt > si.cantidad_stock) return toast('Cantidad supera el stock (' + si.cantidad_stock + ')', false);
     var sw = []; c4.querySelectorAll('#bj-sw input:checked').forEach(function (cb) { sw.push(cb.value); });
 
@@ -610,8 +632,8 @@ function showBajaForm(parent) {
   ff.appendChild(bCa); ff.appendChild(bSv); wrap.appendChild(ff);
 
   ge('bj-s').onchange = function () {
-    var inf = ge('bj-inf'); var m = INV.find(function (i) { return String(i.id) === this.value; }, this);
-    m = INV.find(function (i) { return String(i.id) === ge('bj-s').value; });
+    var inf = ge('bj-inf');
+    var m = INV.find(function (i) { return String(i.id) === ge('bj-s').value; });
     if (m) { inf.style.display = 'block'; inf.innerHTML = '<div class="g4"><div><span class="lbl-field" style="display:block">Categoría</span><b>' + esc(m.categoria || '') + '</b></div><div><span class="lbl-field" style="display:block">Marca</span><b>' + esc(m.marca || '') + '</b></div><div><span class="lbl-field" style="display:block">Modelo</span><b>' + esc(m.modelo || '') + '</b></div><div><span class="lbl-field" style="display:block">Stock actual</span><b style="color:var(--accent)">' + m.cantidad_stock + '</b></div></div>'; ge('bj-hn').value = m.nombre; ge('bj-q').max = m.cantidad_stock; }
     else { inf.style.display = 'none'; }
   };
@@ -619,28 +641,85 @@ function showBajaForm(parent) {
 }
 
 // ---------------------------------------------------------------
-// FIRMA (canvas)
+// FIRMA (canvas) - Corrección de fondo e invocación transparente
 // ---------------------------------------------------------------
 function mkSig(label) {
   var wrap = ce('div', 'sigw'); var lbl = ce('span', 'sig-lbl'); lbl.textContent = label; wrap.appendChild(lbl);
   var cv = ce('canvas', 'sig-cv'); cv.width = 250; cv.height = 75; cv.style.height = '75px'; wrap.appendChild(cv);
   var ctx = cv.getContext('2d'), draw = false, has = false, cbs = [];
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cv.width, cv.height);
-  function pos(e) { var r = cv.getBoundingClientRect(), sx = cv.width / r.width, sy = cv.height / r.height, s = e.touches ? e.touches[0] : e; return { x: (s.clientX - r.left) * sx, y: (s.clientY - r.top) * sy }; }
-  function start(e) { e.preventDefault(); draw = true; cv.classList.add('on'); var p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
-  function move(e) { if (!draw) return; e.preventDefault(); var p = pos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = '#0b2d5e'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke(); has = true; }
-  function end() { if (!draw) return; draw = false; if (has) { var d = cv.toDataURL('image/jpeg', 0.6); cbs.forEach(function (f) { f(d); }); } }
-  cv.addEventListener('mousedown', start); cv.addEventListener('touchstart', start, { passive: false });
-  cv.addEventListener('mousemove', move); cv.addEventListener('touchmove', move, { passive: false });
-  cv.addEventListener('mouseup', end); cv.addEventListener('mouseleave', end); cv.addEventListener('touchend', end);
+  
+  function initBg() {
+    ctx.fillStyle = '#ffffff'; 
+    ctx.fillRect(0, 0, cv.width, cv.height);
+  }
+  initBg();
+
+  function pos(e) { 
+    var r = cv.getBoundingClientRect(), sx = cv.width / r.width, sy = cv.height / r.height, s = (e.touches && e.touches.length > 0) ? e.touches[0] : e; 
+    return { x: (s.clientX - r.left) * sx, y: (s.clientY - r.top) * sy }; 
+  }
+  
+  function start(e) { 
+    e.preventDefault(); 
+    draw = true; 
+    has = true;
+    cv.classList.add('on'); 
+    var p = pos(e); 
+    ctx.beginPath(); 
+    ctx.moveTo(p.x, p.y); 
+  }
+  
+  function move(e) { 
+    if (!draw) return; 
+    e.preventDefault(); 
+    var p = pos(e); 
+    ctx.lineTo(p.x, p.y); 
+    ctx.strokeStyle = '#0b2d5e'; 
+    ctx.lineWidth = 2.5; 
+    ctx.lineCap = 'round'; 
+    ctx.lineJoin = 'round'; 
+    ctx.stroke(); 
+  }
+  
+  function end() { 
+    if (!draw) return; 
+    draw = false; 
+    if (has) { 
+      var d = cv.toDataURL('image/jpeg', 0.6); 
+      cbs.forEach(function (f) { f(d); }); 
+    } 
+  }
+  
+  cv.addEventListener('mousedown', start); 
+  cv.addEventListener('touchstart', start, { passive: false });
+  cv.addEventListener('mousemove', move); 
+  cv.addEventListener('touchmove', move, { passive: false });
+  cv.addEventListener('mouseup', end); 
+  cv.addEventListener('mouseleave', end); 
+  cv.addEventListener('touchend', end);
+  
   var clr = ce('button', 'sig-clr'); clr.type = 'button'; clr.textContent = '🗑️ Limpiar firma';
-  clr.onclick = function () { ctx.clearRect(0, 0, cv.width, cv.height); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cv.width, cv.height); has = false; cv.classList.remove('on'); cbs.forEach(function (f) { f(null); }); };
+  clr.onclick = function () { 
+    ctx.clearRect(0, 0, cv.width, cv.height); 
+    initBg();
+    has = false; 
+    cv.classList.remove('on'); 
+    cbs.forEach(function (f) { f(null); }); 
+  };
   wrap.appendChild(clr);
-  return { el: wrap, on: function (fn) { cbs.push(fn); } };
+
+  return { 
+    el: wrap, 
+    on: function (fn) { cbs.push(fn); },
+    getImg: function() {
+      if (!has) return null;
+      return cv.toDataURL('image/jpeg', 0.6);
+    }
+  };
 }
 
 // ---------------------------------------------------------------
-// IMPRESIÓN — se conserva EXACTAMENTE el formato original F-SGI-GH-12
+// IMPRESIÓN — Formato original F-SGI-GH-12
 // ---------------------------------------------------------------
 function printPDF(a) { ge('pz').innerHTML = buildPDF(a); window.print(); }
 
