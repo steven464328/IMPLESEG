@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
-// EJ Soluciones · Gestión Humana (F-SGI-GH-12)
-// Código completo corregido: Captura de observaciones/novedades,
-// solución a Bajas, ordenamiento descendente y firmas de recepción.
+// IMPLESEG SAS · Gestión Humana (F-SGI-GH-12)
+// Solución completa: Captura garantizada de Observaciones, 
+// Módulo de Bajas funcional y ordenamiento conveniente.
 // ═══════════════════════════════════════════════════════════════
 
 var API_INV = "/api/gh/inventario";
@@ -44,11 +44,6 @@ function formatearFechaBonita(f) {
     return pts[2] + '/' + pts[1] + '/' + pts[0];
   }
   return String(f);
-}
-
-function todayISO() { 
-  var d = new Date(), m = d.getMonth() + 1, dd = d.getDate(); 
-  return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (dd < 10 ? '0' + dd : dd); 
 }
 
 function resetNew() { 
@@ -296,7 +291,7 @@ function renderItems(cont, onChange) {
     selWrap.innerHTML = '<label class="lbl-field">🔗 Vincular desde inventario<select class="sel-i">' + invOptions + '</select></label>';
     box.appendChild(selWrap);
 
-    var obsVal = it.observaciones || it.obs || '';
+    var obsVal = it.observaciones !== undefined ? it.observaciones : (it.obs || '');
 
     var grid = ce('div', 'g2');
     grid.innerHTML =
@@ -323,7 +318,7 @@ function renderItems(cont, onChange) {
 }
 
 // ---------------------------------------------------------------
-// REGISTROS (listar / ver / editar)
+// REGISTROS
 // ---------------------------------------------------------------
 function vList() {
   var el = ce('div'); el.innerHTML = '<p class="gh-title">📋 Registros de asignaciones</p>';
@@ -375,13 +370,15 @@ function vDetail() {
   info.innerHTML = '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px"><div><p style="font-size:20px;font-weight:700;font-family:var(--font-display)">' + esc(a.nombre) + '</p><p style="color:var(--text-dim);margin-top:4px">CC: ' + esc(a.cedula) + ' · ' + esc(a.cargo || '—') + ' · ' + esc(a.area || '—') + '</p><p style="font-size:11px;color:var(--text-faint);margin-top:6px;font-family:var(--font-mono)">' + esc(a.codigo) + ' · ' + esc(formatearFechaBonita(a.fecha)) + '</p></div>' + badgeEstadoAsn(a.status) + '</div>';
 
   var rows = (a.items || []).map(function (it, idx) {
-    return '<tr><td style="text-align:center">' + (idx + 1) + '</td><td><b>' + esc(it.herramienta) + '</b></td><td>' + esc(it.marca || '—') + '</td><td style="text-align:center">' + esc(it.cantidad) + '</td><td>' + esc(it.estado) + '</td><td>' + esc(it.observaciones || it.obs || '—') + '</td></tr>';
+    var obsTxt = it.observaciones || it.obs || '—';
+    return '<tr><td style="text-align:center">' + (idx + 1) + '</td><td><b>' + esc(it.herramienta) + '</b></td><td>' + esc(it.marca || '—') + '</td><td style="text-align:center">' + esc(it.cantidad) + '</td><td>' + esc(it.estado) + '</td><td>' + esc(obsTxt) + '</td></tr>';
   }).join('');
   info.innerHTML += '<p style="font-weight:700;margin-bottom:10px">🔧 Equipos asignados</p><table class="data-table"><thead><tr><th>#</th><th>Herramienta</th><th>Marca/Serial</th><th>Cant.</th><th>Estado</th><th>Observaciones</th></tr></thead><tbody>' + rows + '</tbody></table>';
 
   if (!act && a.items_dev && a.items_dev.length) {
     var rowsDev = a.items_dev.map(function (it, idx) {
-      return '<tr><td style="text-align:center">' + (idx + 1) + '</td><td><b>' + esc(it.herramienta) + '</b></td><td>' + esc(it.estado || '—') + '</td><td>' + esc(it.observaciones || it.obs || '—') + '</td></tr>';
+      var devObs = it.observaciones || it.obs || '—';
+      return '<tr><td style="text-align:center">' + (idx + 1) + '</td><td><b>' + esc(it.herramienta) + '</b></td><td>' + esc(it.estado || '—') + '</td><td>' + esc(devObs) + '</td></tr>';
     }).join('');
     info.innerHTML += '<p style="font-weight:700;margin:18px 0 10px">📥 Devolución (' + esc(formatearFechaBonita(a.fecha_dev)) + ')</p><table class="data-table"><thead><tr><th>#</th><th>Herramienta</th><th>Estado final</th><th>Observaciones</th></tr></thead><tbody>' + rowsDev + '</tbody></table>';
   }
@@ -652,7 +649,7 @@ function showBajaForm(parent) {
   var bCa = ce('button', 'btn btn-ghost'); bCa.textContent = 'Cancelar'; bCa.onclick = function () { wrap.remove(); };
   var bSv = ce('button', 'btn btn-primary'); bSv.textContent = '🗑️ Registrar baja y generar acta';
   bSv.onclick = async function () {
-    var selEl = ge('bj-s'); if (!selEl.value) return toast('Selecciona un equipo', false);
+    var selEl = ge('bj-s'); if (!selEl || !selEl.value) return toast('Selecciona un equipo', false);
     var si = INV.find(function (i) { return String(i.id) === selEl.value; }); if (!si) return toast('Equipo no encontrado', false);
     var rn = ge('bj-rn').value.trim(); if (!rn) return toast('El nombre del responsable es obligatorio', false);
     
@@ -663,8 +660,8 @@ function showBajaForm(parent) {
     var sw = []; c4.querySelectorAll('#bj-sw input:checked').forEach(function (cb) { sw.push(cb.value); });
 
     var payload = {
-      itemId: String(si.id), nombre: si.nombre, categoria: si.categoria, marca: si.marca, modelo: si.modelo, serial: si.serial,
-      cantidad: cnt, motivo: ge('bj-m').value, disposicion: ge('bj-dp').value, entidad: ge('bj-ent').value.trim(),
+      itemId: String(si.id), nombre: si.nombre, categoria: si.categoria || '', marca: si.marca || '', modelo: si.modelo || '', serial: si.serial || '',
+      cantidad: cnt, motivo: ge('bj-m').value || 'Fin de vida útil', disposicion: ge('bj-dp').value || 'Chatarrización', entidad: ge('bj-ent').value.trim(),
       responsNombre: rn, responsCargo: ge('bj-rc').value.trim(), area: ge('bj-ra').value, observaciones: ge('bj-ob').value.trim(), firma: firmaBj,
       config: { hostname: ge('bj-hn').value.trim(), disco: ge('bj-dk').value.trim(), ram: ge('bj-rm').value.trim(), cpu: ge('bj-cp').value.trim(), impresora: ge('bj-ip').value.trim(), jefe: ge('bj-ji').value.trim(), ext: ge('bj-ex').value.trim(), email: ge('bj-em').value.trim(), software: sw, fechaBaja: fechaHoraActual() },
     };
@@ -787,7 +784,7 @@ function buildPDF(a) {
   var rows1 = ''; var items = a.items || [];
   for (var i = 0; i < items.length; i++) { 
     var it = items[i]; 
-    var obsTxt = it.observaciones || it.obs || '';
+    var obsTxt = it.observaciones !== undefined ? it.observaciones : (it.obs || '');
     rows1 += '<tr><td style="text-align:center">' + (i + 1) + '</td><td style="text-align:center;font-size:7px">' + esc(formatearFechaBonita(it.fecha || a.fecha)) + '</td><td style="font-weight:700">' + esc(it.herramienta) + '</td><td>' + esc(it.marca || '—') + '</td><td style="text-align:center">' + esc(it.cantidad) + '</td><td style="text-align:center">' + esc(it.estado) + '</td><td class="sig-cell">' + sigCell(a.firma_recibe) + '</td><td class="sig-cell">' + sigCell(a.firma_entrega) + '</td><td>' + esc(obsTxt) + '</td></tr>'; 
   }
   for (var k = items.length; k < 18; k++) { rows1 += '<tr style="height:22px"><td style="text-align:center">' + (k + 1) + '</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>'; }
@@ -814,7 +811,7 @@ function buildPDF(a) {
 
     for (var d2 = 0; d2 < di.length; d2++) { 
       var dit = di[d2]; 
-      var devObs = dit.observaciones || dit.obs || '';
+      var devObs = dit.observaciones !== undefined ? dit.observaciones : (dit.obs || '');
       rows2 += '<tr><td style="text-align:center">' + (d2 + 1) + '</td><td style="text-align:center;font-size:7px">' + esc(formatearFechaBonita(dit.fechaDevolucion || a.fecha_dev)) + '</td><td style="font-weight:700">' + esc(dit.herramienta) + '</td><td>' + esc(dit.marca || '—') + '</td><td style="text-align:center">' + esc(dit.cantidad || 1) + '</td><td style="text-align:center">' + esc(dit.estado || 'Bueno') + '</td><td class="sig-cell">' + sigCell(fRecibeDev) + '</td><td class="sig-cell">' + sigCell(fEntregaDev) + '</td><td>' + esc(devObs) + '</td></tr>'; 
     }
     for (var dk = di.length; dk < 18; dk++) { rows2 += '<tr style="height:22px"><td style="text-align:center">' + (dk + 1) + '</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>'; }
