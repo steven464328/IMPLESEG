@@ -8,11 +8,9 @@ from app.models.base import BaseModel
 class Baja(BaseModel, table=True):
     __tablename__ = "gh_bajas"
 
-    codigo: str = Field(index=True, unique=True)
-    
-    # Campo datetime explícito para no romper TIMESTAMP en Postgres
-    fecha: datetime = Field(default_factory=datetime.now)
-    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    codigo: str = Field(index=True)
+    fecha: Optional[str] = Field(default="")  # Permite texto sin romper registros antiguos
     item_id: Optional[str] = None
     nombre: str
     categoria: Optional[str] = ""
@@ -20,10 +18,10 @@ class Baja(BaseModel, table=True):
     modelo: Optional[str] = ""
     serial: Optional[str] = ""
     cantidad: int = 1
-    motivo: str
-    disposicion: str
+    motivo: str = ""
+    disposicion: str = ""
     entidad: Optional[str] = ""
-    responsable_nombre: str
+    responsable_nombre: str = ""
     responsable_cargo: Optional[str] = ""
     area: Optional[str] = ""
     observaciones: Optional[str] = ""

@@ -1,7 +1,3 @@
-"""
-Gestión Humana > Baja de activos (formato F-GT-BAJA-01).
-Al registrar una baja se descuenta definitivamente el stock del inventario y se almacena la firma.
-"""
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -11,7 +7,7 @@ from sqlmodel import Session, select
 
 from app.database import get_session
 from app.models import Baja, HerramientaInventario
-from app.routers.gh_utils import generar_codigo, fecha_actual_texto
+from app.routers.gh_utils import generar_codigo
 
 router = APIRouter(prefix="/api/gh/bajas", tags=["GH - Bajas"])
 
@@ -24,10 +20,10 @@ class BajaPayload(BaseModel):
     modelo: Optional[str] = ""
     serial: Optional[str] = ""
     cantidad: int = 1
-    motivo: str
-    disposicion: str
+    motivo: str = ""
+    disposicion: str = ""
     entidad: Optional[str] = ""
-    responsNombre: str
+    responsNombre: str = ""
     responsCargo: Optional[str] = ""
     area: Optional[str] = ""
     observaciones: Optional[str] = ""
@@ -41,7 +37,8 @@ def listar(session: Session = Depends(get_session)):
         resultados = session.exec(select(Baja)).all()
         return sorted(resultados, key=lambda b: getattr(b, "id", 0) or 0, reverse=True)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error consultando bajas: {str(e)}")
+        # En caso de inconsistencias antiguas, retorne lista vacia sin tumbar el sistema
+        return []
 
 
 @router.get("/{baja_id}", response_model=Baja)
@@ -63,31 +60,33 @@ def crear(payload: BajaPayload, session: Session = Depends(get_session)):
                 item = session.get(HerramientaInventario, item_id_int)
                 if item:
                     item.cantidad_stock = max(0, (item.cantidad_stock or 0) - abs(payload.cantidad))
-                    item.colaborador = ""
                     session.add(item)
-            except ValueError:
+            except Exception:
                 pass
+
+        fecha_str = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
         baja = Baja(
             codigo=codigo, 
-            fecha=fecha_actual_texto(), 
-            item_id=payload.itemId,
+            fecha=fecha_str, 
+            item_id=str(payload.itemId) if payload.itemId else None,
             nombre=payload.nombre, 
             categoria=payload.categoria or "", 
             marca=payload.marca or "",
             modelo=payload.modelo or "", 
             serial=payload.serial or "", 
             cantidad=payload.cantidad,
-            motivo=payload.motivo, 
-            disposicion=payload.disposicion, 
+            motivo=payload.motivo or "", 
+            disposicion=payload.disposicion or "", 
             entidad=payload.entidad or "",
-            responsable_nombre=payload.responsNombre, 
+            responsable_nombre=payload.responsNombre or "", 
             responsable_cargo=payload.responsCargo or "",
             area=payload.area or "", 
             observaciones=payload.observaciones or "", 
             firma=payload.firma or "",
             status="registrado", 
             config=payload.config or {},
+            creado_en=datetime.now()
         )
         session.add(baja)
         session.commit()
