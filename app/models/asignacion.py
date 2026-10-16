@@ -13,22 +13,21 @@ class Asignacion(BaseModel, table=True):
     cedula: str
     cargo: Optional[str] = None
     area: Optional[str] = None
-    fecha: str
+    
+    # Campo tipo datetime compatible con TIMESTAMP de PostgreSQL
+    fecha: datetime = Field(default_factory=datetime.now)
     status: str = "activo"
 
-    # Documento y Firmas de Asignación
     doc_url: Optional[str] = ""
     firma_recibe: Optional[str] = ""
     firma_entrega: Optional[str] = ""
 
-    # Mapeo de Colecciones JSON (Resuelve el error "has no field items")
     items: List[Dict[str, Any]] = Field(default=[], sa_column=Column(JSON))
     historial: List[Dict[str, Any]] = Field(default=[], sa_column=Column(JSON))
 
-    # Campos de Recepción y Devolución (Resuelve el error "has no field fecha_dev")
     fecha_dev: Optional[str] = None
     items_dev: List[Dict[str, Any]] = Field(default=[], sa_column=Column(JSON))
     firma_recibe_dev: Optional[str] = ""
     firma_entrega_dev: Optional[str] = ""
 
-    actualizado_en: datetime = Field(default_factory=datetime.utcnow)
+    actualizado_en: datetime = Field(default_factory=datetime.now)
