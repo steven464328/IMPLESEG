@@ -8,40 +8,44 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
 <link rel="stylesheet" href="/static/gh.css">
+<style>
+  /* CSS INCRUSTADO PARA FORZAR EL LOGO 3D IGNORANDO CACHÉ */
+  .brand-3d { padding: 8px 4px 24px 4px; display: flex; justify-content: center; align-items: center; }
+  .brand-logo-container { width: 100%; perspective: 1000px; }
+  .brand-3d-box {
+    background: linear-gradient(145deg, #15803d, #052e16); border: 1px solid #22c55e;
+    border-radius: 14px; padding: 12px 10px; text-align: center;
+    box-shadow: 0 6px 0 #022c22, 0 10px 15px rgba(0,0,0,0.6), inset 0 2px 3px rgba(255,255,255,0.35), inset 0 -2px 3px rgba(0,0,0,0.5);
+    transform: translateY(-2px); transition: all 0.2s ease-in-out;
+  }
+  .brand-3d-box:hover { transform: translateY(-4px); box-shadow: 0 8px 0 #022c22, 0 14px 20px rgba(0,0,0,0.7), inset 0 2px 3px rgba(255,255,255,0.45); }
+  .brand-title-3d {
+    display: block; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 900; color: #ff6b00;
+    text-transform: lowercase; letter-spacing: 1px;
+    text-shadow: 0 1px 0 #b33600, 0 2px 0 #802600, 0 3px 0 #4d0f00, 0 4px 6px rgba(0,0,0,0.7);
+  }
+  .brand-icon-group { margin: 3px 0; font-size: 13px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }
+  .brand-sub-3d { display: block; font-size: 10px; font-weight: 700; color: #4ade80; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+</style>
 </head>
 <body>
-
 <div class="app-shell">
   <aside class="sidebar">
-    <!-- LOGO IMPLESEG EN ALTO RELIEVE 3D -->
     <div class="brand brand-3d">
       <div class="brand-logo-container">
         <div class="brand-3d-box">
           <span class="brand-title-3d">impleseg</span>
-          <div class="brand-icon-group">
-            <span>👥</span><span>🛡️</span><span>👷</span>
-          </div>
+          <div class="brand-icon-group"><span>👥</span><span>🛡️</span><span>👷</span></div>
           <span class="brand-sub-3d">Seguridad Industrial</span>
         </div>
       </div>
     </div>
-
     <nav class="nav-modules">
       <div class="nav-group-label">Áreas</div>
-      <button class="nav-item" onclick="window.location.href='/'">
-        <span class="dot"></span> Sistemas · Hojas de Vida
-      </button>
-      <button class="nav-item active">
-        <span class="dot dot-live"></span> Gestión Humana
-      </button>
-      <button class="nav-item is-locked" disabled>
-        <span class="dot"></span> Contabilidad <em>próximamente</em>
-      </button>
-      <button class="nav-item is-locked" disabled>
-        <span class="dot"></span> Almacén <em>próximamente</em>
-      </button>
+      <button class="nav-item" onclick="window.location.href='/'"><span class="dot"></span> Sistemas · Hojas de Vida</button>
+      <button class="nav-item active"><span class="dot dot-live"></span> Gestión Humana</button>
+      <button class="nav-item is-locked" disabled><span class="dot"></span> Contabilidad <em>próximamente</em></button>
     </nav>
-
     <div class="nav-group-label" style="margin-top:14px">Gestión Humana</div>
     <nav class="nav-modules" id="ghSubNav">
       <button class="nav-item sub on" data-v="dash">📊 Panel</button>
@@ -51,20 +55,11 @@
       <button class="nav-item sub" data-v="rec">🔄 Recepción</button>
       <button class="nav-item sub" data-v="baja">🗑️ Bajas</button>
     </nav>
-
-    <div class="sidebar-footer">
-      <div class="status-pill"><span class="status-led"></span> Servidor local activo</div>
-    </div>
   </aside>
-
-  <main class="main">
-    <div id="ghApp"></div>
-  </main>
+  <main class="main"><div id="ghApp"></div></main>
 </div>
-
 <div id="pz"></div>
 <div class="toast" id="toast"></div>
-
 <script src="/static/gh.js"></script>
 </body>
 </html>

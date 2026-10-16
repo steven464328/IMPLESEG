@@ -1,20 +1,21 @@
 """
 Gestión Humana > Baja de activos (F-GT-BAJA-01).
-Sincronización de stock y fechas nativas para PostgreSQL.
+Utiliza RAW SQL para garantizar compatibilidad absoluta con PostgreSQL.
 """
+import json
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlmodel import Session, select
+from sqlmodel import Session
+from sqlalchemy import text
 
 from app.database import get_session
-from app.models import Baja, HerramientaInventario
+from app.models import HerramientaInventario
 from app.routers.gh_utils import generar_codigo
 
 router = APIRouter(prefix="/api/gh/bajas", tags=["GH - Bajas"])
-
 
 class BajaPayload(BaseModel):
     itemId: Optional[str] = None
@@ -34,33 +35,36 @@ class BajaPayload(BaseModel):
     firma: Optional[str] = ""
     config: Optional[Dict[str, Any]] = {}
 
-
-@router.get("", response_model=List[Baja])
+@router.get("")
 def listar(session: Session = Depends(get_session)):
     try:
-        resultados = session.exec(select(Baja)).all()
-        return sorted(resultados, key=lambda b: getattr(b, "id", 0) or 0, reverse=True)
-    except Exception:
+        # RAW SQL: Lee la tabla directamente sin importar el esquema Pydantic
+        query = text("SELECT * FROM gh_bajas ORDER BY id DESC")
+        result = session.execute(query).mappings().all()
+        bajas = []
+        for r in result:
+            row = dict(r)
+            if isinstance(row.get("config"), str):
+                try:
+                    row["config"] = json.loads(row["config"])
+                except:
+                    row["config"] = {}
+            bajas.append(row)
+        return bajas
+    except Exception as e:
+        print(f"Error forzado leyendo bajas: {e}")
         return []
 
-
-@router.get("/{baja_id}", response_model=Baja)
-def obtener(baja_id: int, session: Session = Depends(get_session)):
-    b = session.get(Baja, baja_id)
-    if not b:
-        raise HTTPException(status_code=404, detail="Baja no encontrada")
-    return b
-
-
-@router.post("", response_model=Baja)
+@router.post("")
 def crear(payload: BajaPayload, session: Session = Depends(get_session)):
     try:
         codigo = generar_codigo("BAJA")
+        fecha_str = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
+        # Descuento en inventario
         if payload.itemId:
             try:
-                item_id_int = int(payload.itemId)
-                item = session.get(HerramientaInventario, item_id_int)
+                item = session.get(HerramientaInventario, int(payload.itemId))
                 if item:
                     item.cantidad_stock = max(0, (item.cantidad_stock or 0) - abs(payload.cantidad or 1))
                     item.colaborador = ""
@@ -68,32 +72,39 @@ def crear(payload: BajaPayload, session: Session = Depends(get_session)):
             except Exception:
                 pass
 
-        baja = Baja(
-            codigo=codigo,
-            fecha=datetime.now(), # <-- SOLUCIÓN AL ERROR EN POSTGRESQL
-            item_id=str(payload.itemId) if payload.itemId else None,
-            nombre=payload.nombre,
-            categoria=payload.categoria or "",
-            marca=payload.marca or "",
-            modelo=payload.modelo or "",
-            serial=payload.serial or "",
-            cantidad=payload.cantidad or 1,
-            motivo=payload.motivo or "Baja de activo",
-            disposicion=payload.disposicion or "Chatarrización",
-            entidad=payload.entidad or "",
-            responsable_nombre=payload.responsNombre or "",
-            responsable_cargo=payload.responsCargo or "",
-            area=payload.area or "",
-            observaciones=payload.observaciones or "",
-            firma=payload.firma or "",
-            status="registrado",
-            config=payload.config or {},
-            creado_en=datetime.now()
-        )
-        session.add(baja)
+        config_json = json.dumps(payload.config or {})
+
+        # RAW SQL INSERT: Garantiza que PostgreSQL lo reciba correctamente
+        insert_query = text("""
+            INSERT INTO gh_bajas (
+                codigo, fecha, item_id, nombre, categoria, marca, modelo, serial, 
+                cantidad, motivo, disposicion, entidad, responsable_nombre, 
+                responsable_cargo, area, observaciones, firma, status, config, creado_en
+            ) VALUES (
+                :codigo, :fecha, :item_id, :nombre, :categoria, :marca, :modelo, :serial,
+                :cantidad, :motivo, :disposicion, :entidad, :responsable_nombre,
+                :responsable_cargo, :area, :observaciones, :firma, :status, :config, CURRENT_TIMESTAMP
+            ) RETURNING id;
+        """)
+        
+        result = session.execute(insert_query, {
+            "codigo": codigo, "fecha": fecha_str, "item_id": str(payload.itemId) if payload.itemId else None,
+            "nombre": payload.nombre, "categoria": payload.categoria or "", "marca": payload.marca or "",
+            "modelo": payload.modelo or "", "serial": payload.serial or "", "cantidad": payload.cantidad or 1,
+            "motivo": payload.motivo or "", "disposicion": payload.disposicion or "", "entidad": payload.entidad or "",
+            "responsable_nombre": payload.responsNombre or "", "responsable_cargo": payload.responsCargo or "",
+            "area": payload.area or "", "observaciones": payload.observaciones or "", "firma": payload.firma or "",
+            "status": "registrado", "config": config_json
+        })
+        
+        new_id = result.scalar()
         session.commit()
-        session.refresh(baja)
-        return baja
+        
+        return {
+            "id": new_id, "codigo": codigo, "fecha": fecha_str, "nombre": payload.nombre,
+            "cantidad": payload.cantidad, "motivo": payload.motivo, "responsable_nombre": payload.responsNombre,
+            "firma": payload.firma, "config": payload.config, "observaciones": payload.observaciones
+        }
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=500, detail=f"Error procesando la baja: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error crítico en base de datos: {str(e)}")
