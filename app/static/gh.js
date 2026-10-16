@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // EJ Soluciones · Gestión Humana (F-SGI-GH-12)
-// Lógica corregida: Firma directa sin novedades forzadas + 
-// Inserción de herramientas al inicio + Manejo de fechas.
+// Código completo corregido: Captura de observaciones/novedades,
+// solución a Bajas, ordenamiento descendente y firmas de recepción.
 // ═══════════════════════════════════════════════════════════════
 
 var API_INV = "/api/gh/inventario";
@@ -53,7 +53,7 @@ function todayISO() {
 
 function resetNew() { 
   nE = { nombre: '', cedula: '', cargo: '', area: AREAS[0] }; 
-  nItems = [{ herramienta: '', marca: '', serialOriginal: '', cantidad: 1, estado: 'Bueno', obs: '', fecha: fechaHoraActual() }]; 
+  nItems = [{ herramienta: '', marca: '', serialOriginal: '', cantidad: 1, estado: 'Bueno', observaciones: '', fecha: fechaHoraActual() }]; 
   sigR = null; sigE = null; 
 }
 
@@ -61,9 +61,6 @@ async function apiGet(url) { var r = await fetch(url); if (!r.ok) throw new Erro
 async function apiPost(url, body) { var r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!r.ok) throw new Error((await r.json()).detail || 'Error'); return r.json(); }
 async function apiPut(url, body) { var r = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!r.ok) throw new Error((await r.json()).detail || 'Error'); return r.json(); }
 
-// ---------------------------------------------------------------
-// Arranque
-// ---------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', function () {
   resetNew();
   document.querySelectorAll('#ghSubNav .nav-item.sub').forEach(function (b) {
@@ -226,9 +223,8 @@ function vNew() {
   var bAI = ce('button', 'btn btn-ghost'); bAI.style.marginBottom = '14px'; bAI.textContent = '+ Agregar herramienta';
   var iCont = ce('div'); c2.appendChild(bAI); c2.appendChild(iCont); el.appendChild(c2);
   
-  // INSERCIÓN ARRIBA (DE PRIMERA EN LA LISTA)
   bAI.onclick = function () { 
-    nItems.unshift({ herramienta: '', marca: '', serialOriginal: '', cantidad: 1, estado: 'Bueno', obs: '', fecha: fechaHoraActual() }); 
+    nItems.unshift({ herramienta: '', marca: '', serialOriginal: '', cantidad: 1, estado: 'Bueno', observaciones: '', fecha: fechaHoraActual() }); 
     renderItems(iCont); 
   };
 
@@ -276,7 +272,7 @@ function vNew() {
 
 function renderItems(cont, onChange) {
   cont.innerHTML = '';
-  if (!nItems.length) nItems.push({ herramienta: '', marca: '', serialOriginal: '', cantidad: 1, estado: 'Bueno', obs: '', fecha: fechaHoraActual() });
+  if (!nItems.length) nItems.push({ herramienta: '', marca: '', serialOriginal: '', cantidad: 1, estado: 'Bueno', observaciones: '', fecha: fechaHoraActual() });
   
   nItems.forEach(function (it, idx) {
     var box = ce('div', 'ibox');
@@ -300,6 +296,8 @@ function renderItems(cont, onChange) {
     selWrap.innerHTML = '<label class="lbl-field">🔗 Vincular desde inventario<select class="sel-i">' + invOptions + '</select></label>';
     box.appendChild(selWrap);
 
+    var obsVal = it.observaciones || it.obs || '';
+
     var grid = ce('div', 'g2');
     grid.innerHTML =
       '<label class="lbl-field">Fecha *<input type="text" class="i-dt" value="' + esc(formatearFechaBonita(it.fecha)) + '" readonly></label>' +
@@ -307,7 +305,7 @@ function renderItems(cont, onChange) {
       '<label class="lbl-field span-2">Marca / modelo / serial<input class="i-mr" value="' + esc(it.marca) + '"></label>' +
       '<label class="lbl-field">Cantidad<input type="number" class="i-qt" value="' + esc(it.cantidad) + '" min="1"></label>' +
       '<label class="lbl-field">Estado inicial<select class="i-es">' + ESTADOS.map(function (e) { return '<option' + (e === it.estado ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></label>' +
-      '<label class="lbl-field span-2">Observaciones<input class="i-ob" value="' + esc(it.obs) + '"></label>';
+      '<label class="lbl-field span-2">Observaciones / Novedades<input class="i-ob" value="' + esc(obsVal) + '"></label>';
     box.appendChild(grid);
 
     box.querySelector('.sel-i').onchange = function (ev) {
@@ -319,7 +317,7 @@ function renderItems(cont, onChange) {
     box.querySelector('.i-mr').oninput = function (ev) { it.marca = ev.target.value; if (onChange) onChange(); };
     box.querySelector('.i-qt').onchange = function (ev) { it.cantidad = parseInt(ev.target.value) || 1; if (onChange) onChange(); };
     box.querySelector('.i-es').onchange = function (ev) { it.estado = ev.target.value; if (onChange) onChange(); };
-    box.querySelector('.i-ob').oninput = function (ev) { it.obs = ev.target.value; if (onChange) onChange(); };
+    box.querySelector('.i-ob').oninput = function (ev) { it.observaciones = ev.target.value; it.obs = ev.target.value; if (onChange) onChange(); };
     cont.appendChild(box);
   });
 }
@@ -383,7 +381,7 @@ function vDetail() {
 
   if (!act && a.items_dev && a.items_dev.length) {
     var rowsDev = a.items_dev.map(function (it, idx) {
-      return '<tr><td style="text-align:center">' + (idx + 1) + '</td><td><b>' + esc(it.herramienta) + '</b></td><td>' + esc(it.estado || '—') + '</td><td>' + esc(it.observaciones || '—') + '</td></tr>';
+      return '<tr><td style="text-align:center">' + (idx + 1) + '</td><td><b>' + esc(it.herramienta) + '</b></td><td>' + esc(it.estado || '—') + '</td><td>' + esc(it.observaciones || it.obs || '—') + '</td></tr>';
     }).join('');
     info.innerHTML += '<p style="font-weight:700;margin:18px 0 10px">📥 Devolución (' + esc(formatearFechaBonita(a.fecha_dev)) + ')</p><table class="data-table"><thead><tr><th>#</th><th>Herramienta</th><th>Estado final</th><th>Observaciones</th></tr></thead><tbody>' + rowsDev + '</tbody></table>';
   }
@@ -420,7 +418,7 @@ function vEdit() {
     el.appendChild(cSigBase);
   }
 
-  nItems = JSON.parse(JSON.stringify(a.items || [])).map(function (it) { return { herramienta: it.herramienta || '', marca: it.marca || '', serialOriginal: it.serialOriginal || '', cantidad: it.cantidad || 1, estado: it.estado || 'Bueno', obs: it.observaciones || it.obs || '', fecha: it.fecha || fechaHoraActual() }; });
+  nItems = JSON.parse(JSON.stringify(a.items || [])).map(function (it) { return { herramienta: it.herramienta || '', marca: it.marca || '', serialOriginal: it.serialOriginal || '', cantidad: it.cantidad || 1, estado: it.estado || 'Bueno', observaciones: it.observaciones || it.obs || '', fecha: it.fecha || fechaHoraActual() }; });
   var originalItems = JSON.parse(JSON.stringify(nItems));
   var editE = { nombre: a.nombre, cedula: a.cedula, cargo: a.cargo, area: a.area };
 
@@ -437,7 +435,7 @@ function vEdit() {
   var eCont = ce('div'); c2.appendChild(bAI2); c2.appendChild(eCont); el.appendChild(c2);
   
   bAI2.onclick = function () { 
-    nItems.unshift({ herramienta: '', marca: '', serialOriginal: '', cantidad: 1, estado: 'Bueno', obs: '', fecha: fechaHoraActual() }); 
+    nItems.unshift({ herramienta: '', marca: '', serialOriginal: '', cantidad: 1, estado: 'Bueno', observaciones: '', fecha: fechaHoraActual() }); 
     renderItems(eCont, updateReasonsUI); 
     updateReasonsUI(); 
   };
@@ -454,7 +452,6 @@ function vEdit() {
     
     var html = '<div class="sh"><div class="sn">3</div>Novedades y cambios</div>';
     
-    // SI SOLO SE FIRMA Y NO HAY RETIROS NI ADICIONES, NO EXIGE NOVEDADES
     if (!removed.length && !added.length) {
       if (isMissingBaseSig) {
         html += '<div class="gh-alert gh-alert-purple">✍️ <b>Completar Firma:</b> estás registrando la firma inicial de este acta. No es necesario ingresar novedades.</div>';
@@ -510,7 +507,6 @@ function vEdit() {
       nuevosHistoriales: notasNuevas.filter(function (n) { return n.nota !== ''; }).map(function (n) { return { herramienta: n.herramienta, nota: n.nota, firmaR: sER || '', firmaE: sEE || '' }; }),
     };
     
-    // Si se capturaron las firmas de base, se envían para actualizar el acta
     if (sR_base) payload.firmaR_base = sR_base;
     if (sE_base) payload.firmaE_base = sE_base;
 
@@ -564,12 +560,13 @@ function showRecForm(parent, a) {
   var c1 = ce('div', 'gh-card'); c1.innerHTML = '<div class="sh"><div class="sn">1</div>Herramientas a devolver</div>';
   ri.forEach(function (it, idx) {
     var row = ce('div', 'ibox');
+    var obsVal = it.observaciones || it.obs || 'Todo conforme';
     row.innerHTML = '<p style="font-weight:700;margin-bottom:12px">🔧 ' + esc(it.herramienta) + '<span style="font-weight:400;color:var(--text-dim);font-size:12px"> — ' + esc(it.marca || '') + '</span></p><div class="g2">' +
       '<label class="lbl-field">Fecha devolución<input type="text" class="r-dt" value="' + (it.fechaDevolucion || fechaHoraActual()) + '" readonly></label>' +
       '<label class="lbl-field">Estado final<select class="r-es">' + ESTADOS.map(function (e) { return '<option' + (it.estado === e ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></label>' +
-      '<label class="lbl-field span-2">Novedades/daños<input class="r-ob" value="' + (it.observaciones || 'Todo conforme') + '"></label></div>';
+      '<label class="lbl-field span-2">Novedades/daños<input class="r-ob" value="' + esc(obsVal) + '"></label></div>';
     row.querySelector('.r-es').onchange = function (ev) { ri[idx].estado = ev.target.value; };
-    row.querySelector('.r-ob').oninput = function (ev) { ri[idx].observaciones = ev.target.value; };
+    row.querySelector('.r-ob').oninput = function (ev) { ri[idx].observaciones = ev.target.value; ri[idx].obs = ev.target.value; };
     c1.appendChild(row);
   });
   parent.appendChild(c1);
@@ -627,8 +624,8 @@ function showBajaForm(parent) {
   var wrap = ce('div', 'bj-fw'); wrap.style.marginBottom = '20px';
 
   var c1 = ce('div', 'gh-card');
-  var sh = '<option value="">-- Selecciona un equipo con stock disponible --</option>';
-  INV.filter(function (i) { return i.cantidad_stock > 0; }).forEach(function (inv) { sh += '<option value="' + inv.id + '">' + esc(inv.nombre) + ' | ' + esc(inv.marca || '') + ' ' + esc(inv.modelo || '') + ' [S/N: ' + esc(inv.serial || 'N/A') + '] — Stock: ' + inv.cantidad_stock + '</option>'; });
+  var sh = '<option value="">-- Selecciona un equipo disponible --</option>';
+  INV.forEach(function (inv) { sh += '<option value="' + inv.id + '">' + esc(inv.nombre) + ' | ' + esc(inv.marca || '') + ' ' + esc(inv.modelo || '') + ' [S/N: ' + esc(inv.serial || 'N/A') + '] — Stock: ' + inv.cantidad_stock + '</option>'; });
   c1.innerHTML = '<div class="sh"><div class="sn">1</div>Equipo a dar de baja</div><label class="lbl-field">Seleccionar equipo *<select id="bj-s">' + sh + '</select></label><div id="bj-inf" style="display:none;margin:12px 0"></div><div class="g2"><label class="lbl-field">Cantidad a dar de baja *<input type="number" id="bj-q" value="1" min="1"></label><label class="lbl-field">Fecha de baja *<input type="text" id="bj-f" value="' + fechaHoraActual() + '" readonly></label></div>';
   wrap.appendChild(c1);
 
@@ -662,7 +659,7 @@ function showBajaForm(parent) {
     var firmaBj = spBj.getImg();
     if (!firmaBj) return toast('La firma del responsable es obligatoria', false);
     
-    var cnt = parseInt(ge('bj-q').value) || 1; if (cnt > si.cantidad_stock) return toast('Cantidad supera el stock (' + si.cantidad_stock + ')', false);
+    var cnt = parseInt(ge('bj-q').value) || 1;
     var sw = []; c4.querySelectorAll('#bj-sw input:checked').forEach(function (cb) { sw.push(cb.value); });
 
     var payload = {
@@ -683,14 +680,14 @@ function showBajaForm(parent) {
   ge('bj-s').onchange = function () {
     var inf = ge('bj-inf');
     var m = INV.find(function (i) { return String(i.id) === ge('bj-s').value; });
-    if (m) { inf.style.display = 'block'; inf.innerHTML = '<div class="g4"><div><span class="lbl-field" style="display:block">Categoría</span><b>' + esc(m.categoria || '') + '</b></div><div><span class="lbl-field" style="display:block">Marca</span><b>' + esc(m.marca || '') + '</b></div><div><span class="lbl-field" style="display:block">Modelo</span><b>' + esc(m.modelo || '') + '</b></div><div><span class="lbl-field" style="display:block">Stock actual</span><b style="color:var(--accent)">' + m.cantidad_stock + '</b></div></div>'; ge('bj-hn').value = m.nombre; ge('bj-q').max = m.cantidad_stock; }
+    if (m) { inf.style.display = 'block'; inf.innerHTML = '<div class="g4"><div><span class="lbl-field" style="display:block">Categoría</span><b>' + esc(m.categoria || '') + '</b></div><div><span class="lbl-field" style="display:block">Marca</span><b>' + esc(m.marca || '') + '</b></div><div><span class="lbl-field" style="display:block">Modelo</span><b>' + esc(m.modelo || '') + '</b></div><div><span class="lbl-field" style="display:block">Stock actual</span><b style="color:var(--accent)">' + m.cantidad_stock + '</b></div></div>'; ge('bj-hn').value = m.nombre; }
     else { inf.style.display = 'none'; }
   };
   var tw2 = parent.querySelector('.table-panel'); parent.insertBefore(wrap, tw2);
 }
 
 // ---------------------------------------------------------------
-// FIRMA (canvas) - Corrección de fondo e invocación transparente
+// FIRMA (canvas)
 // ---------------------------------------------------------------
 function mkSig(label) {
   var wrap = ce('div', 'sigw'); var lbl = ce('span', 'sig-lbl'); lbl.textContent = label; wrap.appendChild(lbl);
@@ -790,7 +787,8 @@ function buildPDF(a) {
   var rows1 = ''; var items = a.items || [];
   for (var i = 0; i < items.length; i++) { 
     var it = items[i]; 
-    rows1 += '<tr><td style="text-align:center">' + (i + 1) + '</td><td style="text-align:center;font-size:7px">' + esc(formatearFechaBonita(it.fecha || a.fecha)) + '</td><td style="font-weight:700">' + esc(it.herramienta) + '</td><td>' + esc(it.marca || '—') + '</td><td style="text-align:center">' + esc(it.cantidad) + '</td><td style="text-align:center">' + esc(it.estado) + '</td><td class="sig-cell">' + sigCell(a.firma_recibe) + '</td><td class="sig-cell">' + sigCell(a.firma_entrega) + '</td><td>' + esc(it.observaciones || it.obs || '') + '</td></tr>'; 
+    var obsTxt = it.observaciones || it.obs || '';
+    rows1 += '<tr><td style="text-align:center">' + (i + 1) + '</td><td style="text-align:center;font-size:7px">' + esc(formatearFechaBonita(it.fecha || a.fecha)) + '</td><td style="font-weight:700">' + esc(it.herramienta) + '</td><td>' + esc(it.marca || '—') + '</td><td style="text-align:center">' + esc(it.cantidad) + '</td><td style="text-align:center">' + esc(it.estado) + '</td><td class="sig-cell">' + sigCell(a.firma_recibe) + '</td><td class="sig-cell">' + sigCell(a.firma_entrega) + '</td><td>' + esc(obsTxt) + '</td></tr>'; 
   }
   for (var k = items.length; k < 18; k++) { rows1 += '<tr style="height:22px"><td style="text-align:center">' + (k + 1) + '</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>'; }
   var pg1 = '<div class="pp">' + hdr('ASIGNACIÓN EQUIPOS Y HERRAMIENTAS DE TRABAJO', currPg++, totalPages) + meta(a.nombre, a.cedula, a.cargo, a.area) + '<table class="pit">' + TH + '<tbody>' + rows1 + '</tbody></table>' + clause('Al firmar este documento, me comprometo a utilizar los equipos y herramientas de trabajo de manera responsable y segura, siguiendo las instrucciones del fabricante y las normas de seguridad de la empresa. Asimismo, me comprometo a velar por el cuidado y la custodia de los equipos y herramientas de trabajo, reportando cualquier daño o anomalía de manera oportuna. Entiendo y acepto que debo devolver la herramienta una vez termine la relación laboral por cualquier causa y autorizo el descuento por nómina de cualquier daño o pérdida no atribuible al desgaste normal de la herramienta asignada.') + footer('Coordinador SGI', 'Elaboró', 'Custodio', a.nombre) + '<div class="pconf">CLÁUSULA DE CONFIDENCIALIDAD: Esta información es propiedad Intelectual de IMPLESEG S.A.S.</div></div>';
@@ -808,7 +806,7 @@ function buildPDF(a) {
   // PAGE 3: RECEPCIÓN / DEVOLUCIÓN
   var pgDev = '';
   if (isRet) {
-    var di = (a.items_dev && a.items_dev.length) ? a.items_dev : items.map(function (it) { return { herramienta: it.herramienta, marca: it.marca || '', cantidad: it.cantidad || 1, estado: 'Bueno', observaciones: '', fechaDevolucion: a.fecha_dev || '' }; });
+    var di = (a.items_dev && a.items_dev.length) ? a.items_dev : items.map(function (it) { return { herramienta: it.herramienta, marca: it.marca || '', cantidad: it.cantidad || 1, estado: 'Bueno', observaciones: it.observaciones || it.obs || '', fechaDevolucion: a.fecha_dev || '' }; });
     var rows2 = '';
     
     var fRecibeDev = a.firma_recibe_dev || a.firmaRecibe || '';
@@ -816,7 +814,8 @@ function buildPDF(a) {
 
     for (var d2 = 0; d2 < di.length; d2++) { 
       var dit = di[d2]; 
-      rows2 += '<tr><td style="text-align:center">' + (d2 + 1) + '</td><td style="text-align:center;font-size:7px">' + esc(formatearFechaBonita(dit.fechaDevolucion || a.fecha_dev)) + '</td><td style="font-weight:700">' + esc(dit.herramienta) + '</td><td>' + esc(dit.marca || '—') + '</td><td style="text-align:center">' + esc(dit.cantidad || 1) + '</td><td style="text-align:center">' + esc(dit.estado || 'Bueno') + '</td><td class="sig-cell">' + sigCell(fRecibeDev) + '</td><td class="sig-cell">' + sigCell(fEntregaDev) + '</td><td>' + esc(dit.observaciones || '') + '</td></tr>'; 
+      var devObs = dit.observaciones || dit.obs || '';
+      rows2 += '<tr><td style="text-align:center">' + (d2 + 1) + '</td><td style="text-align:center;font-size:7px">' + esc(formatearFechaBonita(dit.fechaDevolucion || a.fecha_dev)) + '</td><td style="font-weight:700">' + esc(dit.herramienta) + '</td><td>' + esc(dit.marca || '—') + '</td><td style="text-align:center">' + esc(dit.cantidad || 1) + '</td><td style="text-align:center">' + esc(dit.estado || 'Bueno') + '</td><td class="sig-cell">' + sigCell(fRecibeDev) + '</td><td class="sig-cell">' + sigCell(fEntregaDev) + '</td><td>' + esc(devObs) + '</td></tr>'; 
     }
     for (var dk = di.length; dk < 18; dk++) { rows2 += '<tr style="height:22px"><td style="text-align:center">' + (dk + 1) + '</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>'; }
     

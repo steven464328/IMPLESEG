@@ -1,3 +1,7 @@
+"""
+Gestión Humana > Baja de activos (formato F-GT-BAJA-01).
+Lógica limpia y segura para PostgreSQL y SQLModel.
+"""
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -37,7 +41,6 @@ def listar(session: Session = Depends(get_session)):
         resultados = session.exec(select(Baja)).all()
         return sorted(resultados, key=lambda b: getattr(b, "id", 0) or 0, reverse=True)
     except Exception as e:
-        # En caso de inconsistencias antiguas, retorne lista vacia sin tumbar el sistema
         return []
 
 
@@ -54,12 +57,14 @@ def crear(payload: BajaPayload, session: Session = Depends(get_session)):
     try:
         codigo = generar_codigo("BAJA")
 
+        # Descontar del inventario
         if payload.itemId:
             try:
                 item_id_int = int(payload.itemId)
                 item = session.get(HerramientaInventario, item_id_int)
                 if item:
                     item.cantidad_stock = max(0, (item.cantidad_stock or 0) - abs(payload.cantidad))
+                    item.colaborador = ""
                     session.add(item)
             except Exception:
                 pass
