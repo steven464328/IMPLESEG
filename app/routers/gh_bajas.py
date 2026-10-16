@@ -1,6 +1,6 @@
 """
-Gestión Humana > Baja de activos (formato F-GT-BAJA-01).
-Lógica limpia y segura para PostgreSQL y SQLModel.
+Gestión Humana > Baja de activos (F-GT-BAJA-01).
+Sincronización de stock y fechas nativas para PostgreSQL.
 """
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -24,15 +24,15 @@ class BajaPayload(BaseModel):
     modelo: Optional[str] = ""
     serial: Optional[str] = ""
     cantidad: int = 1
-    motivo: str = ""
-    disposicion: str = ""
+    motivo: Optional[str] = "Fin de vida útil"
+    disposicion: Optional[str] = "Chatarrización"
     entidad: Optional[str] = ""
-    responsNombre: str = ""
+    responsNombre: str
     responsCargo: Optional[str] = ""
     area: Optional[str] = ""
     observaciones: Optional[str] = ""
     firma: Optional[str] = ""
-    config: Dict[str, Any] = {}
+    config: Optional[Dict[str, Any]] = {}
 
 
 @router.get("", response_model=List[Baja])
@@ -40,7 +40,7 @@ def listar(session: Session = Depends(get_session)):
     try:
         resultados = session.exec(select(Baja)).all()
         return sorted(resultados, key=lambda b: getattr(b, "id", 0) or 0, reverse=True)
-    except Exception as e:
+    except Exception:
         return []
 
 
@@ -57,39 +57,36 @@ def crear(payload: BajaPayload, session: Session = Depends(get_session)):
     try:
         codigo = generar_codigo("BAJA")
 
-        # Descontar del inventario
         if payload.itemId:
             try:
                 item_id_int = int(payload.itemId)
                 item = session.get(HerramientaInventario, item_id_int)
                 if item:
-                    item.cantidad_stock = max(0, (item.cantidad_stock or 0) - abs(payload.cantidad))
+                    item.cantidad_stock = max(0, (item.cantidad_stock or 0) - abs(payload.cantidad or 1))
                     item.colaborador = ""
                     session.add(item)
             except Exception:
                 pass
 
-        fecha_str = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-
         baja = Baja(
-            codigo=codigo, 
-            fecha=fecha_str, 
+            codigo=codigo,
+            fecha=datetime.now(), # <-- SOLUCIÓN AL ERROR EN POSTGRESQL
             item_id=str(payload.itemId) if payload.itemId else None,
-            nombre=payload.nombre, 
-            categoria=payload.categoria or "", 
+            nombre=payload.nombre,
+            categoria=payload.categoria or "",
             marca=payload.marca or "",
-            modelo=payload.modelo or "", 
-            serial=payload.serial or "", 
-            cantidad=payload.cantidad,
-            motivo=payload.motivo or "", 
-            disposicion=payload.disposicion or "", 
+            modelo=payload.modelo or "",
+            serial=payload.serial or "",
+            cantidad=payload.cantidad or 1,
+            motivo=payload.motivo or "Baja de activo",
+            disposicion=payload.disposicion or "Chatarrización",
             entidad=payload.entidad or "",
-            responsable_nombre=payload.responsNombre or "", 
+            responsable_nombre=payload.responsNombre or "",
             responsable_cargo=payload.responsCargo or "",
-            area=payload.area or "", 
-            observaciones=payload.observaciones or "", 
+            area=payload.area or "",
+            observaciones=payload.observaciones or "",
             firma=payload.firma or "",
-            status="registrado", 
+            status="registrado",
             config=payload.config or {},
             creado_en=datetime.now()
         )
@@ -99,4 +96,4 @@ def crear(payload: BajaPayload, session: Session = Depends(get_session)):
         return baja
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=500, detail=f"Error al registrar la baja: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error procesando la baja: {str(e)}")
