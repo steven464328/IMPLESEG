@@ -4,10 +4,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from app.database import init_db
 
+# 1. IMPORTAR ROUTERS
 from app.routers import (
     dashboard, equipos, gh_inventario, gh_asignaciones,
     gh_bajas, recepcion, etiquetas_usb, dashboard_equipos,
-    impresoras, hv_equipos
+    impresoras, hv_equipos, visitantes
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -20,6 +21,7 @@ def startup():
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
+# 2. INCLUIR ROUTERS DE API
 app.include_router(dashboard.router)
 app.include_router(equipos.router)
 app.include_router(gh_inventario.router)
@@ -30,6 +32,7 @@ app.include_router(etiquetas_usb.router)
 app.include_router(dashboard_equipos.router)
 app.include_router(impresoras.router)
 app.include_router(hv_equipos.router)
+app.include_router(visitantes.router)
 
 USUARIOS_PERMITIDOS = {
     "admin@impleseg.com": "admin123",
@@ -103,3 +106,10 @@ def hojas_vida(request: Request):
     if not verificar_sesion(request):
         return RedirectResponse(url="/login")
     return FileResponse(os.path.join(BASE_DIR, "templates", "hojas_vida.html"))
+
+# 3. RUTA DE VISTA PARA VISITANTES
+@app.get("/visitantes")
+def visitantes_view(request: Request):
+    if not verificar_sesion(request):
+        return RedirectResponse(url="/login")
+    return FileResponse(os.path.join(BASE_DIR, "templates", "visitantes.html"))
