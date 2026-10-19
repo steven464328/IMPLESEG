@@ -4,215 +4,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>IMPLESEG ERP | Hojas de Vida de Equipos</title>
+    <title>IMPLESEG ERP | Panel Principal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: #0f172a;
-            color: #e2e8f0;
-            font-family: "Segoe UI", sans-serif;
-            overflow-x: hidden;
-        }
-
-        a {
-            text-decoration: none;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0f172a; color: #e2e8f0; font-family: "Segoe UI", sans-serif; overflow-x: hidden; }
+        a { text-decoration: none; }
 
         .sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 270px;
-            height: 100vh;
-            background: #111827;
-            border-right: 1px solid #1f2937;
-            overflow: auto;
-            padding: 15px;
+            position: fixed; left: 0; top: 0; width: 270px; height: 100vh;
+            background: #111827; border-right: 1px solid #1f2937; overflow: auto; padding: 15px;
         }
 
-        /* BANNER Y LOGO VERDE UNIFICADO */
         .brand-banner {
             background: linear-gradient(145deg, #0f6c2f, #0a4f21);
-            padding: 15px;
-            border-radius: 12px;
-            text-align: center;
-            margin-bottom: 20px;
+            padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px;
             box-shadow: inset 0px 4px 6px rgba(255,255,255,0.1), 0px 6px 15px rgba(0,0,0,0.4);
-            border: 1px solid #16a34a;
-            cursor: pointer;
+            border: 1px solid #16a34a; cursor: pointer;
         }
 
         .brand-banner .logo-text {
-            font-family: 'Arial Black', sans-serif;
-            font-size: 24px;
-            color: #f97316;
-            text-shadow: 2px 2px 0px #9a3412, 0px 4px 10px rgba(0,0,0,0.5);
-            letter-spacing: 1px;
-            margin-bottom: 2px;
+            font-family: 'Arial Black', sans-serif; font-size: 24px; color: #f97316;
+            text-shadow: 2px 2px 0px #9a3412, 0px 4px 10px rgba(0,0,0,0.5); letter-spacing: 1px; margin-bottom: 2px;
         }
 
-        .brand-banner .logo-icons {
-            font-size: 15px;
-            margin-bottom: 4px;
-        }
+        .brand-banner .logo-icons { font-size: 15px; margin-bottom: 4px; }
+        .brand-banner .logo-sub { font-size: 9px; font-weight: 800; color: #86efac; letter-spacing: 1.5px; }
 
-        .brand-banner .logo-sub {
-            font-size: 9px;
-            font-weight: 800;
-            color: #86efac;
-            letter-spacing: 1.5px;
-        }
-
-        .menu {
-            padding: 5px;
-        }
-
-        .menu-title {
-            color: #64748b;
-            font-size: 11px;
-            letter-spacing: 2px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-        }
+        .menu { padding: 5px; }
+        .menu-title { color: #64748b; font-size: 11px; letter-spacing: 2px; margin-bottom: 10px; text-transform: uppercase; }
 
         .menu a {
-            display: block;
-            color: #cbd5e1;
-            padding: 12px 15px;
-            border-radius: 8px;
-            margin-bottom: 5px;
-            transition: .2s;
-            cursor: pointer;
+            display: block; color: #cbd5e1; padding: 12px 15px; border-radius: 8px;
+            margin-bottom: 5px; transition: .2s; cursor: pointer;
         }
 
-        .menu a:hover {
-            background: #1e293b;
-            color: white;
+        .menu a:hover { background: #1e293b; color: white; }
+        .menu .active { background: #2563eb; color: white; }
+        .menu .disabled-link { opacity: 0.5; cursor: not-allowed; }
+        .menu .disabled-link:hover { background: transparent; color: #cbd5e1; }
+
+        .content { margin-left: 270px; padding: 35px; }
+        .page-title { font-size: 30px; font-weight: 700; color: white; }
+        .page-subtitle { color: #94a3b8; margin-bottom: 30px; }
+
+        .module-card {
+            background: #1e293b; border-radius: 15px; padding: 25px; border: 1px solid #334155;
+            transition: transform .2s, border-color .2s; cursor: pointer; height: 100%;
         }
 
-        .menu .active {
-            background: #2563eb;
-            color: white;
-        }
-
-        .menu .disabled-link {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .menu .disabled-link:hover {
-            background: transparent;
-            color: #cbd5e1;
-        }
-
-        .content {
-            margin-left: 270px;
-            padding: 35px;
-        }
-
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-
-        .page-title {
-            font-size: 30px;
-            font-weight: 700;
-            color: white;
-        }
-
-        .page-subtitle {
-            color: #94a3b8;
-        }
-
-        .btn-success {
-            background: #10b981;
-            border: none;
-        }
-
-        .btn-success:hover {
-            background: #059669;
-        }
-
-        .btn-dark {
-            background: #1e293b;
-            border: 1px solid #334155;
-        }
-
-        .kpi-card {
-            background: #1e293b;
-            border-radius: 15px;
-            padding: 25px;
-            border: 1px solid #334155;
-            height: 100%;
-        }
-
-        .kpi-card h6 {
-            color: #94a3b8;
-            text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 1px;
-        }
-
-        .kpi-card h2 {
-            color: white;
-            margin-top: 15px;
-            font-size: 38px;
-            font-weight: 700;
-        }
-
-        .panel {
-            margin-top: 25px;
-            background: #1e293b;
-            border-radius: 15px;
-            border: 1px solid #334155;
-            padding: 25px;
-        }
-
-        .panel-title {
-            color: white;
-            font-weight: 600;
-            margin-bottom: 20px;
-        }
-
-        .table-dark {
-            --bs-table-bg: #1e293b;
-            --bs-table-striped-bg: #17202e;
-            --bs-table-border-color: #334155;
-        }
-
-        .form-control,
-        .form-select {
-            background: #111827;
-            border: 1px solid #334155;
-            color: white;
-        }
-
-        .form-control:focus,
-        .form-select:focus {
-            background: #111827;
-            color: white;
-        }
-
-        .chart-box {
-            min-height: 350px;
-        }
+        .module-card:hover { transform: translateY(-5px); border-color: #10b981; }
+        .module-card i { font-size: 40px; color: #10b981; margin-bottom: 15px; display: block; }
+        .module-card h4 { color: white; font-weight: 700; margin-bottom: 10px; }
+        .module-card p { color: #94a3b8; font-size: 14px; margin: 0; }
     </style>
 </head>
 
 <body>
 
-    <!-- NAVEGACIÓN LATERAL UNIFICADA -->
     <div class="sidebar">
         <div class="brand-banner" onclick="window.location.href='/'">
             <div class="logo-text">impleseg</div>
@@ -222,226 +73,46 @@
 
         <div class="menu">
             <div class="menu-title">MÓDULOS ERP</div>
-
-            <!-- ENLACES NAVEGABLES FUNCIONALES -->
-            <a href="/hojas_vida" class="active">
-                <i class="bi bi-pc-display-horizontal me-2"></i> Hojas de Vida
-            </a>
-
-            <a href="/gestion-humana">
-                <i class="bi bi-person-vcard me-2"></i> Gestión Humana
-            </a>
-
-            <a href="/etiquetas_usb">
-                <i class="bi bi-upc-scan me-2"></i> Etiquetas USB
-            </a>
-
-            <!-- MÓDULOS EN DESARROLLO -->
-            <a class="disabled-link">
-                <i class="bi bi-box-seam me-2"></i> Inventarios
-            </a>
-
-            <a class="disabled-link">
-                <i class="bi bi-receipt me-2"></i> Compras
-            </a>
-
-            <a class="disabled-link">
-                <i class="bi bi-cash-stack me-2"></i> Contabilidad
-            </a>
-
-            <!-- CERRAR SESIÓN -->
-            <a href="/logout" style="color:#ef4444; margin-top:25px;">
-                <i class="bi bi-box-arrow-left me-2"></i> Cerrar Sesión
-            </a>
+            <a href="/" class="active"><i class="bi bi-house-door me-2"></i> Inicio</a>
+            <a href="/hojas_vida"><i class="bi bi-pc-display-horizontal me-2"></i> Hojas de Vida</a>
+            <a href="/gestion-humana"><i class="bi bi-person-vcard me-2"></i> Gestión Humana</a>
+            <a href="/etiquetas_usb"><i class="bi bi-upc-scan me-2"></i> Etiquetas USB</a>
+            <a class="disabled-link"><i class="bi bi-box-seam me-2"></i> Inventarios</a>
+            <a class="disabled-link"><i class="bi bi-receipt me-2"></i> Compras</a>
+            <a class="disabled-link"><i class="bi bi-cash-stack me-2"></i> Contabilidad</a>
+            <a href="/logout" style="color:#ef4444; margin-top:25px;"><i class="bi bi-box-arrow-left me-2"></i> Cerrar Sesión</a>
         </div>
     </div>
 
-    <!-- CONTENIDO PRINCIPAL -->
     <div class="content">
-        <div class="topbar">
-            <div>
-                <div class="page-title">Hojas de Vida de Equipos</div>
-                <div class="page-subtitle">Inventario • Garantías • Licencias • Mantenimientos • Historial</div>
-            </div>
-            <div>
-                <button class="btn btn-dark me-2" id="btnExportar">
-                    <i class="bi bi-download"></i> Exportar CSV
-                </button>
-                <button class="btn btn-success" id="btnNuevo" data-bs-toggle="modal" data-bs-target="#modalEquipo">
-                    <i class="bi bi-plus-circle"></i> Nueva Hoja de Vida
-                </button>
-            </div>
-        </div>
+        <div class="page-title">Sistema Integrado Empresarial IMPLESEG</div>
+        <div class="page-subtitle">Selecciona el módulo al que deseas acceder</div>
 
-        <!-- INDICADORES (KPIs) -->
         <div class="row g-4">
-            <div class="col-lg-3">
-                <div class="kpi-card">
-                    <h6>Equipos Registrados</h6>
-                    <h2 id="kpiTotal">0</h2>
+            <div class="col-md-4">
+                <div class="module-card" onclick="window.location.href='/hojas_vida'">
+                    <i class="bi bi-pc-display-horizontal"></i>
+                    <h4>Hojas de Vida</h4>
+                    <p>Gestión técnica de equipos de cómputo, líneas corporativas y celulares.</p>
                 </div>
             </div>
-            <div class="col-lg-3">
-                <div class="kpi-card">
-                    <h6>Equipos Activos</h6>
-                    <h2 id="kpiActivos" style="color:#22c55e;">0</h2>
+            <div class="col-md-4">
+                <div class="module-card" onclick="window.location.href='/gestion-humana'">
+                    <i class="bi bi-person-vcard"></i>
+                    <h4>Gestión Humana</h4>
+                    <p>Asignación de activos, actas, inventario general y entregas a personal.</p>
                 </div>
             </div>
-            <div class="col-lg-3">
-                <div class="kpi-card">
-                    <h6>En Mantenimiento</h6>
-                    <h2 id="kpiMantenimiento" style="color:#f59e0b;">0</h2>
-                </div>
-            </div>
-            <div class="col-lg-3">
-                <div class="kpi-card">
-                    <h6>Dados de Baja</h6>
-                    <h2 id="kpiBaja" style="color:#ef4444;">0</h2>
-                </div>
-            </div>
-        </div>
-
-        <!-- TABLA Y FILTROS -->
-        <div class="panel">
-            <div class="row g-3 mb-4">
-                <div class="col-lg-3">
-                    <input type="text" class="form-control" id="buscar" placeholder="Buscar equipo...">
-                </div>
-                <div class="col-lg-2">
-                    <select class="form-select" id="filtroEmpresa">
-                        <option value="">Empresa</option>
-                    </select>
-                </div>
-                <div class="col-lg-2">
-                    <select class="form-select" id="filtroArea">
-                        <option value="">Área</option>
-                    </select>
-                </div>
-                <div class="col-lg-2">
-                    <select class="form-select" id="filtroEstado">
-                        <option value="">Estado</option>
-                    </select>
-                </div>
-                <div class="col-lg-3 text-end">
-                    <button class="btn btn-primary" id="btnBuscar">
-                        <i class="bi bi-search"></i> Buscar
-                    </button>
-                    <button class="btn btn-secondary" id="btnLimpiar">Limpiar</button>
-                </div>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-dark table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>Código</th>
-                            <th>Equipo</th>
-                            <th>Serial</th>
-                            <th>Usuario</th>
-                            <th>Área</th>
-                            <th>Estado</th>
-                            <th>Marca</th>
-                            <th width="170">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaEquipos">
-                        <tr>
-                            <td colspan="8" class="text-center">Cargando información...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- GRÁFICAS -->
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="panel chart-box">
-                    <h5 class="panel-title">Distribución por Área</h5>
-                    <div id="graficaAreas"></div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="panel chart-box">
-                    <h5 class="panel-title">Estado de Equipos</h5>
-                    <div id="graficaEstados"></div>
+            <div class="col-md-4">
+                <div class="module-card" onclick="window.location.href='/etiquetas_usb'">
+                    <i class="bi bi-upc-scan"></i>
+                    <h4>Etiquetas USB</h4>
+                    <p>Módulo de escaneo y etiquetado para dispositivos y memorias USB.</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL NUEVO EQUIPO -->
-    <div class="modal fade" id="modalEquipo" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content bg-dark text-light">
-                <div class="modal-header border-secondary">
-                    <h5>Nueva Hoja de Vida</h5>
-                    <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="formEquipo">
-                        <div class="row g-3">
-                            <div class="col-lg-3">
-                                <label>Código</label>
-                                <input id="codigo" class="form-control">
-                            </div>
-                            <div class="col-lg-5">
-                                <label>Nombre Equipo</label>
-                                <input id="nombre_equipo" class="form-control">
-                            </div>
-                            <div class="col-lg-4">
-                                <label>Tipo</label>
-                                <input id="tipo_equipo" class="form-control">
-                            </div>
-                            <div class="col-lg-4">
-                                <label>Serial</label>
-                                <input id="serial" class="form-control">
-                            </div>
-                            <div class="col-lg-4">
-                                <label>Marca</label>
-                                <input id="marca" class="form-control">
-                            </div>
-                            <div class="col-lg-4">
-                                <label>Modelo</label>
-                                <input id="modelo" class="form-control">
-                            </div>
-                            <div class="col-lg-6">
-                                <label>Usuario</label>
-                                <input id="usuario_asignado" class="form-control">
-                            </div>
-                            <div class="col-lg-3">
-                                <label>Área</label>
-                                <input id="area" class="form-control">
-                            </div>
-                            <div class="col-lg-3">
-                                <label>Empresa</label>
-                                <input id="empresa_id" type="number" class="form-control">
-                            </div>
-                            <div class="col-lg-4">
-                                <label>Estado</label>
-                                <select id="estado_equipo" class="form-select">
-                                    <option>ACTIVO</option>
-                                    <option>MANTENIMIENTO</option>
-                                    <option>BAJA</option>
-                                    <option>PRESTAMO</option>
-                                </select>
-                            </div>
-                            <div class="col-lg-8">
-                                <label>Observaciones</label>
-                                <textarea id="observaciones" rows="3" class="form-control"></textarea>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer border-secondary">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button class="btn btn-success" id="guardarEquipo">Guardar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>
