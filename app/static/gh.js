@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
 // IMPLESEG SAS · Gestión Humana
-// Archivo BLINDADO. Listado de áreas actualizado y ordenado.
+// Archivo BLINDADO. Memoria en tiempo real para múltiples ítems.
 // ═══════════════════════════════════════════════════════════════
 
 var API_INV = "/api/gh/inventario";
@@ -9,15 +9,12 @@ var API_BAJ = "/api/gh/bajas";
 
 var CATS = ['AIO', 'DESKTOP', 'LAPTOP', 'Portátil/Laptop', 'Teclado', 'Mouse', 'Pantalla/Monitor', 'Base refrigerante', 'Auriculares/Diadema', 'EPP - Casco', 'Herramienta manual', 'Otro'];
 var ESTADOS = ['Nuevo', 'Bueno', 'Regular', 'Deteriorado', 'Dañado/Inservible'];
-
-// Listado unificado y ordenado alfabéticamente
 var AREAS = [
   'Administración', 'Almacén', 'Aprovisionamiento', 'Centro de Servicios', 
   'Comercial', 'Conductor', 'Contabilidad', 'Contratos', 'Gerencia', 
   'Logística', 'Mantenimiento', 'Operaciones', 'Producción', 
-  'Punto de Venta', 'Recursos Humanos', 'SST/HSEQ', 'Técnica', 'Tecnología'
+  'Punto de Venta', 'GESTION HUMANA', 'SGI', 'Técnica', 'Tecnología'
 ];
-
 var MOTIVOS = ['Deterioro / Daño irreparable', 'Obsolescencia tecnológica', 'Pérdida / Robo', 'Donación a entidad', 'Chatarrización', 'Fin de vida útil'];
 var DISPS = ['Chatarrización', 'Donación a entidad externa', 'Destrucción controlada', 'Traslado interno', 'Venta como chatarra'];
 var SW_LIST = ['Windows', 'Office', 'Antivirus', 'Lector PDF', 'CRM', 'VPN', 'ERP', 'Otros'];
@@ -47,9 +44,7 @@ function formatearFechaBonita(f) {
   if (typeof f === 'string' && f.indexOf('/') > -1) return f;
   var str = String(f).split('T')[0];
   var pts = str.split('-');
-  if (pts.length === 3) {
-    return pts[2] + '/' + pts[1] + '/' + pts[0];
-  }
+  if (pts.length === 3) { return pts[2] + '/' + pts[1] + '/' + pts[0]; }
   return String(f);
 }
 
@@ -304,7 +299,12 @@ function renderItems(cont, onChange) {
     hdr.innerHTML = '<b>Herramienta #' + (nItems.length - idx) + '</b>';
     if (nItems.length > 1) {
       var del = ce('button', 'row-btn danger'); del.textContent = 'Quitar';
-      del.onclick = function (e) { e.stopPropagation(); nItems.splice(idx, 1); renderItems(cont, onChange); if (onChange) onChange(); };
+      del.onclick = function (e) { 
+        e.stopPropagation(); 
+        nItems.splice(idx, 1); 
+        renderItems(cont, onChange); 
+        if (onChange) onChange(); 
+      };
       hdr.appendChild(del);
     }
     box.appendChild(hdr);
@@ -337,22 +337,24 @@ function renderItems(cont, onChange) {
       '<label class="lbl-field span-2">Observaciones / Novedades<input type="text" class="i-ob" value="' + esc(obsVal) + '" placeholder="Observaciones de este equipo..."></label>';
     box.appendChild(grid);
 
+    // FIX: Guardado automático en memoria al escribir (Evita que se borre al agregar cajas)
     box.querySelector('.sel-i').oninput = function (ev) {
       var m = invMap[ev.target.value];
       if (m) { 
         box.querySelector('.i-hr').value = m.nombre; 
         box.querySelector('.i-mr').value = (m.marca || '') + ' / ' + (m.modelo || '') + ' / S/N: ' + (m.serial || 'N/A'); 
+        it.herramienta = box.querySelector('.i-hr').value;
+        it.marca = box.querySelector('.i-mr').value;
         if (onChange) onChange(); 
       }
     };
     
-    if (onChange) {
-      box.querySelector('.i-hr').onchange = onChange;
-      box.querySelector('.i-mr').oninput = onChange;
-      box.querySelector('.i-qt').onchange = onChange;
-      box.querySelector('.i-es').onchange = onChange;
-      box.querySelector('.i-ob').oninput = onChange;
-    }
+    box.querySelector('.i-hr').addEventListener('input', function(e) { it.herramienta = e.target.value; if(onChange) onChange(); });
+    box.querySelector('.i-mr').addEventListener('input', function(e) { it.marca = e.target.value; if(onChange) onChange(); });
+    box.querySelector('.i-qt').addEventListener('input', function(e) { it.cantidad = parseInt(e.target.value) || 1; if(onChange) onChange(); });
+    box.querySelector('.i-es').addEventListener('change', function(e) { it.estado = e.target.value; if(onChange) onChange(); });
+    box.querySelector('.i-ob').addEventListener('input', function(e) { it.observaciones = e.target.value; if(onChange) onChange(); });
+
     cont.appendChild(box);
   });
 }
