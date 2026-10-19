@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════
+// IMPLESEG SAS · Módulo Hojas de Vida (Equipos y Celulares)
+// Formulario Extendido con el 100% de los campos de Excel
+// ═══════════════════════════════════════════════════════════════
+
 var API_HV = "/api/hv/equipos";
 var HV_DATA = [];
 var VIEW = 'dash';
@@ -136,75 +141,194 @@ function showFormularioHV(parent, esPC, item = null) {
   w.style.border = '2px solid var(--accent)';
 
   var i = item || {};
+  var c = i.config || {};
   var iden = i.nombre_equipo || i.linea_numero || '';
 
   var html = '<div class="sh"><div class="sn">✏️</div>' + (item ? 'Editar' : 'Registrar') + ' ' + (esPC ? 'Equipo de Cómputo' : 'Celular / Línea') + '</div>';
   
-  html += '<div class="sect-title">Información General</div><div class="g4">' +
-          '<label class="lbl-field">Código Interno *<input id="h-cod" value="' + esc(i.codigo) + '"></label>' +
-          '<label class="lbl-field">' + (esPC ? 'Nombre Equipo *' : 'Número de Línea *') + '<input id="h-nom" value="' + esc(iden) + '"></label>' +
-          '<label class="lbl-field">Usuario Asignado<input id="h-usu" value="' + esc(i.usuario_asignado) + '"></label>' +
-          '<label class="lbl-field">Área<input id="h-are" value="' + esc(i.area) + '"></label>' +
-          '<label class="lbl-field">Marca<input id="h-mar" value="' + esc(i.marca) + '"></label>' +
-          '<label class="lbl-field">Modelo<input id="h-mod" value="' + esc(i.modelo) + '"></label>' +
-          '<label class="lbl-field">' + (esPC ? 'Serial' : 'IMEI *') + '<input id="h-ser" value="' + esc(esPC?i.serial:i.imei) + '"></label>' +
-          '<label class="lbl-field">Estado<select id="h-est"><option '+(i.estado==='Activo'?'selected':'')+'>Activo</option><option '+(i.estado==='Mantenimiento'?'selected':'')+'>Mantenimiento</option><option '+(i.estado==='Baja'?'selected':'')+'>Baja</option></select></label>' +
-          '</div>';
-
   if (esPC) {
-    html += '<div class="sect-title">Especificaciones Técnicas</div><div class="g4">' +
-            '<label class="lbl-field">Procesador (CPU)<input id="h-cpu" value="' + esc(i.procesador) + '"></label>' +
-            '<label class="lbl-field">Memoria RAM<input id="h-ram" value="' + esc(i.memoria) + '"></label>' +
-            '<label class="lbl-field">Disco Duro<input id="h-hdd" value="' + esc(i.disco) + '"></label>' +
-            '<label class="lbl-field">Sistema Operativo<input id="h-so" value="' + esc(i.sistema_operativo) + '"></label>' +
-            '<label class="lbl-field">Dirección IP<input id="h-ip" value="' + esc(i.ip) + '"></label>' +
-            '<label class="lbl-field">Dirección MAC<input id="h-mac" value="' + esc(i.mac) + '"></label>' +
-            '<label class="lbl-field">Licencia Office<input id="h-off" value="' + esc(i.licencia_office) + '"></label>' +
-            '<label class="lbl-field">Antivirus<input id="h-av" value="' + esc(i.antivirus) + '"></label>' +
-            '</div>';
+    // ---- FORMULARIO ORDENADO PARA PC (EXCEL EMPRESAS EJ) ----
+    html += '<div class="sect-title">Información Principal</div><div class="g4">';
+    html += '<label class="lbl-field">Empresa<input id="h-emp" value="' + esc(i.empresa) + '"></label>';
+    html += '<label class="lbl-field">Equipo (Tipo)<input id="c-tip" value="' + esc(c.tipo) + '"></label>';
+    html += '<label class="lbl-field">Código Interno *<input id="h-cod" value="' + esc(i.codigo) + '"></label>';
+    html += '<label class="lbl-field">Área<input id="h-are" value="' + esc(i.area) + '"></label>';
+    html += '<label class="lbl-field">Nombre Equipo *<input id="h-nom" value="' + esc(iden) + '"></label>';
+    html += '<label class="lbl-field">Usuario Servidor<input id="c-ususer" value="' + esc(c.usuario_servidor) + '"></label>';
+    html += '<label class="lbl-field">Usuario Asignado<input id="h-usu" value="' + esc(i.usuario_asignado) + '"></label>';
+    html += '<label class="lbl-field">Estado<select id="h-est"><option '+(i.estado==='Activo'?'selected':'')+'>Activo</option><option '+(i.estado==='Mantenimiento'?'selected':'')+'>Mantenimiento</option><option '+(i.estado==='Baja'?'selected':'')+'>Baja</option></select></label>';
+    html += '</div>';
+
+    html += '<div class="sect-title">Hardware y Componentes</div><div class="g4">';
+    html += '<label class="lbl-field">Marca<input id="h-mar" value="' + esc(i.marca) + '"></label>';
+    html += '<label class="lbl-field">Modelo<input id="h-mod" value="' + esc(i.modelo) + '"></label>';
+    html += '<label class="lbl-field">CPU / Procesador<input id="h-cpu" value="' + esc(i.procesador) + '"></label>';
+    html += '<label class="lbl-field">Memoria RAM<input id="h-ram" value="' + esc(i.memoria) + '"></label>';
+    html += '<label class="lbl-field">Mainboard<input id="c-main" value="' + esc(c.mainboard) + '"></label>';
+    html += '<label class="lbl-field">HDD / SSD<input id="h-hdd" value="' + esc(i.disco) + '"></label>';
+    html += '<label class="lbl-field">Tamaño Disco<input id="c-tamdis" value="' + esc(c.tamano_disco) + '"></label>';
+    html += '<label class="lbl-field">Serial / Service Tag<input id="h-ser" value="' + esc(i.serial) + '"></label>';
+    html += '</div>';
+
+    html += '<div class="sect-title">Redes y Periféricos</div><div class="g4">';
+    html += '<label class="lbl-field">MAC Address<input id="h-mac" value="' + esc(i.mac) + '"></label>';
+    html += '<label class="lbl-field">Dirección IP<input id="h-ip" value="' + esc(i.ip) + '"></label>';
+    html += '<label class="lbl-field">Pantalla Auxiliar<input id="c-pau" value="' + esc(c.pantalla_auxiliar) + '"></label>';
+    html += '<label class="lbl-field">Teclado<input id="c-tec" value="' + esc(c.teclado) + '"></label>';
+    html += '<label class="lbl-field">Mouse<input id="c-mou" value="' + esc(c.mouse) + '"></label>';
+    html += '<label class="lbl-field">Diadema<input id="c-dia" value="' + esc(c.diadema) + '"></label>';
+    html += '<label class="lbl-field">Base Refrigerante<input id="c-bas" value="' + esc(c.base_refrigerante) + '"></label>';
+    html += '</div>';
+
+    html += '<div class="sect-title">Software, Office y Licencias</div><div class="g4">';
+    html += '<label class="lbl-field">Sistema Operativo<input id="h-so" value="' + esc(i.sistema_operativo) + '"></label>';
+    html += '<label class="lbl-field">Antivirus<input id="h-av" value="' + esc(i.antivirus) + '"></label>';
+    html += '<label class="lbl-field">Fecha Venc. Antivirus<input id="c-fvenav" type="date" value="' + esc(c.fecha_vencimiento_av) + '"></label>';
+    html += '<label class="lbl-field">Anydesk ID<input id="c-any" value="' + esc(c.anydesk) + '"></label>';
+    html += '<label class="lbl-field">Office<input id="h-off" value="' + esc(i.licencia_office) + '"></label>';
+    html += '<label class="lbl-field">Licencia Office<input id="c-lic" value="' + esc(c.licencia) + '"></label>';
+    html += '<label class="lbl-field">Serial / Correo Licencia<input id="c-corlic" value="' + esc(c.correo_licencia) + '"></label>';
+    html += '<label class="lbl-field">Programas Adicionales<input id="c-prog" value="' + esc(c.programas) + '"></label>';
+    html += '<label class="lbl-field">Office Funciones<input id="c-ofun" value="' + esc(c.office_funciones) + '"></label>';
+    html += '</div>';
+
+    html += '<div class="sect-title">Control y Facturación</div><div class="g4">';
+    html += '<label class="lbl-field">Fórmula<input id="c-for" value="' + esc(c.formula) + '"></label>';
+    html += '<label class="lbl-field">Etiqueta<input id="c-eti" value="' + esc(c.etiqueta) + '"></label>';
+    html += '<label class="lbl-field">Número Factura<input id="c-numfac" value="' + esc(c.numero_factura) + '"></label>';
+    html += '<label class="lbl-field">Fecha Factura<input type="date" id="c-fecfac" value="' + esc(c.fecha_factura) + '"></label>';
+    html += '<label class="lbl-field">Productos Factura<input id="c-profac" value="' + esc(c.productos_factura) + '"></label>';
+    html += '<label class="lbl-field">Precio / Valor<input type="number" id="c-pre" value="' + esc(i.precio || '') + '"></label>';
+    html += '<label class="lbl-field">Seriales Adicionales<input id="c-sers" value="' + esc(c.seriales) + '"></label>';
+    html += '<label class="lbl-field">Mantenimiento (Fecha)<input type="date" id="h-mto" value="' + esc(i.mantenimiento_programado) + '"></label>';
+    html += '</div>';
+
+    html += '<div class="sect-title">Observaciones y Notas</div><div class="g3">';
+    html += '<label class="lbl-field">Observaciones Generales<textarea id="h-obs" rows="2">' + esc(i.observaciones) + '</textarea></label>';
+    html += '<label class="lbl-field">Observaciones S.O.<textarea id="c-obsso" rows="2">' + esc(c.observaciones_so) + '</textarea></label>';
+    html += '<label class="lbl-field">Revisión Drive<textarea id="c-revd" rows="2">' + esc(c.revision_drive) + '</textarea></label>';
+    html += '</div>';
+
   } else {
-    html += '<div class="sect-title">Datos del Plan y Línea</div><div class="g2">' +
-            '<label class="lbl-field">Plan de Datos / Operador<input id="h-pla" value="' + esc(i.plan_datos) + '"></label>' +
-            '<label class="lbl-field">Tipo de Línea<select id="h-tpl"><option '+(i.tipo_linea==='Corporativa'?'selected':'')+'>Corporativa</option><option '+(i.tipo_linea==='Personal'?'selected':'')+'>Personal</option></select></label>' +
-            '</div>';
+    // ---- FORMULARIO ORDENADO PARA CELULAR (EXCEL LINEAS CORPORATIVAS) ----
+    html += '<div class="sect-title">Información de la Línea y Plan</div><div class="g4">';
+    html += '<label class="lbl-field">Número de Línea *<input id="h-nom" value="' + esc(iden) + '"></label>';
+    html += '<label class="lbl-field">Cuenta<input id="c-cta" value="' + esc(c.cuenta) + '"></label>';
+    html += '<label class="lbl-field">Nombre del Plan Actual<input id="h-pla" value="' + esc(i.plan_datos) + '"></label>';
+    html += '<label class="lbl-field">Detalle del Plan<input id="c-detpla" value="' + esc(c.detalle_plan) + '"></label>';
+    html += '<label class="lbl-field">CFM (Cargo Fijo)<input id="c-cfm" value="' + esc(c.cfm) + '"></label>';
+    html += '<label class="lbl-field">Nombre Usuario<input id="h-usu" value="' + esc(i.usuario_asignado) + '"></label>';
+    html += '<label class="lbl-field">Propiedad Línea<select id="h-tpl"><option '+(i.tipo_linea==='Corporativa'?'selected':'')+'>Corporativa</option><option '+(i.tipo_linea==='Personal'?'selected':'')+'>Personal</option></select></label>';
+    html += '<label class="lbl-field">Cédula / NIT<input id="c-ced" value="' + esc(c.cedula_usuario) + '"></label>';
+    html += '<label class="lbl-field">Fecha Activación<input type="date" id="c-fecact" value="' + esc(c.fecha_activacion) + '"></label>';
+    html += '<label class="lbl-field">Área<input id="h-are" value="' + esc(i.area) + '"></label>';
+    html += '<label class="lbl-field">Código Celular<input id="h-cod" value="' + esc(i.codigo) + '"></label>';
+    html += '<label class="lbl-field">Estado<select id="h-est"><option '+(i.estado==='Activo'?'selected':'')+'>Activo</option><option '+(i.estado==='Mantenimiento'?'selected':'')+'>Mantenimiento</option><option '+(i.estado==='Baja'?'selected':'')+'>Baja</option></select></label>';
+    html += '</div>';
+
+    html += '<div class="sect-title">Equipo Físico (Hardware Celular)</div><div class="g4">';
+    html += '<label class="lbl-field">Equipo / Propietario<input id="c-eqpro" value="' + esc(c.equipo_propiedad) + '"></label>';
+    html += '<label class="lbl-field">IMEI *<input id="h-ser" value="' + esc(i.imei || i.serial) + '"></label>';
+    html += '<label class="lbl-field">Serial Celular<input id="c-ser" value="' + esc(c.serial_adicional) + '"></label>';
+    html += '<label class="lbl-field">Marca<input id="h-mar" value="' + esc(i.marca) + '"></label>';
+    html += '<label class="lbl-field">Modelo<input id="h-mod" value="' + esc(i.modelo) + '"></label>';
+    html += '<label class="lbl-field">Referencia<input id="c-ref" value="' + esc(c.referencia) + '"></label>';
+    html += '<label class="lbl-field">CPU<input id="h-cpu" value="' + esc(i.procesador) + '"></label>';
+    html += '<label class="lbl-field">MAC<input id="h-mac" value="' + esc(i.mac) + '"></label>';
+    html += '<label class="lbl-field">Almacenamiento (ROM)<input id="c-rom" value="' + esc(c.rom) + '"></label>';
+    html += '<label class="lbl-field">Memoria RAM<input id="h-ram" value="' + esc(i.memoria) + '"></label>';
+    html += '<label class="lbl-field">Mantenimiento (Fecha)<input type="date" id="h-mto" value="' + esc(i.mantenimiento_programado) + '"></label>';
+    html += '</div>';
+
+    html += '<div class="sect-title">Facturación y Otros Datos</div><div class="g4">';
+    html += '<label class="lbl-field">Fórmula<input id="c-for" value="' + esc(c.formula) + '"></label>';
+    html += '<label class="lbl-field">Etiqueta<input id="c-eti" value="' + esc(c.etiqueta) + '"></label>';
+    html += '<label class="lbl-field">Revisión<input id="c-rev" value="' + esc(c.revision) + '"></label>';
+    html += '<label class="lbl-field">Número Factura<input id="c-numfac" value="' + esc(c.numero_factura) + '"></label>';
+    html += '<label class="lbl-field">Fecha Factura<input type="date" id="c-fecfac" value="' + esc(c.fecha_factura) + '"></label>';
+    html += '<label class="lbl-field">Productos Factura<input id="c-profac" value="' + esc(c.productos_factura) + '"></label>';
+    html += '<label class="lbl-field">Precio / Valor<input type="number" id="c-pre" value="' + esc(i.precio || '') + '"></label>';
+    html += '</div>';
+
+    html += '<div class="sect-title">Observaciones</div><div class="g2">';
+    html += '<label class="lbl-field">Observaciones Generales<textarea id="h-obs" rows="2">' + esc(i.observaciones) + '</textarea></label>';
+    html += '<label class="lbl-field">Observación 1<textarea id="c-obs1" rows="2">' + esc(c.observacion_1) + '</textarea></label>';
+    html += '</div>';
   }
 
-  html += '<div class="sect-title">Programación y Observaciones</div><div class="g2">' +
-          '<label class="lbl-field">Programar Mantenimiento<input type="date" id="h-mto" value="' + esc(i.mantenimiento_programado) + '"></label>' +
-          '<label class="lbl-field">Observaciones Generales<textarea id="h-obs" rows="2">' + esc(i.observaciones) + '</textarea></label>' +
-          '</div><div style="margin-top:16px;display:flex;gap:10px;"><button class="btn btn-primary" id="btn-sav-hv">💾 ' + (item ? 'Actualizar' : 'Guardar') + ' Registro</button><button class="btn btn-ghost" onclick="this.parentElement.parentElement.remove()">Cancelar</button></div>';
+  html += '<div style="margin-top:16px;display:flex;gap:10px;"><button class="btn btn-primary" id="btn-sav-hv">💾 ' + (item ? 'Actualizar Registro' : 'Guardar Nuevo Registro') + '</button><button class="btn btn-ghost" onclick="this.parentElement.parentElement.remove()">Cancelar</button></div>';
 
   w.innerHTML = html;
   
   w.querySelector('#btn-sav-hv').onclick = async function() {
-    var cod = w.querySelector('#h-cod').value.trim();
-    var nom = w.querySelector('#h-nom').value.trim();
+    var val = (id) => { var e = w.querySelector('#'+id); return e ? e.value.trim() : ''; };
+    
+    var cod = val('h-cod');
+    var nom = val('h-nom');
     if (!cod || !nom) return toast('Código y Nombre/Línea son obligatorios', false);
 
     var payload = {
       tipo_activo: esPC ? 'COMPUTO' : 'CELULAR',
+      empresa: val('h-emp'),
       codigo: cod,
       nombre_equipo: esPC ? nom : 'CELULAR ' + nom,
       linea_numero: esPC ? '' : nom,
-      usuario_asignado: w.querySelector('#h-usu').value,
-      area: w.querySelector('#h-are').value,
-      marca: w.querySelector('#h-mar').value,
-      modelo: w.querySelector('#h-mod').value,
-      serial: esPC ? w.querySelector('#h-ser').value : '',
-      imei: esPC ? '' : w.querySelector('#h-ser').value,
-      estado: w.querySelector('#h-est').value,
-      procesador: esPC ? w.querySelector('#h-cpu').value : '',
-      memoria: esPC ? w.querySelector('#h-ram').value : '',
-      disco: esPC ? w.querySelector('#h-hdd').value : '',
-      sistema_operativo: esPC ? w.querySelector('#h-so').value : '',
-      ip: esPC ? w.querySelector('#h-ip').value : '',
-      mac: esPC ? w.querySelector('#h-mac').value : '',
-      licencia_office: esPC ? w.querySelector('#h-off').value : '',
-      antivirus: esPC ? w.querySelector('#h-av').value : '',
-      plan_datos: esPC ? '' : w.querySelector('#h-pla').value,
-      tipo_linea: esPC ? '' : w.querySelector('#h-tpl').value,
-      mantenimiento_programado: w.querySelector('#h-mto').value,
-      observaciones: w.querySelector('#h-obs').value
+      usuario_asignado: val('h-usu'),
+      area: val('h-are'),
+      marca: val('h-mar'),
+      modelo: val('h-mod'),
+      serial: esPC ? val('h-ser') : '',
+      imei: esPC ? '' : val('h-ser'),
+      estado: val('h-est'),
+      procesador: val('h-cpu'),
+      memoria: val('h-ram'),
+      disco: val('h-hdd'),
+      sistema_operativo: val('h-so'),
+      ip: val('h-ip'),
+      mac: val('h-mac'),
+      licencia_office: val('h-off'),
+      antivirus: val('h-av'),
+      plan_datos: val('h-pla'),
+      tipo_linea: val('h-tpl'),
+      mantenimiento_programado: val('h-mto'),
+      observaciones: val('h-obs'),
+      precio: parseFloat(val('c-pre')) || 0,
+      config: {
+        tipo: val('c-tip'),
+        usuario_servidor: val('c-ususer'),
+        mainboard: val('c-main'),
+        tamano_disco: val('c-tamdis'),
+        anydesk: val('c-any'),
+        diadema: val('c-dia'),
+        teclado: val('c-tec'),
+        mouse: val('c-mou'),
+        base_refrigerante: val('c-bas'),
+        fecha_vencimiento_av: val('c-fvenav'),
+        observaciones_so: val('c-obsso'),
+        licencia: val('c-lic'),
+        correo_licencia: val('c-corlic'),
+        programas: val('c-prog'),
+        formula: val('c-for'),
+        etiqueta: val('c-eti'),
+        pantalla_auxiliar: val('c-pau'),
+        numero_factura: val('c-numfac'),
+        fecha_factura: val('c-fecfac'),
+        productos_factura: val('c-profac'),
+        revision_drive: val('c-revd'),
+        cuenta: val('c-cta'),
+        detalle_plan: val('c-detpla'),
+        cfm: val('c-cfm'),
+        equipo_propiedad: val('c-eqpro'),
+        fecha_activacion: val('c-fecact'),
+        cedula_usuario: val('c-ced'),
+        referencia: val('c-ref'),
+        rom: val('c-rom'),
+        serial_adicional: val('c-ser'),
+        revision: val('c-rev'),
+        observacion_1: val('c-obs1'),
+        seriales: val('c-sers'),
+        office_funciones: val('c-ofun')
+      }
     };
 
     try {

@@ -1,4 +1,5 @@
-from typing import List, Optional
+import json
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -10,7 +11,7 @@ router = APIRouter(prefix="/api/hv", tags=["Hojas de Vida"])
 class HVPayload(BaseModel):
     id: Optional[int] = None
     tipo_activo: str
-    empresa: Optional[str] = "IMPLESEG"
+    empresa: Optional[str] = ""
     codigo: str
     nombre_equipo: str
     area: Optional[str] = ""
@@ -35,6 +36,7 @@ class HVPayload(BaseModel):
     precio: Optional[float] = 0.0
     mantenimiento_programado: Optional[str] = ""
     observaciones: Optional[str] = ""
+    config: Dict[str, Any] = {}
 
 @router.get("/equipos")
 def listar_equipos(session: Session = Depends(get_session)):
@@ -51,21 +53,23 @@ def crear_equipo(payload: HVPayload, session: Session = Depends(get_session)):
                 marca, modelo, serial, procesador, memoria, disco, mac, ip,
                 sistema_operativo, licencia_office, antivirus, linea_numero,
                 plan_datos, imei, tipo_linea, estado, fecha_compra, precio,
-                mantenimiento_programado, observaciones, creado_en
+                mantenimiento_programado, observaciones, config, creado_en
             ) VALUES (
                 :tipo_activo, :empresa, :codigo, :nombre_equipo, :area, :usuario_asignado,
                 :marca, :modelo, :serial, :procesador, :memoria, :disco, :mac, :ip,
                 :sistema_operativo, :licencia_office, :antivirus, :linea_numero,
                 :plan_datos, :imei, :tipo_linea, :estado, :fecha_compra, :precio,
-                :mantenimiento_programado, :observaciones, CURRENT_TIMESTAMP
+                :mantenimiento_programado, :observaciones, CAST(:config_json AS JSONB), CURRENT_TIMESTAMP
             ) RETURNING id;
         """)
-        datos = payload.dict(exclude_none=True)
+        
+        datos = payload.dict(exclude={"config"})
+        datos['config_json'] = json.dumps(payload.config)
         res = session.execute(insert_query, datos)
         nuevo_id = res.scalar()
         session.commit()
 
-        # Sincronización con Gestión Humana
+        # Sincronización automática con Inventario
         try:
             nombre_inv = payload.nombre_equipo if payload.tipo_activo != "CELULAR" else f"CELULAR {payload.marca} - {payload.linea_numero}"
             serial_inv = payload.serial if payload.tipo_activo != "CELULAR" else payload.imei
@@ -82,8 +86,8 @@ def crear_equipo(payload: HVPayload, session: Session = Depends(get_session)):
                 "descripcion": f"Auto-Sync HV. Cód: {payload.codigo}"
             })
             session.commit()
-        except Exception:
-            session.rollback() # Ignora fallo de sync si ya guardó HV
+        except Exception as e_sync:
+            session.rollback()
 
         return {"id": nuevo_id, "status": "ok"}
     except Exception as e:
@@ -95,15 +99,18 @@ def editar_equipo(equipo_id: int, payload: HVPayload, session: Session = Depends
     try:
         update_query = text("""
             UPDATE hv_equipos SET 
-                codigo=:codigo, nombre_equipo=:nombre_equipo, area=:area, usuario_asignado=:usuario_asignado,
-                marca=:marca, modelo=:modelo, serial=:serial, procesador=:procesador, memoria=:memoria, 
-                disco=:disco, mac=:mac, ip=:ip, sistema_operativo=:sistema_operativo, 
-                licencia_office=:licencia_office, antivirus=:antivirus, linea_numero=:linea_numero, 
-                plan_datos=:plan_datos, imei=:imei, tipo_linea=:tipo_linea, estado=:estado, 
-                mantenimiento_programado=:mantenimiento_programado, observaciones=:observaciones
+                tipo_activo=:tipo_activo, empresa=:empresa, codigo=:codigo, nombre_equipo=:nombre_equipo, 
+                area=:area, usuario_asignado=:usuario_asignado, marca=:marca, modelo=:modelo, 
+                serial=:serial, procesador=:procesador, memoria=:memoria, disco=:disco, 
+                mac=:mac, ip=:ip, sistema_operativo=:sistema_operativo, licencia_office=:licencia_office, 
+                antivirus=:antivirus, linea_numero=:linea_numero, plan_datos=:plan_datos, imei=:imei, 
+                tipo_linea=:tipo_linea, estado=:estado, fecha_compra=:fecha_compra, precio=:precio,
+                mantenimiento_programado=:mantenimiento_programado, observaciones=:observaciones,
+                config=CAST(:config_json AS JSONB)
             WHERE id = :id
         """)
-        datos = payload.dict(exclude_none=True)
+        datos = payload.dict(exclude={"config"})
+        datos['config_json'] = json.dumps(payload.config)
         datos["id"] = equipo_id
         session.execute(update_query, datos)
         session.commit()
