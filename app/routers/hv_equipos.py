@@ -1,10 +1,8 @@
-from typing import List, Optional, Dict, Any
-from datetime import datetime
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlmodel import Session
-
 from app.database import get_session
 
 router = APIRouter(prefix="/api/hv", tags=["Hojas de Vida"])
@@ -47,7 +45,6 @@ def listar_equipos(session: Session = Depends(get_session)):
 @router.post("/equipos")
 def crear_equipo(payload: HVPayload, session: Session = Depends(get_session)):
     try:
-        # 1. Guardar en Hojas de Vida
         insert_query = text("""
             INSERT INTO hv_equipos (
                 tipo_activo, empresa, codigo, nombre_equipo, area, usuario_asignado,
@@ -63,17 +60,15 @@ def crear_equipo(payload: HVPayload, session: Session = Depends(get_session)):
                 :mantenimiento_programado, :observaciones, CURRENT_TIMESTAMP
             ) RETURNING id;
         """)
-        
         datos = payload.dict(exclude_none=True)
         res = session.execute(insert_query, datos)
         nuevo_id = res.scalar()
         session.commit()
 
-        # 2. AUTO-SINCRONIZACIÓN CON GESTIÓN HUMANA
+        # Sincronización con Gestión Humana
         try:
             nombre_inv = payload.nombre_equipo if payload.tipo_activo != "CELULAR" else f"CELULAR {payload.marca} - {payload.linea_numero}"
             serial_inv = payload.serial if payload.tipo_activo != "CELULAR" else payload.imei
-            
             sync_query = text("""
                 INSERT INTO gh_inventario (nombre, categoria, marca, modelo, serial, cantidad_stock, descripcion)
                 VALUES (:nombre, :categoria, :marca, :modelo, :serial, 1, :descripcion)
@@ -84,13 +79,45 @@ def crear_equipo(payload: HVPayload, session: Session = Depends(get_session)):
                 "marca": payload.marca,
                 "modelo": payload.modelo,
                 "serial": serial_inv,
-                "descripcion": f"Auto-Sync Hojas de Vida. Cód: {payload.codigo}"
+                "descripcion": f"Auto-Sync HV. Cód: {payload.codigo}"
             })
             session.commit()
-        except Exception as e_sync:
-            session.rollback()
+        except Exception:
+            session.rollback() # Ignora fallo de sync si ya guardó HV
 
         return {"id": nuevo_id, "status": "ok"}
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/equipos/{equipo_id}")
+def editar_equipo(equipo_id: int, payload: HVPayload, session: Session = Depends(get_session)):
+    try:
+        update_query = text("""
+            UPDATE hv_equipos SET 
+                codigo=:codigo, nombre_equipo=:nombre_equipo, area=:area, usuario_asignado=:usuario_asignado,
+                marca=:marca, modelo=:modelo, serial=:serial, procesador=:procesador, memoria=:memoria, 
+                disco=:disco, mac=:mac, ip=:ip, sistema_operativo=:sistema_operativo, 
+                licencia_office=:licencia_office, antivirus=:antivirus, linea_numero=:linea_numero, 
+                plan_datos=:plan_datos, imei=:imei, tipo_linea=:tipo_linea, estado=:estado, 
+                mantenimiento_programado=:mantenimiento_programado, observaciones=:observaciones
+            WHERE id = :id
+        """)
+        datos = payload.dict(exclude_none=True)
+        datos["id"] = equipo_id
+        session.execute(update_query, datos)
+        session.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/equipos/{equipo_id}")
+def eliminar_equipo(equipo_id: int, session: Session = Depends(get_session)):
+    try:
+        session.execute(text("DELETE FROM hv_equipos WHERE id = :id"), {"id": equipo_id})
+        session.commit()
+        return {"status": "ok"}
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
