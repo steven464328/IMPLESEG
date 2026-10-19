@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMPLESEG · Hojas de Vida Técnicas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/gh.css">
+<style>
+  .hv-filter-bar { display: flex; gap: 12px; background: #0b1121; padding: 16px; border-radius: 8px; margin-bottom: 20px; flex-wrap: wrap; border: 1px solid #1e293b; }
+  .hv-filter-bar input, .hv-filter-bar select { background: #0f172a; border: 1px solid #334155; color: #fff; padding: 8px 12px; border-radius: 6px; font-family: 'Inter', sans-serif; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .sect-title { font-size: 13px; font-weight: 700; color: var(--accent); text-transform: uppercase; margin: 20px 0 10px; border-bottom: 1px solid #1e293b; padding-bottom: 5px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand brand-3d">
+      <div class="brand-logo-container">
+        <div class="brand-3d-box">
+          <span class="brand-title-3d">impleseg</span>
+          <div class="brand-icon-group"><span>💻</span><span>📱</span><span>⚙️</span></div>
+          <span class="brand-sub-3d">Hojas de Vida</span>
+        </div>
+      </div>
+    </div>
+    <nav class="nav-modules">
+      <div class="nav-group-label">Módulos ERP</div>
+      <button class="nav-item active"><span class="dot dot-live"></span> Sistemas · Hojas de Vida</button>
+      <button class="nav-item" onclick="window.location.href='/gestion-humana'"><span class="dot"></span> Gestión Humana</button>
+    </nav>
+    <div class="nav-group-label" style="margin-top:14px">Opciones Técnicas</div>
+    <nav class="nav-modules" id="hvSubNav">
+      <button class="nav-item sub on" data-v="dash">📊 Panel de Control</button>
+      <button class="nav-item sub" data-v="pc">💻 Equipos de Cómputo</button>
+      <button class="nav-item sub" data-v="cel">📱 Líneas y Celulares</button>
+      <button class="nav-item sub" data-v="mto">🔧 Mantenimientos</button>
+    </nav>
+  </aside>
+  <main class="main"><div id="hvApp"></div></main>
+</div>
+<div class="toast" id="toast"></div>
+<script src="/static/hv.js"></script>
+</body>
+</html>
