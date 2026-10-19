@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
 // IMPLESEG SAS · Gestión Humana
-// Archivo BLINDADO. Libre de colapsos silenciosos.
+// Archivo BLINDADO. Retraso de impresión para firmas y cierre automático.
 // ═══════════════════════════════════════════════════════════════
 
 var API_INV = "/api/gh/inventario";
@@ -670,14 +670,9 @@ function vBajas() {
   bN.style.marginBottom = '16px'; 
   bN.textContent = '🗑️ Registrar nueva baja'; 
   
-  // Asignación de evento blindada con alerta de error
   bN.addEventListener('click', function() {
-    try {
-      showBajaForm(el);
-    } catch (error) {
-      alert("Error crítico abriendo formulario de Bajas:\n" + error.message);
-      console.error(error);
-    }
+    try { showBajaForm(el); } 
+    catch (error) { console.error(error); }
   });
   el.appendChild(bN);
 
@@ -691,7 +686,10 @@ function vBajas() {
   return el;
 }
 
-function printActaBajaById(id) { var b = BAJAS.find(function (x) { return String(x.id) === String(id); }); if (b) printActaBaja(b); }
+function printActaBajaById(id) { 
+    var b = BAJAS.find(function (x) { return String(x.id) === String(id); }); 
+    if (b) printActaBaja(b); 
+}
 
 function showBajaForm(parent) {
   var ex = parent.querySelector('.bj-fw'); if (ex) { ex.remove(); return; }
@@ -760,7 +758,14 @@ function showBajaForm(parent) {
       };
 
       var r = await apiPost(API_BAJ, payload);
+      
+      // Inyectar firma manual por seguridad (evita error de render si el servidor retrasa la respuesta)
+      if (!r.firma) r.firma = firmaBj;
+      
       toast('Baja registrada: ' + r.codigo + ' ✓');
+      
+      // Cierra el formulario antes de imprimir
+      wrap.remove(); 
       printActaBaja(r);
       await cargarTodo('baja');
     } catch (e) {
@@ -870,7 +875,10 @@ function mkSig(label) {
 // ---------------------------------------------------------------
 // IMPRESIÓN — Formato original F-SGI-GH-12
 // ---------------------------------------------------------------
-function printPDF(a) { ge('pz').innerHTML = buildPDF(a); window.print(); }
+function printPDF(a) { 
+    ge('pz').innerHTML = buildPDF(a); 
+    setTimeout(function() { window.print(); }, 250); // Retraso de seguridad para render base64
+}
 
 function buildPDF(a) {
   var hasHist = (a.historial && a.historial.length > 0);
@@ -880,7 +888,11 @@ function buildPDF(a) {
 
   function hdr(tit, pg, ofpg) { return '<table class="ph"><tr><td style="width:18%;text-align:center"><div style="font-weight:900;font-size:16px;letter-spacing:1px">IMPLESEG</div><div style="font-size:7px">Seguridad Industrial</div></td><td style="text-align:center"><div style="font-weight:700;font-size:9px">IMPLESEG SAS</div><div style="font-weight:700;font-size:8px">SISTEMA DE GESTIÓN INTEGRAL</div><div style="font-weight:800;font-size:10px;margin-top:2px">' + tit + '</div></td><td style="width:20%;font-size:8px;line-height:1.8"><b>Código:</b> F-SGI-GH-12<br><b>Revisión:</b> 01<br><b>Fecha:</b> 05/03/2024<br><b>Página:</b> ' + pg + ' de ' + ofpg + '</td></tr></table>'; }
   function meta(n, c, ca, ar) { return '<table class="pm"><tr><td style="width:55%"><b>Nombre del Servidor:</b> ' + esc(n) + '</td><td><b>Documento:</b> ' + esc(c) + '</td></tr><tr><td><b>Cargo Funcional:</b> ' + esc(ca || '—') + '</td><td><b>Área de Operación:</b> ' + esc(ar) + '</td></tr></table>'; }
-  function sigCell(b64) { if (b64 && String(b64).indexOf('data:image') === 0) return '<img src="' + b64 + '" style="max-height:26px;max-width:72px;display:block;margin:0 auto">'; return ''; }
+  function sigCell(b64) { 
+    if(!b64) return '';
+    b64 = String(b64).trim();
+    return (b64.indexOf('data:image') === 0) ? '<img src="' + b64 + '" style="max-height:26px;max-width:72px;display:block;margin:0 auto">' : ''; 
+  }
   function clause(t) { return '<div class="pcl">' + t + '</div>'; }
   function footer(lbl1, nom1, lbl2, nom2) { return '<table class="pf"><tr><td><br><hr style="margin:2px 0"><small>' + lbl1 + '<br><b>Elaboró</b></small></td><td><br><hr style="margin:2px 0"><small>' + lbl2 + ': ' + esc(nom2) + '<br><b>Coordinador GGRH</b></small></td><td><br><hr style="margin:2px 0"><small><b>Revisó</b></small></td><td><br><hr style="margin:2px 0"><small>Gerencia<br><b>Aprobó</b></small></td></tr></table>'; }
 
@@ -927,11 +939,20 @@ function buildPDF(a) {
   return pg1 + pgHist + pgDev;
 }
 
-function printActaBaja(b) { ge('pz').innerHTML = buildActaBaja(b); window.print(); }
+function printActaBaja(b) { 
+    ge('pz').innerHTML = buildActaBaja(b); 
+    setTimeout(function() { window.print(); }, 250); // Retraso de seguridad
+}
 
 function buildActaBaja(b) {
   var cfg = b.config || {}, sw = cfg.software || [];
   function chk(l) { var on = sw.indexOf(l) > -1; return '<span class="chkb">' + (on ? '✓' : '') + '</span>' + l; }
-  function sig(b64) { return (b64 && String(b64).indexOf('data:image') === 0) ? '<img src="' + b64 + '" style="max-height:40px;max-width:100px;display:block;margin:0 auto 2px">' : ''; }
+  
+  function sig(b64) { 
+    if(!b64) return ''; 
+    b64 = String(b64).trim(); 
+    return (b64.indexOf('data:image') === 0) ? '<img src="' + b64 + '" style="max-height:40px;max-width:120px;display:block;margin:0 auto 2px">' : ''; 
+  }
+  
   return '<div class="pp"><table class="pb-hdr"><tr><td style="width:20%;text-align:center;border-right:2px solid #000"><div style="font-weight:900;font-size:20px;letter-spacing:2px;color:#15803d">IMPLESEG</div><div style="font-size:7px">Seguridad Industrial</div></td><td style="text-align:center"><div style="font-weight:900;font-size:13px">IMPLESEG SAS</div><div style="font-weight:800;font-size:12px;text-transform:uppercase;margin-top:2px">Acta Baja de Activos Informáticos</div><div style="font-size:7px;color:#666;margin-top:2px">Sistema de Gestión Integral · F-GT-BAJA-01</div></td><td style="width:20%;font-size:7.5px;line-height:1.8;border-left:2px solid #000;padding-left:8px"><b>Código:</b> F-GT-BAJA-01<br><b>Revisión:</b> 01<br><b>Fecha:</b> ' + esc(formatearFechaBonita(b.fecha)) + '<br><b>ID:</b> ' + esc(b.codigo || '') + '</td></tr></table><table class="pb-tbl" style="width:35%;margin-bottom:6px"><tr><td class="lc" style="width:25%">FECHA</td><td>' + esc(formatearFechaBonita(cfg.fechaBaja || b.fecha)) + '</td></tr></table><div class="pb-sec">Datos del Usuario y Ubicación</div><table class="pb-tbl"><tr><td class="lc">NOMBRES Y APELLIDOS</td><td>' + esc(b.responsable_nombre || '') + '</td><td class="lc">ÁREA</td><td>' + esc(b.area || '') + '</td><td class="lc">CENTRO DE COSTO</td><td></td></tr><tr><td class="lc">IDENTIFICACIÓN</td><td></td><td class="lc">PROCESO</td><td></td><td class="lc">EXT / CEL</td><td>' + esc(cfg.ext || '') + '</td></tr><tr><td class="lc">CARGO</td><td>' + esc(b.responsable_cargo || '') + '</td><td class="lc">JEFE INMEDIATO</td><td>' + esc(cfg.jefe || '') + '</td><td class="lc">E-MAIL</td><td>' + esc(cfg.email || '') + '</td></tr></table><div class="pb-sec">Descripción de Hardware</div><table class="pb-tbl"><thead><tr><th style="width:18%">TIPO DE EQUIPO</th><th style="width:30%">SERIAL</th><th>MARCA</th><th>MODELO</th></tr></thead><tbody><tr><td style="font-weight:700">' + esc(b.categoria || '—') + '</td><td><code>' + esc(b.serial || '—') + '</code></td><td>' + esc(b.marca || '—') + '</td><td>' + esc(b.modelo || '—') + '</td></tr><tr style="height:16px"><td></td><td></td><td></td><td></td></tr><tr style="height:16px"><td></td><td></td><td></td><td></td></tr></tbody></table><div class="pb-sec">Configuración y Capacidades</div><table class="pb-tbl"><tr><td class="lc">NOMBRE DEL EQUIPO</td><td>' + esc(cfg.hostname || b.nombre || '') + '</td><td class="lc">DISCO DURO</td><td>' + esc(cfg.disco || '') + '</td><td class="lc">RAM</td><td>' + esc(cfg.ram || '') + '</td><td class="lc">PROCESADOR</td><td>' + esc(cfg.cpu || '') + '</td></tr><tr><td class="lc">IMPRESORA ASIGNADA</td><td colspan="7">' + esc(cfg.impresora || '') + '</td></tr></table><div class="pb-sec">Software</div><table class="pb-tbl"><tr><td>' + chk('Windows') + '</td><td>' + chk('Lector PDF') + '</td><td>' + chk('CRM') + '</td><td>' + chk('VPN') + '</td><td colspan="4"><b>OTROS:</b> ' + esc(sw.filter(function (s) { return ['Windows', 'Office', 'Antivirus', 'Lector PDF', 'CRM', 'VPN', 'ERP'].indexOf(s) === -1; }).join(', ') || '—') + '</td></tr><tr><td>' + chk('Office') + '</td><td>' + chk('Antivirus') + '</td><td colspan="2">' + chk('ERP') + '</td><td colspan="4"></td></tr></table><div class="pb-sec">Motivo de Baja y Disposición Final</div><table class="pb-tbl"><tr><td class="lc">MOTIVO DE BAJA</td><td colspan="3"><b>' + esc(b.motivo || '') + '</b></td><td class="lc">CANTIDAD</td><td><b>' + esc(b.cantidad || 1) + '</b></td></tr><tr><td class="lc">DISPOSICIÓN FINAL</td><td colspan="3"><b>' + esc(b.disposicion || '') + '</b></td><td class="lc">ENTIDAD RECEPTORA</td><td>' + esc(b.entidad || 'N/A') + '</td></tr></table><div class="pb-sec">Observaciones</div><div class="pb-obs">' + esc(b.observaciones || 'Sin observaciones adicionales.') + '</div><table class="pb-sigs"><tr><td>' + sig(b.firma) + '<hr style="margin:2px 0"><small>Responsable<br><b>' + esc(b.responsable_nombre || '') + '</b><br>' + esc(b.responsable_cargo || '') + '</small></td><td><hr style="margin:2px 0"><small>Jefe Inmediato<br><b>' + esc(cfg.jefe || '') + '</b></small></td><td><hr style="margin:2px 0"><small>Coordinador TI<br><b>Vo.Bo.</b></small></td><td><hr style="margin:2px 0"><small>Gerencia<br><b>Aprobó</b></small></td></tr></table><div class="pconf" style="margin-top:5px">CLÁUSULA DE CONFIDENCIALIDAD: Esta información es propiedad Intelectual de IMPLESEG S.A.S.</div></div>';
 }
