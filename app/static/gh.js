@@ -652,7 +652,7 @@ function vBajas() {
   var el = ce('div'); el.innerHTML = '<p class="gh-title">🗑️ Baja de activos</p><div class="gh-alert gh-alert-orange">⚠️ <b>Importante:</b> la baja reduce el stock definitivamente y genera un acta oficial. No se puede deshacer.</div>';
   var bN = ce('button', 'btn btn-primary'); bN.style.marginBottom = '16px'; bN.textContent = '🗑️ Registrar nueva baja'; bN.onclick = function () { showBajaForm(el); }; el.appendChild(bN);
 
-  var rows = BAJAS.map(function (b) {
+  var rows = BAJAS.slice().reverse().map(function (b) {
     return '<tr><td style="font-family:var(--font-mono);font-size:11px">' + esc(b.codigo) + '</td><td><b>' + esc(b.nombre) + '</b></td><td>' + esc(b.categoria || '—') + '</td><td>' + esc(b.marca || '') + ' ' + esc(b.modelo || '') + '</td><td style="text-align:center">' + b.cantidad + '</td><td>' + esc(b.motivo || '—') + '</td><td>' + esc(b.responsable_nombre || '—') + '</td><td style="font-size:10.5px">' + esc(formatearFechaBonita(b.fecha)) + '</td><td><button class="row-btn" onclick="printActaBajaById(' + b.id + ')">Acta</button></td></tr>';
   }).join('');
 
