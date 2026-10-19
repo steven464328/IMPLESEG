@@ -11,9 +11,9 @@
       --orange-dark: #ea580c;
       --green-main: #10b981;
       --green-dark: #059669;
-      --bg-dark: #090d16;
-      --card-bg: rgba(18, 26, 43, 0.75);
-      --border-card: rgba(255, 255, 255, 0.08);
+      --bg-dark: #090e17;
+      --card-bg: rgba(15, 23, 42, 0.82);
+      --border-card: rgba(255, 255, 255, 0.1);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
@@ -31,8 +31,8 @@
       position: relative;
     }
 
-    /* FONDO DE PARTÍCULAS / CHISPAS EN VIVO */
-    #sparks-canvas {
+    /* CANVAS DE ANIMACIÓN (OBJETOS DE SEGURIDAD + CHISPAS) */
+    #bg-animation-canvas {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
@@ -40,19 +40,7 @@
       pointer-events: none;
     }
 
-    /* ELEMENTOS FLOTANTES DE SEGURIDAD (MARCA DE AGUA) */
-    .sst-watermark {
-      position: fixed;
-      width: 100%; height: 100%;
-      top: 0; left: 0;
-      z-index: 0;
-      pointer-events: none;
-      opacity: 0.04;
-      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z"/></svg>');
-      background-size: 140px 140px;
-    }
-
-    /* HEADER SUPERIOR */
+    /* HEADER */
     header {
       width: 100%;
       max-width: 1200px;
@@ -70,19 +58,19 @@
     }
 
     .brand-logo-icon {
-      width: 45px; height: 45px;
+      width: 48px; height: 48px;
       background: linear-gradient(135deg, #f97316, #c2410c);
       clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
       display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-      box-shadow: 0 0 20px rgba(249, 115, 22, 0.4);
+      font-size: 24px;
+      box-shadow: 0 0 25px rgba(249, 115, 22, 0.5);
     }
 
     .brand-text h1 {
       font-family: 'Teko', sans-serif;
-      font-size: 38px;
+      font-size: 42px;
       letter-spacing: 2px;
-      line-height: 0.9;
+      line-height: 0.85;
       color: #fff;
     }
 
@@ -95,16 +83,17 @@
     }
 
     .clock-box {
-      background: rgba(18, 26, 43, 0.8);
+      background: rgba(15, 23, 42, 0.85);
       border: 1px solid var(--border-card);
-      padding: 8px 18px;
-      border-radius: 8px;
+      padding: 8px 20px;
+      border-radius: 10px;
       text-align: right;
+      backdrop-filter: blur(8px);
     }
 
     .clock-time {
       font-family: 'Teko', sans-serif;
-      font-size: 28px;
+      font-size: 32px;
       letter-spacing: 1px;
       color: #fff;
       line-height: 1;
@@ -113,11 +102,11 @@
     .clock-date {
       font-size: 10px;
       color: #64748b;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
     }
 
-    /* CONTENEDOR PRINCIPAL */
+    /* CONTENIDO PRINCIPAL */
     main {
       width: 100%;
       max-width: 1100px;
@@ -131,10 +120,10 @@
     .status-pill {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       background: rgba(16, 185, 129, 0.1);
       border: 1px solid rgba(16, 185, 129, 0.3);
-      padding: 6px 16px;
+      padding: 6px 18px;
       border-radius: 20px;
       font-size: 11px;
       letter-spacing: 2px;
@@ -157,33 +146,33 @@
       50% { opacity: 0.4; transform: scale(0.8); }
     }
 
-    /* VISTA DE BOTONES PRINCIPALES (MODO QUIOSCO) */
+    /* TARJETAS QUIOSCO */
     .kiosk-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 30px;
+      gap: 35px;
       width: 100%;
-      max-width: 900px;
+      max-width: 920px;
     }
 
     .kiosk-card {
       background: var(--card-bg);
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(16px);
       border: 1px solid var(--border-card);
-      border-radius: 20px;
+      border-radius: 24px;
       padding: 45px 30px;
       text-align: center;
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
       overflow: hidden;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.4);
     }
 
     .kiosk-card::before {
       content: '';
       position: absolute;
       top: 0; left: 0; width: 100%; height: 4px;
-      transition: background 0.3s;
     }
 
     .card-ingreso::before { background: var(--orange-main); }
@@ -191,30 +180,30 @@
 
     .kiosk-card:hover {
       transform: translateY(-8px);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
     }
 
-    .card-ingreso:hover { border-color: rgba(249, 115, 22, 0.4); }
-    .card-salida:hover { border-color: rgba(16, 185, 129, 0.4); }
+    .card-ingreso:hover { border-color: rgba(249, 115, 22, 0.5); }
+    .card-salida:hover { border-color: rgba(16, 185, 129, 0.5); }
 
     .icon-circle {
       width: 90px; height: 90px;
       border-radius: 50%;
       margin: 0 auto 25px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 38px;
+      font-size: 40px;
       transition: transform 0.3s;
     }
 
     .card-ingreso .icon-circle {
-      background: rgba(249, 115, 22, 0.1);
-      border: 1px solid rgba(249, 115, 22, 0.3);
+      background: rgba(249, 115, 22, 0.12);
+      border: 1px solid rgba(249, 115, 22, 0.35);
       color: var(--orange-main);
     }
 
     .card-salida .icon-circle {
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
       color: var(--green-main);
     }
 
@@ -224,9 +213,9 @@
 
     .kiosk-card h2 {
       font-family: 'Teko', sans-serif;
-      font-size: 42px;
+      font-size: 45px;
       letter-spacing: 2px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
 
     .card-ingreso h2 { color: var(--orange-main); }
@@ -238,17 +227,17 @@
       line-height: 1.5;
     }
 
-    /* FORMULARIOS OCULTOS / ANIMADOS */
+    /* FORMULARIOS */
     .form-panel {
       display: none;
       width: 100%;
-      max-width: 800px;
+      max-width: 820px;
       background: var(--card-bg);
-      backdrop-filter: blur(16px);
+      backdrop-filter: blur(20px);
       border: 1px solid var(--border-card);
-      border-radius: 20px;
+      border-radius: 24px;
       padding: 35px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      box-shadow: 0 25px 60px rgba(0,0,0,0.7);
       animation: fadeIn 0.3s ease;
     }
 
@@ -261,8 +250,8 @@
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--border-card);
       color: #94a3b8;
-      padding: 8px 16px;
-      border-radius: 6px;
+      padding: 8px 18px;
+      border-radius: 8px;
       font-size: 12px;
       cursor: pointer;
       margin-bottom: 20px;
@@ -270,13 +259,13 @@
     }
 
     .btn-back:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.12);
       color: #fff;
     }
 
     .form-header-title {
       font-family: 'Teko', sans-serif;
-      font-size: 32px;
+      font-size: 36px;
       letter-spacing: 1.5px;
       margin-bottom: 25px;
       display: flex;
@@ -307,9 +296,9 @@
     }
 
     .field-group input, .field-group select {
-      background: rgba(9, 13, 22, 0.8);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
+      background: rgba(9, 14, 23, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
       padding: 12px 14px;
       color: #fff;
       font-size: 14px;
@@ -323,16 +312,16 @@
 
     .btn-action-submit {
       width: 100%;
-      padding: 15px;
+      padding: 16px;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       font-family: 'Teko', sans-serif;
-      font-size: 24px;
+      font-size: 26px;
       letter-spacing: 2px;
       color: #fff;
       cursor: pointer;
       margin-top: 15px;
-      transition: transform 0.2s, background 0.2s;
+      transition: transform 0.2s, filter 0.2s;
     }
 
     .btn-ingreso { background: linear-gradient(135deg, var(--orange-main), var(--orange-dark)); }
@@ -340,10 +329,10 @@
 
     .btn-action-submit:hover {
       transform: translateY(-2px);
-      filter: brightness(1.1);
+      filter: brightness(1.15);
     }
 
-    /* FOOTER ICONOS SST */
+    /* FOOTER BARRA SST */
     footer {
       width: 100%;
       max-width: 1000px;
@@ -355,9 +344,9 @@
     .sst-icons-bar {
       display: flex;
       justify-content: center;
-      gap: 30px;
+      gap: 35px;
       margin-bottom: 15px;
-      opacity: 0.5;
+      opacity: 0.6;
     }
 
     .sst-item {
@@ -369,7 +358,7 @@
       letter-spacing: 1px;
     }
 
-    .sst-item span { font-size: 18px; margin-bottom: 4px; }
+    .sst-item span { font-size: 20px; margin-bottom: 4px; }
 
     .footer-credits {
       font-size: 10px;
@@ -391,9 +380,8 @@
 </head>
 <body>
 
-  <!-- Canvas de Chispas / Partículas -->
-  <canvas id="sparks-canvas"></canvas>
-  <div class="sst-watermark"></div>
+  <!-- Canvas con objetos flotantes de Seguridad e incendios + Chispas -->
+  <canvas id="bg-animation-canvas"></canvas>
 
   <!-- Header -->
   <header>
@@ -411,14 +399,14 @@
     </div>
   </header>
 
-  <!-- Contenido Central -->
+  <!-- Contenido Principal -->
   <main>
     <div class="status-pill">
       <div class="status-dot"></div>
       SISTEMA ACTIVO · SELECCIONE UNA OPCIÓN
     </div>
 
-    <!-- PANTALLA PRINCIPAL CON DOS TARJETAS -->
+    <!-- Menú Principal con dos Tarjetas -->
     <div class="kiosk-grid" id="kiosk-menu">
       <div class="kiosk-card card-ingreso" onclick="mostrarFormulario('ingreso')">
         <div class="icon-circle">🪖</div>
@@ -433,7 +421,7 @@
       </div>
     </div>
 
-    <!-- FORMULARIO DE INGRESO -->
+    <!-- Formulario Ingreso -->
     <div class="form-panel" id="panel-ingreso">
       <button class="btn-back" onclick="volverMenu()">← VOLVER</button>
       <div class="form-header-title" style="color: var(--orange-main);">
@@ -444,7 +432,7 @@
         <div class="grid-fields">
           <div class="field-group">
             <label>Nombre y Apellido *</label>
-            <input type="text" id="in-nombre" placeholder="Ej. Juan Pérez Garcia" required>
+            <input type="text" id="in-nombre" placeholder="Ej. Juan Pérez García" required>
           </div>
           <div class="field-group">
             <label>Cédula de Ciudadanía *</label>
@@ -465,10 +453,10 @@
               <option>Sistemas / IT</option>
               <option>Gestión Humana</option>
               <option>Gerencia General</option>
-              <option>SST / Seguridad</option>
-              <option>Compras y Comercio</option>
-              <option>Contabilidad</option>
-              <option>Planta / Producción</option>
+              <option>SST / Seguridad Industrial</option>
+              <option>Compras y Comercial</option>
+              <option>Contabilidad y Finanzas</option>
+              <option>Planta y Producción</option>
             </select>
           </div>
           <div class="field-group">
@@ -491,7 +479,7 @@
               <option>COLMENA</option>
               <option>POSITIVA</option>
               <option>AXA COLPATRIA</option>
-              <option>BOLIVAR</option>
+              <option>BOLÍVAR</option>
               <option>LIBERTY</option>
               <option>OTRA</option>
             </select>
@@ -509,7 +497,7 @@
       </form>
     </div>
 
-    <!-- FORMULARIO DE SALIDA -->
+    <!-- Formulario Salida -->
     <div class="form-panel" id="panel-salida">
       <button class="btn-back" onclick="volverMenu()">← VOLVER</button>
       <div class="form-header-title" style="color: var(--green-main);">
@@ -523,14 +511,14 @@
       <form id="form-salida-data">
         <div class="field-group full" style="margin-bottom: 20px;">
           <label style="text-align: center;">Cédula de Ciudadanía</label>
-          <input type="text" id="out-cedula" placeholder="- - - - - - - - - -" style="text-align: center; font-size: 20px; font-family: 'Teko', sans-serif; letter-spacing: 2px;" required>
+          <input type="text" id="out-cedula" placeholder="- - - - - - - - - -" style="text-align: center; font-size: 24px; font-family: 'Teko', sans-serif; letter-spacing: 3px;" required>
         </div>
         <button type="submit" class="btn-action-submit btn-salida">CONFIRMAR SALIDA →</button>
       </form>
     </div>
   </main>
 
-  <!-- Footer con Iconos SST -->
+  <!-- Footer SST -->
   <footer>
     <div class="sst-icons-bar">
       <div class="sst-item"><span>🧯</span>EXTINTOR</div>
@@ -548,7 +536,7 @@
   <a href="/" class="admin-link">🏠 Regresar al ERP</a>
 
   <script>
-    // RELOJ EN TIEMPO REAL
+    // RELOJ DIGITAL EN VIVO
     function updateClock() {
       const now = new Date();
       document.getElementById('clock-time').textContent = now.toLocaleTimeString('es-CO');
@@ -558,7 +546,6 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // NAVEGACIÓN VISTAS
     function mostrarFormulario(tipo) {
       document.getElementById('kiosk-menu').style.display = 'none';
       if(tipo === 'ingreso') {
@@ -574,10 +561,10 @@
       document.getElementById('kiosk-menu').style.display = 'grid';
     }
 
-    // EFECTO CHISPAS DE FUEGO / PARTÍCULAS
-    const canvas = document.getElementById('sparks-canvas');
+    // ANIMACIÓN DE OBJETOS FLOTANTES DE SEGURIDAD INDUSTRIAL Y CHISPAS
+    const canvas = document.getElementById('bg-animation-canvas');
     const ctx = canvas.getContext('2d');
-    let width, height, sparks = [];
+    let width, height;
 
     function resize() {
       width = canvas.width = window.innerWidth;
@@ -586,41 +573,121 @@
     window.addEventListener('resize', resize);
     resize();
 
-    for(let i=0; i<60; i++) {
+    // DIBUJAR ICONOS VECTORIALES DE SEGURIDAD INDUSTRIAL (EXTINTOR, CASCO, DETECTOR, LAMA, VÁLVULA)
+    function drawSecurityIcon(ctx, type, size) {
+      ctx.beginPath();
+      ctx.lineWidth = 1.8;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+
+      if (type === 'extintor') {
+        // Cuerpo extintor
+        ctx.roundRect(-size/4, -size/3, size/2, size*0.7, 4);
+        // Manija y boquilla
+        ctx.moveTo(-size/6, -size/3); ctx.lineTo(-size/6, -size/2);
+        ctx.moveTo(-size/6, -size/2); ctx.lineTo(size/4, -size/2);
+        ctx.moveTo(0, -size/3); ctx.lineTo(size/3, -size/4);
+      } else if (type === 'casco') {
+        // Casco EPP
+        ctx.arc(0, 0, size/2, Math.PI, 0);
+        ctx.moveTo(-size*0.6, 0); ctx.lineTo(size*0.6, 0);
+      } else if (type === 'fuego') {
+        // Flama
+        ctx.moveTo(0, -size/2);
+        ctx.quadraticCurveTo(size/3, 0, 0, size/2);
+        ctx.quadraticCurveTo(-size/3, 0, 0, -size/2);
+      } else if (type === 'detector') {
+        // Detector de humo
+        ctx.arc(0, 0, size/2, 0, Math.PI*2);
+        ctx.arc(0, 0, size/4, 0, Math.PI*2);
+      } else {
+        // Cono de seguridad
+        ctx.moveTo(0, -size/2);
+        ctx.lineTo(size/3, size/2);
+        ctx.lineTo(-size/3, size/2);
+        ctx.closePath();
+      }
+      ctx.stroke();
+    }
+
+    // LISTA DE OBJETOS FLOTANTES
+    const iconTypes = ['extintor', 'casco', 'fuego', 'detector', 'cono'];
+    let floatingObjects = [];
+
+    for (let i = 0; i < 22; i++) {
+      floatingObjects.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        type: iconTypes[Math.floor(Math.random() * iconTypes.length)],
+        size: Math.random() * 30 + 35,
+        vy: -Math.random() * 0.4 - 0.2,
+        vx: (Math.random() - 0.5) * 0.3,
+        rotation: Math.random() * Math.PI * 2,
+        vRot: (Math.random() - 0.5) * 0.005,
+        opacity: Math.random() * 0.12 + 0.04
+      });
+    }
+
+    // CHISPAS
+    let sparks = [];
+    for (let i = 0; i < 45; i++) {
       sparks.push({
         x: Math.random() * width,
         y: Math.random() * height + height,
-        vx: (Math.random() - 0.5) * 0.8,
-        vy: -Math.random() * 1.5 - 0.5,
-        size: Math.random() * 2.5 + 1,
+        vx: (Math.random() - 0.5) * 0.6,
+        vy: -Math.random() * 1.6 - 0.4,
+        size: Math.random() * 2 + 1,
         alpha: Math.random(),
         color: Math.random() > 0.5 ? '#f97316' : '#eab308'
       });
     }
 
-    function drawSparks() {
+    function animate() {
       ctx.clearRect(0, 0, width, height);
+
+      // 1. Dibujar Objetos de Seguridad Flotantes
+      floatingObjects.forEach(obj => {
+        obj.y += obj.vy;
+        obj.x += obj.vx;
+        obj.rotation += obj.vRot;
+
+        if (obj.y < -60) {
+          obj.y = height + 60;
+          obj.x = Math.random() * width;
+        }
+
+        ctx.save();
+        ctx.translate(obj.x, obj.y);
+        ctx.rotate(obj.rotation);
+        ctx.globalAlpha = obj.opacity;
+        drawSecurityIcon(ctx, obj.type, obj.size);
+        ctx.restore();
+      });
+
+      // 2. Dibujar Chispas de Fuego
       sparks.forEach(s => {
         s.x += s.vx;
         s.y += s.vy;
         s.alpha -= 0.003;
-        if(s.y < -10 || s.alpha <= 0) {
+
+        if (s.y < -10 || s.alpha <= 0) {
           s.x = Math.random() * width;
           s.y = height + 10;
-          s.vy = -Math.random() * 1.5 - 0.5;
+          s.vy = -Math.random() * 1.6 - 0.4;
           s.alpha = Math.random();
         }
+
         ctx.globalAlpha = s.alpha;
         ctx.fillStyle = s.color;
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
         ctx.fill();
       });
-      requestAnimationFrame(drawSparks);
-    }
-    drawSparks();
 
-    // PROCESAR INGRESO
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // REGISTRO DE INGRESO
     document.getElementById('form-ingreso-data').onsubmit = async (e) => {
       e.preventDefault();
       const payload = {
@@ -653,7 +720,7 @@
       }
     };
 
-    // PROCESAR SALIDA POR CÉDULA
+    // REGISTRO DE SALIDA
     document.getElementById('form-salida-data').onsubmit = async (e) => {
       e.preventDefault();
       const cedula = document.getElementById('out-cedula').value;
