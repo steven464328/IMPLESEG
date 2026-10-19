@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
 // IMPLESEG SAS · Gestión Humana
-// Archivo BLINDADO. Búsqueda inteligente por nombre, serial o marca.
+// Archivo BLINDADO. Listado de áreas actualizado y ordenado.
 // ═══════════════════════════════════════════════════════════════
 
 var API_INV = "/api/gh/inventario";
@@ -9,7 +9,15 @@ var API_BAJ = "/api/gh/bajas";
 
 var CATS = ['AIO', 'DESKTOP', 'LAPTOP', 'Portátil/Laptop', 'Teclado', 'Mouse', 'Pantalla/Monitor', 'Base refrigerante', 'Auriculares/Diadema', 'EPP - Casco', 'Herramienta manual', 'Otro'];
 var ESTADOS = ['Nuevo', 'Bueno', 'Regular', 'Deteriorado', 'Dañado/Inservible'];
-var AREAS = ['Comercial/Ventas', 'Operaciones', 'SST/HSEQ', 'Administración', 'Recursos Humanos', 'Tecnología', 'Logística', 'Dirección/Gerencia', 'Producción'];
+
+// Listado unificado y ordenado alfabéticamente
+var AREAS = [
+  'Administración', 'Almacén', 'Aprovisionamiento', 'Centro de Servicios', 
+  'Comercial', 'Conductor', 'Contabilidad', 'Contratos', 'Gerencia', 
+  'Logística', 'Mantenimiento', 'Operaciones', 'Producción', 
+  'Punto de Venta', 'Recursos Humanos', 'SST/HSEQ', 'Técnica', 'Tecnología'
+];
+
 var MOTIVOS = ['Deterioro / Daño irreparable', 'Obsolescencia tecnológica', 'Pérdida / Robo', 'Donación a entidad', 'Chatarrización', 'Fin de vida útil'];
 var DISPS = ['Chatarrización', 'Donación a entidad externa', 'Destrucción controlada', 'Traslado interno', 'Venta como chatarra'];
 var SW_LIST = ['Windows', 'Office', 'Antivirus', 'Lector PDF', 'CRM', 'VPN', 'ERP', 'Otros'];
@@ -301,10 +309,9 @@ function renderItems(cont, onChange) {
     }
     box.appendChild(hdr);
 
-    // NUEVO: Implementación de Datalist (Búsqueda Inteligente)
     var dlId = 'dl-inv-' + Math.random().toString(36).substr(2, 9);
     var invOptions = '';
-    var invMap = {}; // Mapa para recuperar los datos exactos del equipo
+    var invMap = {}; 
     
     (INV || []).forEach(function (inv) {
       if(!inv) return;
@@ -330,7 +337,6 @@ function renderItems(cont, onChange) {
       '<label class="lbl-field span-2">Observaciones / Novedades<input type="text" class="i-ob" value="' + esc(obsVal) + '" placeholder="Observaciones de este equipo..."></label>';
     box.appendChild(grid);
 
-    // Evento para el buscador inteligente
     box.querySelector('.sel-i').oninput = function (ev) {
       var m = invMap[ev.target.value];
       if (m) { 
@@ -705,10 +711,9 @@ function showBajaForm(parent) {
   var ex = parent.querySelector('.bj-fw'); if (ex) { ex.remove(); return; }
   var wrap = ce('div', 'bj-fw'); wrap.style.marginBottom = '20px';
 
-  // NUEVO: Implementación de Datalist para el módulo de Bajas
   var dlId = 'dl-baj-' + Math.random().toString(36).substr(2, 9);
   var sh = '';
-  var bajMap = {}; // Mapa para recuperar los datos exactos del equipo
+  var bajMap = {}; 
   
   (INV || []).forEach(function (inv) { 
     if(!inv) return;
@@ -764,7 +769,7 @@ function showBajaForm(parent) {
           if (cnt > si.cantidad_stock) return toast('Cantidad supera el stock actual (' + si.cantidad_stock + ')', false);
           itemIdVal = String(si.id); nomEq = si.nombre; catEq = si.categoria; marEq = si.marca; modEq = si.modelo; serEq = si.serial;
         } else {
-          nomEq = wrap.querySelector('#bj-hn').value.trim() || selElVal; // Usa lo escrito si no está en lista
+          nomEq = wrap.querySelector('#bj-hn').value.trim() || selElVal;
         }
       } else {
         nomEq = wrap.querySelector('#bj-hn').value.trim() || 'Activo no inventariado';
@@ -808,7 +813,6 @@ function showBajaForm(parent) {
   var tw2 = parent.querySelector('.table-panel'); 
   parent.insertBefore(wrap, tw2);
 
-  // Evento autocompletar info al buscar en Bajas
   var bsSelect = wrap.querySelector('#bj-s');
   if(bsSelect) {
     bsSelect.addEventListener('input', function () {
