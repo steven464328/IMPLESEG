@@ -65,7 +65,7 @@
 <body>
 
     <div class="sidebar">
-        <!-- Haz clic aquí para volver al Inicio de forma directa -->
+        <!-- Volver al Inicio ERP -->
         <div class="brand-banner" onclick="window.location.href='/'" title="Volver al Menú Principal">
             <div class="logo-text">impleseg</div>
             <div class="logo-icons">👥 🛡️ 👷</div>
@@ -77,6 +77,7 @@
             <a href="/" class="active"><i class="bi bi-house-door me-2"></i> Inicio</a>
             <a href="/hojas_vida"><i class="bi bi-pc-display-horizontal me-2"></i> Hojas de Vida</a>
             <a href="/gestion-humana"><i class="bi bi-person-vcard me-2"></i> Gestión Humana</a>
+            <a href="/visitantes"><i class="bi bi-people-fill me-2"></i> Ingreso Visitantes</a>
             <a href="/etiquetas/"><i class="bi bi-upc-scan me-2"></i> Etiquetas USB</a>
             <a class="disabled-link"><i class="bi bi-box-seam me-2"></i> Inventarios</a>
             <a class="disabled-link"><i class="bi bi-receipt me-2"></i> Compras</a>
@@ -90,21 +91,28 @@
         <div class="page-subtitle">Selecciona el módulo al que deseas acceder</div>
 
         <div class="row g-4">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="module-card" onclick="window.location.href='/hojas_vida'">
                     <i class="bi bi-pc-display-horizontal"></i>
                     <h4>Hojas de Vida</h4>
                     <p>Gestión técnica de equipos de cómputo, líneas corporativas y celulares.</p>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="module-card" onclick="window.location.href='/gestion-humana'">
                     <i class="bi bi-person-vcard"></i>
                     <h4>Gestión Humana</h4>
                     <p>Asignación de activos, actas, inventario general y entregas a personal.</p>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
+                <div class="module-card" onclick="window.location.href='/visitantes'">
+                    <i class="bi bi-people-fill"></i>
+                    <h4>Ingreso Visitantes</h4>
+                    <p>Control de acceso, historial, ARL y registro de entradas y salidas.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
                 <div class="module-card" onclick="window.location.href='/etiquetas/'">
                     <i class="bi bi-upc-scan"></i>
                     <h4>Etiquetas USB</h4>
