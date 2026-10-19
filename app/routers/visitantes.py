@@ -45,16 +45,24 @@ def registrar_ingreso(payload: VisitantePayload, session: Session = Depends(get_
         session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.put("/{visitante_id}/salida")
-def registrar_salida(visitante_id: int, session: Session = Depends(get_session)):
+@router.put("/salida-cedula/{cedula}")
+def registrar_salida_cedula(cedula: str, session: Session = Depends(get_session)):
     try:
         query = text("""
             UPDATE registro_visitantes 
             SET hora_salida = CURRENT_TIMESTAMP, estado = 'SALIO'
-            WHERE id = :id
+            WHERE id = (
+                SELECT id FROM registro_visitantes 
+                WHERE cedula = :cedula AND estado = 'DENTRO' 
+                ORDER BY id DESC LIMIT 1
+            )
+            RETURNING id;
         """)
-        session.execute(query, {"id": visitante_id})
+        res = session.execute(query, {"cedula": cedula})
+        row = res.fetchone()
         session.commit()
+        if not row:
+            raise HTTPException(status_code=404, detail="No activo")
         return {"status": "ok"}
     except Exception as e:
         session.rollback()
