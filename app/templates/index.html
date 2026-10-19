@@ -65,7 +65,8 @@
 <body>
 
     <div class="sidebar">
-        <div class="brand-banner" onclick="window.location.href='/'">
+        <!-- Haz clic aquí para volver al Inicio de forma directa -->
+        <div class="brand-banner" onclick="window.location.href='/'" title="Volver al Menú Principal">
             <div class="logo-text">impleseg</div>
             <div class="logo-icons">👥 🛡️ 👷</div>
             <div class="logo-sub">SEGURIDAD INDUSTRIAL</div>
@@ -76,7 +77,7 @@
             <a href="/" class="active"><i class="bi bi-house-door me-2"></i> Inicio</a>
             <a href="/hojas_vida"><i class="bi bi-pc-display-horizontal me-2"></i> Hojas de Vida</a>
             <a href="/gestion-humana"><i class="bi bi-person-vcard me-2"></i> Gestión Humana</a>
-            <a href="/etiquetas_usb"><i class="bi bi-upc-scan me-2"></i> Etiquetas USB</a>
+            <a href="/etiquetas/"><i class="bi bi-upc-scan me-2"></i> Etiquetas USB</a>
             <a class="disabled-link"><i class="bi bi-box-seam me-2"></i> Inventarios</a>
             <a class="disabled-link"><i class="bi bi-receipt me-2"></i> Compras</a>
             <a class="disabled-link"><i class="bi bi-cash-stack me-2"></i> Contabilidad</a>
@@ -104,7 +105,7 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="module-card" onclick="window.location.href='/etiquetas_usb'">
+                <div class="module-card" onclick="window.location.href='/etiquetas/'">
                     <i class="bi bi-upc-scan"></i>
                     <h4>Etiquetas USB</h4>
                     <p>Módulo de escaneo y etiquetado para dispositivos y memorias USB.</p>
