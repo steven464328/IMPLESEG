@@ -12,6 +12,7 @@ from app.routers import (
     gh_bajas,
     recepcion,
     etiquetas_usb,
+    hv_equipos, # <-- ¡Añadido aquí para que reconozca el router!
 )
 
 import os
@@ -36,6 +37,7 @@ app.include_router(recepcion.router)
 app.include_router(etiquetas_usb.router)
 app.include_router(dashboard_equipos.router)
 app.include_router(impresoras.router)
+app.include_router(hv_equipos.router) 
 
 app.mount(
     "/static",
@@ -51,3 +53,7 @@ def index():
 def gestion_humana():
     return FileResponse(os.path.join(BASE_DIR, "templates", "gestion_humana.html"))
 
+# <-- NUEVA RUTA PARA QUE CARGUE LA PANTALLA DE HOJAS DE VIDA -->
+@app.get("/hojas_vida")
+def hojas_vida():
+    return FileResponse(os.path.join(BASE_DIR, "templates", "hojas_vida.html"))
