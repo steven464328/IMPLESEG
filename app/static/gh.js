@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
 // IMPLESEG SAS · Gestión Humana
-// Archivo consolidado y a prueba de fallos. Libre de errores de sintaxis.
+// Archivo BLINDADO. Libre de colapsos silenciosos.
 // ═══════════════════════════════════════════════════════════════
 
 var API_INV = "/api/gh/inventario";
@@ -80,7 +80,7 @@ async function cargarTodo(gotoView) {
     ASN = Array.isArray(asn) ? asn : []; 
     BAJAS = Array.isArray(baj) ? baj : [];
   } catch (e) {
-    toast('Error de red al cargar datos', false);
+    toast('Error cargando datos del servidor', false);
   }
   if (gotoView) VIEW = gotoView;
   resetNew();
@@ -100,8 +100,8 @@ function render() {
     if (VIEW === 'baja') app.appendChild(vBajas());
     if (VIEW === 'edit') app.appendChild(vEdit());
   } catch(err) {
-    console.error("Error renderizando vista:", err);
-    ge('ghApp').innerHTML = '<div style="padding:40px;text-align:center;color:#ff5d6c;">⚠️ Error interno de la plataforma. Revisa la consola o limpia la caché (Ctrl+F5).</div>';
+    console.error(err);
+    alert("Error interno en la interfaz. Recarga la página.");
   }
 }
 
@@ -156,7 +156,7 @@ function vInv() {
   var bA = ce('button', 'btn btn-primary'); bA.style.marginBottom = '16px'; bA.textContent = '+ Nuevo ítem';
   bA.onclick = function () { showInvForm(el); }; el.appendChild(bA);
 
-  var rows = INV.map(function (it) {
+  var rows = (INV || []).map(function (it) {
     var color = it.cantidad_stock > 0 ? 'var(--accent)' : 'var(--danger)';
     return '<tr><td><b>' + esc(it.nombre) + '</b></td><td>' + esc(it.categoria || '—') + '</td><td>' + esc(it.marca || '—') + '</td><td>' + esc(it.modelo || '—') + '</td><td style="font-family:var(--font-mono);font-size:11.5px">' + esc(it.serial || '—') + '</td><td style="text-align:center;font-weight:700;color:' + color + '">' + it.cantidad_stock + '</td><td>' + esc(it.colaborador || '—') + '</td><td><button class="row-btn" onclick="showInvForm(document.getElementById(\'ghApp\'),' + it.id + ')">Editar</button></td></tr>';
   }).join('');
@@ -168,40 +168,39 @@ function vInv() {
 }
 
 function showInvForm(parent, itemId) {
-  var ex = parent.querySelector('.inv-fc'); if (ex) ex.remove();
-  var item = itemId ? INV.find(function (i) { return String(i.id) === String(itemId); }) : null;
-  var f = ce('div', 'gh-card inv-fc');
-  f.innerHTML = '<div class="sh"><div class="sn">' + (item ? '✏️' : '+') + '</div>' + (item ? 'Editar' : 'Agregar') + ' equipo/herramienta</div>' +
-    '<div class="g4" style="margin-bottom:16px">' +
-    '<label class="lbl-field">Nombre *<input id="fi-n" value="' + esc(item ? item.nombre : '') + '" placeholder="Ej: LAPTOP LENOVO 05"></label>' +
-    '<label class="lbl-field">Categoría<select id="fi-c">' + CATS.map(function (c) { return '<option' + (item && item.categoria === c ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select></label>' +
-    '<label class="lbl-field">Marca<input id="fi-ma" value="' + esc(item ? item.marca : '') + '"></label>' +
-    '<label class="lbl-field">Modelo<input id="fi-mo" value="' + esc(item ? item.modelo : '') + '"></label>' +
-    '<label class="lbl-field">Serial<input id="fi-s" value="' + esc(item ? item.serial : '') + '"></label>' +
-    '<label class="lbl-field">Descripción<input id="fi-d" value="' + esc(item ? item.descripcion : 'Equipo Impleseg') + '"></label>' +
-    '<label class="lbl-field">Cantidad stock *<input type="number" id="fi-q" value="' + (item ? item.cantidad_stock : 1) + '" min="0"></label>' +
-    '<label class="lbl-field">Colaborador asignado<input id="fi-co" value="' + esc(item ? item.colaborador : '') + '"></label>' +
-    '</div><div style="display:flex;gap:10px"><button class="btn btn-primary" id="btn-sav-inv">Guardar</button><button class="btn btn-ghost" id="btn-can-inv">Cancelar</button></div>';
-  f.querySelector('#btn-can-inv').onclick = function () { f.remove(); };
-  f.querySelector('#btn-sav-inv').onclick = async function () {
-    var payload = {
-      nombre: ge('fi-n').value.trim(), categoria: ge('fi-c').value, marca: ge('fi-ma').value.trim(),
-      modelo: ge('fi-mo').value.trim(), serial: ge('fi-s').value.trim(), descripcion: ge('fi-d').value.trim(),
-      cantidad_stock: parseInt(ge('fi-q').value) || 0, colaborador: ge('fi-co').value.trim(),
+  try {
+    var ex = parent.querySelector('.inv-fc'); if (ex) ex.remove();
+    var item = itemId ? INV.find(function (i) { return String(i.id) === String(itemId); }) : null;
+    var f = ce('div', 'gh-card inv-fc');
+    f.innerHTML = '<div class="sh"><div class="sn">' + (item ? '✏️' : '+') + '</div>' + (item ? 'Editar' : 'Agregar') + ' equipo/herramienta</div>' +
+      '<div class="g4" style="margin-bottom:16px">' +
+      '<label class="lbl-field">Nombre *<input id="fi-n" value="' + esc(item ? item.nombre : '') + '" placeholder="Ej: LAPTOP LENOVO 05"></label>' +
+      '<label class="lbl-field">Categoría<select id="fi-c">' + (CATS||[]).map(function (c) { return '<option' + (item && item.categoria === c ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="lbl-field">Marca<input id="fi-ma" value="' + esc(item ? item.marca : '') + '"></label>' +
+      '<label class="lbl-field">Modelo<input id="fi-mo" value="' + esc(item ? item.modelo : '') + '"></label>' +
+      '<label class="lbl-field">Serial<input id="fi-s" value="' + esc(item ? item.serial : '') + '"></label>' +
+      '<label class="lbl-field">Descripción<input id="fi-d" value="' + esc(item ? item.descripcion : 'Equipo Impleseg') + '"></label>' +
+      '<label class="lbl-field">Cantidad stock *<input type="number" id="fi-q" value="' + (item ? item.cantidad_stock : 1) + '" min="0"></label>' +
+      '<label class="lbl-field">Colaborador asignado<input id="fi-co" value="' + esc(item ? item.colaborador : '') + '"></label>' +
+      '</div><div style="display:flex;gap:10px"><button class="btn btn-primary" id="btn-sav-inv">Guardar</button><button class="btn btn-ghost" id="btn-can-inv">Cancelar</button></div>';
+    f.querySelector('#btn-can-inv').onclick = function () { f.remove(); };
+    f.querySelector('#btn-sav-inv').onclick = async function () {
+      var payload = {
+        nombre: ge('fi-n').value.trim(), categoria: ge('fi-c').value, marca: ge('fi-ma').value.trim(),
+        modelo: ge('fi-mo').value.trim(), serial: ge('fi-s').value.trim(), descripcion: ge('fi-d').value.trim(),
+        cantidad_stock: parseInt(ge('fi-q').value) || 0, colaborador: ge('fi-co').value.trim(),
+      };
+      if (!payload.nombre) return toast('El nombre es obligatorio', false);
+      try {
+        if (item) await apiPut(API_INV + '/' + item.id, payload);
+        else await apiPost(API_INV, payload);
+        toast('Ítem guardado ✓'); await cargarTodo('inv');
+      } catch (e) { toast(e.message, false); }
     };
-    if (!payload.nombre) return toast('El nombre es obligatorio', false);
-    try {
-      if (item) await apiPut(API_INV + '/' + item.id, payload);
-      else await apiPost(API_INV, payload);
-      toast('Ítem guardado ✓'); await cargarTodo('inv');
-    } catch (e) { toast(e.message, false); }
-  };
-  var tw = parent.querySelector('.table-panel');
-  if (tw && tw.parentNode) {
-    tw.parentNode.insertBefore(f, tw);
-  } else {
-    parent.appendChild(f);
-  }
+    var tw = parent.querySelector('.table-panel');
+    if (tw && tw.parentNode) { tw.parentNode.insertBefore(f, tw); } 
+    else { parent.appendChild(f); }
+  } catch(err) { alert("Error: " + err.message); }
 }
 
 // ---------------------------------------------------------------
@@ -215,7 +214,7 @@ function vNew() {
     '<label class="lbl-field">Nombre completo *<input id="n-nm" value="' + esc(nE.nombre) + '"></label>' +
     '<label class="lbl-field">Cédula *<input id="n-cc" value="' + esc(nE.cedula) + '"></label>' +
     '<label class="lbl-field">Cargo<input id="n-ca" value="' + esc(nE.cargo) + '"></label>' +
-    '<label class="lbl-field">Área<select id="n-ar">' + AREAS.map(function (a) { return '<option' + (a === nE.area ? ' selected' : '') + '>' + esc(a) + '</option>'; }).join('') + '</select></label></div>';
+    '<label class="lbl-field">Área<select id="n-ar">' + (AREAS||[]).map(function (a) { return '<option' + (a === nE.area ? ' selected' : '') + '>' + esc(a) + '</option>'; }).join('') + '</select></label></div>';
   el.appendChild(c1);
   setTimeout(function () {
     ge('n-nm').oninput = function () { nE.nombre = this.value; };
@@ -303,7 +302,8 @@ function renderItems(cont, onChange) {
     box.appendChild(hdr);
 
     var invOptions = '<option value="">-- Vincular desde inventario (opcional) --</option>';
-    INV.forEach(function (inv) {
+    (INV || []).forEach(function (inv) {
+      if(!inv) return;
       var key = inv.nombre + '|||' + (inv.serial || '');
       var sel = (inv.nombre === it.herramienta && (inv.serial || '') === (it.serialOriginal || '')) ? ' selected' : '';
       var stxt = inv.cantidad_stock > 0 ? 'Stock: ' + inv.cantidad_stock : '⚠ Sin stock';
@@ -321,7 +321,7 @@ function renderItems(cont, onChange) {
       '<label class="lbl-field">Herramienta/equipo *<input class="i-hr" value="' + esc(it.herramienta) + '"></label>' +
       '<label class="lbl-field span-2">Marca / modelo / serial<input class="i-mr" value="' + esc(it.marca) + '"></label>' +
       '<label class="lbl-field">Cantidad<input type="number" class="i-qt" value="' + esc(it.cantidad) + '" min="1"></label>' +
-      '<label class="lbl-field">Estado inicial<select class="i-es">' + ESTADOS.map(function (e) { return '<option' + (e === it.estado ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></label>' +
+      '<label class="lbl-field">Estado inicial<select class="i-es">' + (ESTADOS||[]).map(function (e) { return '<option' + (e === it.estado ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></label>' +
       '<label class="lbl-field span-2">Observaciones / Novedades<input type="text" class="i-ob" value="' + esc(obsVal) + '" placeholder="Observaciones de este equipo..."></label>';
     box.appendChild(grid);
 
@@ -356,7 +356,7 @@ function vList() {
 
   function rl(f) {
     lc.innerHTML = ''; var flt = (f || '').toLowerCase();
-    var fil = ASN.filter(function (a) {
+    var fil = (ASN||[]).filter(function (a) {
       if (LIST_F === 'activo' && a.status === 'devuelto') return false;
       if (LIST_F === 'devuelto' && a.status !== 'devuelto') return false;
       if (!flt) return true;
@@ -448,7 +448,7 @@ function vEdit() {
     '<label class="lbl-field">Nombre *<input id="ed-nm" value="' + esc(editE.nombre) + '"></label>' +
     '<label class="lbl-field">Cédula *<input id="ed-cc" value="' + esc(editE.cedula) + '"></label>' +
     '<label class="lbl-field">Cargo<input id="ed-ca" value="' + esc(editE.cargo) + '"></label>' +
-    '<label class="lbl-field">Área<select id="ed-ar">' + AREAS.map(function (ar) { return '<option' + (ar === editE.area ? ' selected' : '') + '>' + esc(ar) + '</option>'; }).join('') + '</select></label></div>';
+    '<label class="lbl-field">Área<select id="ed-ar">' + (AREAS||[]).map(function (ar) { return '<option' + (ar === editE.area ? ' selected' : '') + '>' + esc(ar) + '</option>'; }).join('') + '</select></label></div>';
   el.appendChild(c1);
 
   var c2 = ce('div', 'gh-card'); c2.innerHTML = '<div class="sh"><div class="sn">2</div>Herramientas (actualiza lo necesario)</div>';
@@ -465,7 +465,7 @@ function vEdit() {
   var tempReasons = {};
   
   function updateReasonsUI() {
-    var rc = ge('reasons-container'); if (!rc) return;
+    var rc = el.querySelector('#reasons-container'); if (!rc) return;
     rc.querySelectorAll('.dyn-nota').forEach(function (ta) { tempReasons[ta.getAttribute('data-herr')] = ta.value; });
     
     var currentDomItems = [];
@@ -531,11 +531,14 @@ function vEdit() {
     if (!valid.length) return toast('Debe haber al menos una herramienta', false);
 
     var notasNuevas = []; var missingReasons = false;
-    ge('reasons-container').querySelectorAll('.dyn-nota').forEach(function (ta) {
-      var val = ta.value.trim(); var herr = ta.getAttribute('data-herr');
-      if (!val) missingReasons = true;
-      notasNuevas.push({ herramienta: herr, nota: val });
-    });
+    var rcEl = el.querySelector('#reasons-container');
+    if(rcEl) {
+      rcEl.querySelectorAll('.dyn-nota').forEach(function (ta) {
+        var val = ta.value.trim(); var herr = ta.getAttribute('data-herr');
+        if (!val) missingReasons = true;
+        notasNuevas.push({ herramienta: herr, nota: val });
+      });
+    }
     
     if (missingReasons) return toast('Debes llenar las razones del cambio/retiro', false);
 
@@ -570,7 +573,7 @@ function vEdit() {
 // ---------------------------------------------------------------
 function vRec() {
   var el = ce('div'); el.innerHTML = '<p class="gh-title">🔄 Recepción / devolución</p>';
-  var act = ASN.filter(function (x) { return x.status !== 'devuelto'; });
+  var act = (ASN||[]).filter(function (x) { return x.status !== 'devuelto'; });
   if (!act.length) {
     var ok = ce('div', 'gh-card'); ok.style.textAlign = 'center'; ok.style.padding = '50px';
     ok.innerHTML = '<div style="font-size:50px;margin-bottom:16px">✅</div><p style="font-weight:700;font-size:17px;color:var(--accent)">¡Todos están a paz y salvo!</p><p style="color:var(--text-dim);margin-top:8px">No hay herramientas pendientes por devolver.</p>';
@@ -660,10 +663,25 @@ function showRecForm(parent, a) {
 // BAJAS
 // ---------------------------------------------------------------
 function vBajas() {
-  var el = ce('div'); el.innerHTML = '<p class="gh-title">🗑️ Baja de activos</p><div class="gh-alert gh-alert-orange">⚠️ <b>Importante:</b> la baja reduce el stock definitivamente y genera un acta oficial. No se puede deshacer.</div>';
-  var bN = ce('button', 'btn btn-primary'); bN.style.marginBottom = '16px'; bN.textContent = '🗑️ Registrar nueva baja'; bN.onclick = function () { showBajaForm(el); }; el.appendChild(bN);
+  var el = ce('div'); 
+  el.innerHTML = '<p class="gh-title">🗑️ Baja de activos</p><div class="gh-alert gh-alert-orange">⚠️ <b>Importante:</b> la baja reduce el stock definitivamente y genera un acta oficial. No se puede deshacer.</div>';
+  
+  var bN = ce('button', 'btn btn-primary'); 
+  bN.style.marginBottom = '16px'; 
+  bN.textContent = '🗑️ Registrar nueva baja'; 
+  
+  // Asignación de evento blindada con alerta de error
+  bN.addEventListener('click', function() {
+    try {
+      showBajaForm(el);
+    } catch (error) {
+      alert("Error crítico abriendo formulario de Bajas:\n" + error.message);
+      console.error(error);
+    }
+  });
+  el.appendChild(bN);
 
-  var rows = BAJAS.map(function (b) {
+  var rows = (BAJAS||[]).slice().reverse().map(function (b) {
     return '<tr><td style="font-family:var(--font-mono);font-size:11px">' + esc(b.codigo) + '</td><td><b>' + esc(b.nombre) + '</b></td><td>' + esc(b.categoria || '—') + '</td><td>' + esc(b.marca || '') + ' ' + esc(b.modelo || '') + '</td><td style="text-align:center">' + b.cantidad + '</td><td>' + esc(b.motivo || '—') + '</td><td>' + esc(b.responsable_nombre || '—') + '</td><td style="font-size:10.5px">' + esc(formatearFechaBonita(b.fecha)) + '</td><td><button class="row-btn" onclick="printActaBajaById(' + b.id + ')">Acta</button></td></tr>';
   }).join('');
 
@@ -681,23 +699,26 @@ function showBajaForm(parent) {
 
   var c1 = ce('div', 'gh-card');
   var sh = '<option value="">-- Selecciona un equipo disponible --</option>';
-  INV.forEach(function (inv) { sh += '<option value="' + inv.id + '">' + esc(inv.nombre) + ' | ' + esc(inv.marca || '') + ' ' + esc(inv.modelo || '') + ' [S/N: ' + esc(inv.serial || 'N/A') + '] — Stock: ' + inv.cantidad_stock + '</option>'; });
+  (INV || []).forEach(function (inv) { 
+    if(!inv) return;
+    sh += '<option value="' + inv.id + '">' + esc(inv.nombre) + ' | ' + esc(inv.marca || '') + ' ' + esc(inv.modelo || '') + ' [S/N: ' + esc(inv.serial || 'N/A') + '] — Stock: ' + inv.cantidad_stock + '</option>'; 
+  });
   c1.innerHTML = '<div class="sh"><div class="sn">1</div>Equipo a dar de baja</div><label class="lbl-field">Seleccionar equipo *<select id="bj-s">' + sh + '</select></label><div id="bj-inf" style="display:none;margin:12px 0"></div><div class="g2"><label class="lbl-field">Cantidad a dar de baja *<input type="number" id="bj-q" value="1" min="1"></label><label class="lbl-field">Fecha de baja *<input type="text" id="bj-f" value="' + fechaHoraActual() + '" readonly></label></div>';
   wrap.appendChild(c1);
 
   var c2 = ce('div', 'gh-card');
-  c2.innerHTML = '<div class="sh"><div class="sn">2</div>Motivo y disposición final</div><div class="g2"><label class="lbl-field">Motivo *<select id="bj-m">' + MOTIVOS.map(function (m) { return '<option>' + esc(m) + '</option>'; }).join('') + '</select></label><label class="lbl-field">Disposición final *<select id="bj-dp">' + DISPS.map(function (d) { return '<option>' + esc(d) + '</option>'; }).join('') + '</select></label><label class="lbl-field span-2">Entidad/persona receptora<input id="bj-ent"></label></div>';
+  c2.innerHTML = '<div class="sh"><div class="sn">2</div>Motivo y disposición final</div><div class="g2"><label class="lbl-field">Motivo *<select id="bj-m">' + (MOTIVOS||[]).map(function (m) { return '<option>' + esc(m) + '</option>'; }).join('') + '</select></label><label class="lbl-field">Disposición final *<select id="bj-dp">' + (DISPS||[]).map(function (d) { return '<option>' + esc(d) + '</option>'; }).join('') + '</select></label><label class="lbl-field span-2">Entidad/persona receptora<input id="bj-ent"></label></div>';
   wrap.appendChild(c2);
 
   var c3 = ce('div', 'gh-card');
-  c3.innerHTML = '<div class="sh"><div class="sn">3</div>Datos del responsable</div><div class="g3"><label class="lbl-field">Nombre completo *<input id="bj-rn"></label><label class="lbl-field">Cargo<input id="bj-rc"></label><label class="lbl-field">Área<select id="bj-ra">' + AREAS.map(function (a) { return '<option>' + esc(a) + '</option>'; }).join('') + '</select></label></div>';
+  c3.innerHTML = '<div class="sh"><div class="sn">3</div>Datos del responsable</div><div class="g3"><label class="lbl-field">Nombre completo *<input id="bj-rn"></label><label class="lbl-field">Cargo<input id="bj-rc"></label><label class="lbl-field">Área<select id="bj-ra">' + (AREAS||[]).map(function (a) { return '<option>' + esc(a) + '</option>'; }).join('') + '</select></label></div>';
   wrap.appendChild(c3);
 
   var c4 = ce('div', 'gh-card');
   c4.innerHTML = '<div class="sh"><div class="sn">4</div>Especificaciones técnicas</div><div class="g4" style="margin-bottom:12px">' +
     '<label class="lbl-field">Hostname<input id="bj-hn"></label><label class="lbl-field">Disco duro<input id="bj-dk"></label><label class="lbl-field">RAM<input id="bj-rm"></label><label class="lbl-field">Procesador<input id="bj-cp"></label>' +
     '<label class="lbl-field">Impresora asignada<input id="bj-ip"></label><label class="lbl-field">Jefe inmediato<input id="bj-ji"></label><label class="lbl-field">Ext./celular<input id="bj-ex"></label><label class="lbl-field">E-mail<input id="bj-em"></label></div>' +
-    '<label class="lbl-field">Software instalado<div class="chkgrp" id="bj-sw">' + SW_LIST.map(function (s) { return '<label class="chkitem"><input type="checkbox" value="' + esc(s) + '">' + esc(s) + '</label>'; }).join('') + '</div></label>' +
+    '<label class="lbl-field">Software instalado<div class="chkgrp" id="bj-sw">' + (SW_LIST||[]).map(function (s) { return '<label class="chkitem"><input type="checkbox" value="' + esc(s) + '">' + esc(s) + '</label>'; }).join('') + '</div></label>' +
     '<label class="lbl-field" style="margin-top:12px">Observaciones<textarea id="bj-ob" rows="3"></textarea></label>';
   wrap.appendChild(c4);
 
@@ -709,50 +730,63 @@ function showBajaForm(parent) {
   var bSv = ce('button', 'btn btn-primary'); bSv.textContent = '🗑️ Registrar baja y generar acta';
   
   bSv.onclick = async function () {
-    var selEl = ge('bj-s');
-    var rn = ge('bj-rn').value.trim(); 
-    if (!rn) return toast('El nombre del responsable es obligatorio', false);
-    
-    var firmaBj = spBj.getImg();
-    if (!firmaBj) return toast('La firma del responsable es obligatoria', false);
-    
-    var cnt = parseInt(ge('bj-q').value) || 1;
-    var sw = []; c4.querySelectorAll('#bj-sw input:checked').forEach(function (cb) { sw.push(cb.value); });
-    
-    var itemIdVal = null, nomEq = "Equipo dado de baja", catEq = "", marEq = "", modEq = "", serEq = "";
-    if (selEl && selEl.value) {
-      var si = INV.find(function (i) { return String(i.id) === selEl.value; });
-      if (si) {
-        if (cnt > si.cantidad_stock) return toast('Cantidad supera el stock actual (' + si.cantidad_stock + ')', false);
-        itemIdVal = String(si.id); nomEq = si.nombre; catEq = si.categoria; marEq = si.marca; modEq = si.modelo; serEq = si.serial;
-      }
-    } else {
-      nomEq = ge('bj-hn').value.trim() || 'Activo no inventariado';
-    }
-
-    var payload = {
-      itemId: itemIdVal, nombre: nomEq, categoria: catEq, marca: marEq, modelo: modEq, serial: serEq,
-      cantidad: cnt, motivo: ge('bj-m').value, disposicion: ge('bj-dp').value, entidad: ge('bj-ent').value.trim(),
-      responsNombre: rn, responsCargo: ge('bj-rc').value.trim(), area: ge('bj-ra').value, observaciones: ge('bj-ob').value.trim(), firma: firmaBj,
-      config: { hostname: ge('bj-hn').value.trim(), disco: ge('bj-dk').value.trim(), ram: ge('bj-rm').value.trim(), cpu: ge('bj-cp').value.trim(), impresora: ge('bj-ip').value.trim(), jefe: ge('bj-ji').value.trim(), ext: ge('bj-ex').value.trim(), email: ge('bj-em').value.trim(), software: sw, fechaBaja: fechaHoraActual() },
-    };
-
     try {
+      var selEl = wrap.querySelector('#bj-s');
+      var rn = wrap.querySelector('#bj-rn').value.trim(); 
+      if (!rn) return toast('El nombre del responsable es obligatorio', false);
+      
+      var firmaBj = spBj.getImg();
+      if (!firmaBj) return toast('La firma del responsable es obligatoria', false);
+      
+      var cnt = parseInt(wrap.querySelector('#bj-q').value) || 1;
+      var sw = []; wrap.querySelectorAll('#bj-sw input:checked').forEach(function (cb) { sw.push(cb.value); });
+      
+      var itemIdVal = null, nomEq = "Equipo dado de baja", catEq = "", marEq = "", modEq = "", serEq = "";
+      if (selEl && selEl.value) {
+        var si = INV.find(function (i) { return String(i.id) === selEl.value; });
+        if (si) {
+          if (cnt > si.cantidad_stock) return toast('Cantidad supera el stock actual (' + si.cantidad_stock + ')', false);
+          itemIdVal = String(si.id); nomEq = si.nombre; catEq = si.categoria; marEq = si.marca; modEq = si.modelo; serEq = si.serial;
+        }
+      } else {
+        nomEq = wrap.querySelector('#bj-hn').value.trim() || 'Activo no inventariado';
+      }
+
+      var payload = {
+        itemId: itemIdVal, nombre: nomEq, categoria: catEq, marca: marEq, modelo: modEq, serial: serEq,
+        cantidad: cnt, motivo: wrap.querySelector('#bj-m').value, disposicion: wrap.querySelector('#bj-dp').value, entidad: wrap.querySelector('#bj-ent').value.trim(),
+        responsNombre: rn, responsCargo: wrap.querySelector('#bj-rc').value.trim(), area: wrap.querySelector('#bj-ra').value, observaciones: wrap.querySelector('#bj-ob').value.trim(), firma: firmaBj,
+        config: { hostname: wrap.querySelector('#bj-hn').value.trim(), disco: wrap.querySelector('#bj-dk').value.trim(), ram: wrap.querySelector('#bj-rm').value.trim(), cpu: wrap.querySelector('#bj-cp').value.trim(), impresora: wrap.querySelector('#bj-ip').value.trim(), jefe: wrap.querySelector('#bj-ji').value.trim(), ext: wrap.querySelector('#bj-ex').value.trim(), email: wrap.querySelector('#bj-em').value.trim(), software: sw, fechaBaja: fechaHoraActual() },
+      };
+
       var r = await apiPost(API_BAJ, payload);
       toast('Baja registrada: ' + r.codigo + ' ✓');
       printActaBaja(r);
       await cargarTodo('baja');
-    } catch (e) { toast(e.message, false); }
+    } catch (e) {
+      toast(e.message, false);
+      console.error(e);
+    }
   };
   ff.appendChild(bCa); ff.appendChild(bSv); wrap.appendChild(ff);
 
-  ge('bj-s').onchange = function () {
-    var inf = ge('bj-inf');
-    var m = INV.find(function (i) { return String(i.id) === ge('bj-s').value; });
-    if (m) { inf.style.display = 'block'; inf.innerHTML = '<div class="g4"><div><span class="lbl-field" style="display:block">Categoría</span><b>' + esc(m.categoria || '') + '</b></div><div><span class="lbl-field" style="display:block">Marca</span><b>' + esc(m.marca || '') + '</b></div><div><span class="lbl-field" style="display:block">Modelo</span><b>' + esc(m.modelo || '') + '</b></div><div><span class="lbl-field" style="display:block">Stock actual</span><b style="color:var(--accent)">' + m.cantidad_stock + '</b></div></div>'; ge('bj-hn').value = m.nombre; }
-    else { inf.style.display = 'none'; }
-  };
-  var tw2 = parent.querySelector('.table-panel'); parent.insertBefore(wrap, tw2);
+  var tw2 = parent.querySelector('.table-panel'); 
+  parent.insertBefore(wrap, tw2);
+
+  var bsSelect = wrap.querySelector('#bj-s');
+  if(bsSelect) {
+    bsSelect.addEventListener('change', function () {
+      var inf = wrap.querySelector('#bj-inf');
+      var m = INV.find(function (i) { return String(i.id) === bsSelect.value; });
+      if (m) { 
+        inf.style.display = 'block'; 
+        inf.innerHTML = '<div class="g4"><div><span class="lbl-field" style="display:block">Categoría</span><b>' + esc(m.categoria || '') + '</b></div><div><span class="lbl-field" style="display:block">Marca</span><b>' + esc(m.marca || '') + '</b></div><div><span class="lbl-field" style="display:block">Modelo</span><b>' + esc(m.modelo || '') + '</b></div><div><span class="lbl-field" style="display:block">Stock actual</span><b style="color:var(--accent)">' + m.cantidad_stock + '</b></div></div>'; 
+        wrap.querySelector('#bj-hn').value = m.nombre; 
+      } else { 
+        inf.style.display = 'none'; 
+      }
+    });
+  }
 }
 
 // ---------------------------------------------------------------
