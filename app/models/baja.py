@@ -1,16 +1,18 @@
 from datetime import datetime
 from typing import Optional, Dict, Any
-from sqlmodel import SQLModel, Field, Column, JSON
+from sqlmodel import Field, Column, JSON
+from sqlalchemy import TIMESTAMP
 
 from app.models.base import BaseModel
-
 
 class Baja(BaseModel, table=True):
     __tablename__ = "gh_bajas"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
     codigo: str = Field(index=True)
-    fecha: Optional[str] = Field(default="")  # Permite texto sin romper registros antiguos
+    
+    # Campo fecha estrictamente como TIMESTAMP para PostgreSQL
+    fecha: datetime = Field(sa_column=Column(TIMESTAMP(timezone=False), nullable=False))
+    
     item_id: Optional[str] = None
     nombre: str
     categoria: Optional[str] = ""
