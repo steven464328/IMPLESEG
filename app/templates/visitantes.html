@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Visitantes · IMPLESEG ERP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0b1121;
+      --card-bg: rgba(30, 41, 59, 0.75);
+      --accent: #10b981;
+      --accent-hover: #059669;
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+      --border: rgba(255, 255, 255, 0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+    /* Dynamic Background Canvas */
+    #bg-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .app-shell {
+      display: flex;
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 270px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    .main-content {
+      flex: 1;
+      padding: 35px;
+      overflow-y: auto;
+    }
+    .gh-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      margin-bottom: 25px;
+    }
+    .grid-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+    .lbl-field {
+      display: flex;
+      flex-direction: column;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dim);
+      gap: 6px;
+    }
+    .lbl-field input, .lbl-field select {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .lbl-field input:focus { border-color: var(--accent); }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .data-table th, .data-table td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .data-table th { background: rgba(15, 23, 42, 0.5); color: var(--text-dim); }
+    .badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-in { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+    .badge-out { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div style="background: linear-gradient(145deg, #0f6c2f, #0a4f21); padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 25px; border: 1px solid #16a34a; cursor: pointer;" onclick="window.location.href='/'">
+        <div style="font-family: 'Arial Black', sans-serif; font-size: 24px; color: #f97316;">impleseg</div>
+        <div style="font-size: 10px; font-weight: 800; color: #86efac; letter-spacing: 1.5px;">SEGURIDAD INDUSTRIAL</div>
+      </div>
+      <nav style="display:flex; flex-direction:column; gap:10px;">
+        <button class="btn-primary" onclick="window.location.href='/'" style="background:transparent; border:1px solid var(--border); text-align:left;">🏠 Inicio ERP</button>
+        <button class="btn-primary" onclick="window.location.href='/logout'" style="background:transparent; border:1px solid #ef4444; color:#ef4444; text-align:left;">🚪 Cerrar Sesión</button>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <h2 style="margin-bottom: 20px;">📋 Control y Registro de Visitantes</h2>
+
+      <!-- Formulario de Ingreso -->
+      <div class="gh-card">
+        <h3 style="margin-bottom: 15px; color: var(--accent);">📥 Registrar Nuevo Ingreso</h3>
+        <form id="form-visitante" class="grid-form">
+          <label class="lbl-field">Cédula / Documento *<input type="text" id="v-cedula" required></label>
+          <label class="lbl-field">Nombre Completo *<input type="text" id="v-nombre" required></label>
+          <label class="lbl-field">Empresa<input type="text" id="v-empresa"></label>
+          <label class="lbl-field">Correo Electrónico<input type="email" id="v-correo"></label>
+          <label class="lbl-field">Área a Visitar<input type="text" id="v-area"></label>
+          <label class="lbl-field">Motivo Visita<input type="text" id="v-motivo"></label>
+          <label class="lbl-field">Persona que Recibe<input type="text" id="v-recibe"></label>
+          <label class="lbl-field">ARL<input type="text" id="v-arl" placeholder="Ej: SURA"></label>
+          <label class="lbl-field">Teléfono Contacto<input type="text" id="v-contacto"></label>
+          <div style="grid-column: 1 / -1; margin-top: 10px;">
+            <button type="submit" class="btn-primary">✅ Guardar e Ingresar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tabla de Visitantes -->
+      <div class="gh-card">
+        <h3>🔍 Historial y Visitantes Activos</h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Visitante</th>
+              <th>Documento</th>
+              <th>Empresa</th>
+              <th>Área / Recibe</th>
+              <th>Entrada</th>
+              <th>Salida</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="tb-visitantes">
+            <tr><td colspan="8">Cargando visitantes...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Fondo Animado Dinámico
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height, particles = [];
+
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    for (let i = 0; i < 40; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        radius: Math.random() * 2 + 1
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.3)';
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > width) p.vx *= -1;
+        if (p.y < 0 || p.y > height) p.vy *= -1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // Lógica de API
+    async function cargarVisitantes() {
+      const res = await fetch('/api/visitantes');
+      const data = await res.json();
+      const tbody = document.getElementById('tb-visitantes');
+      tbody.innerHTML = data.map(v => `
+        <tr>
+          <td><b>${v.nombre}</b></td>
+          <td>${v.cedula}</td>
+          <td>${v.empresa || '-'}</td>
+          <td>${v.area} (${v.persona_recibe || '-'})</td>
+          <td>${v.hora_entrada ? new Date(v.hora_entrada).toLocaleString() : '-'}</td>
+          <td>${v.hora_salida ? new Date(v.hora_salida).toLocaleString() : '-'}</td>
+          <td><span class="badge ${v.estado === 'DENTRO' ? 'badge-in' : 'badge-out'}">${v.estado}</span></td>
+          <td>
+            ${v.estado === 'DENTRO' ? `<button onclick="marcarSalida(${v.id})" class="btn-primary" style="padding:4px 8px; font-size:11px; background:#ef4444;">🚪 Salida</button>` : '-'}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('form-visitante').onsubmit = async (e) => {
+      e.preventDefault();
+      const payload = {
+        cedula: document.getElementById('v-cedula').value,
+        nombre: document.getElementById('v-nombre').value,
+        empresa: document.getElementById('v-empresa').value,
+        correo: document.getElementById('v-correo').value,
+        area: document.getElementById('v-area').value,
+        motivo: document.getElementById('v-motivo').value,
+        persona_recibe: document.getElementById('v-recibe').value,
+        arl: document.getElementById('v-arl').value,
+        contacto: document.getElementById('v-contacto').value
+      };
+      await fetch('/api/visitantes', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      document.getElementById('form-visitante').reset();
+      cargarVisitantes();
+    };
+
+    async function marcarSalida(id) {
+      await fetch(`/api/visitantes/${id}/salida`, { method: 'PUT' });
+      cargarVisitantes();
+    }
+
+    cargarVisitantes();
+  </script>
+</body>
+</html>
