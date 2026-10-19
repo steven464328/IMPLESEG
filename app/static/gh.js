@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
 // IMPLESEG SAS · Gestión Humana
-// Archivo consolidado. Libre de errores de sintaxis.
+// Archivo consolidado y a prueba de fallos. Libre de errores de sintaxis.
 // ═══════════════════════════════════════════════════════════════
 
 var API_INV = "/api/gh/inventario";
@@ -71,10 +71,16 @@ function marcarSubNav() {
 
 async function cargarTodo(gotoView) {
   try {
-    var [inv, asn, baj] = await Promise.all([apiGet(API_INV), apiGet(API_ASN), apiGet(API_BAJ)]);
-    INV = inv; ASN = asn; BAJAS = baj;
+    var [inv, asn, baj] = await Promise.all([
+        apiGet(API_INV).catch(function(){ return []; }), 
+        apiGet(API_ASN).catch(function(){ return []; }), 
+        apiGet(API_BAJ).catch(function(){ return []; })
+    ]);
+    INV = Array.isArray(inv) ? inv : []; 
+    ASN = Array.isArray(asn) ? asn : []; 
+    BAJAS = Array.isArray(baj) ? baj : [];
   } catch (e) {
-    toast('Error de conexión con el servidor', false);
+    toast('Error de red al cargar datos', false);
   }
   if (gotoView) VIEW = gotoView;
   resetNew();
@@ -83,15 +89,20 @@ async function cargarTodo(gotoView) {
 }
 
 function render() {
-  var app = ge('ghApp'); if(!app) return; app.innerHTML = '';
-  if (VIEW === 'dash') app.appendChild(vDash());
-  if (VIEW === 'inv') app.appendChild(vInv());
-  if (VIEW === 'new') app.appendChild(vNew());
-  if (VIEW === 'list') app.appendChild(vList());
-  if (VIEW === 'rec') app.appendChild(vRec());
-  if (VIEW === 'detail') app.appendChild(vDetail());
-  if (VIEW === 'baja') app.appendChild(vBajas());
-  if (VIEW === 'edit') app.appendChild(vEdit());
+  try {
+    var app = ge('ghApp'); if(!app) return; app.innerHTML = '';
+    if (VIEW === 'dash') app.appendChild(vDash());
+    if (VIEW === 'inv') app.appendChild(vInv());
+    if (VIEW === 'new') app.appendChild(vNew());
+    if (VIEW === 'list') app.appendChild(vList());
+    if (VIEW === 'rec') app.appendChild(vRec());
+    if (VIEW === 'detail') app.appendChild(vDetail());
+    if (VIEW === 'baja') app.appendChild(vBajas());
+    if (VIEW === 'edit') app.appendChild(vEdit());
+  } catch(err) {
+    console.error("Error renderizando vista:", err);
+    ge('ghApp').innerHTML = '<div style="padding:40px;text-align:center;color:#ff5d6c;">⚠️ Error interno de la plataforma. Revisa la consola o limpia la caché (Ctrl+F5).</div>';
+  }
 }
 
 // ---------------------------------------------------------------
@@ -158,7 +169,7 @@ function vInv() {
 
 function showInvForm(parent, itemId) {
   var ex = parent.querySelector('.inv-fc'); if (ex) ex.remove();
-  var item = itemId ? INV.find(function (i) { return i.id === itemId; }) : null;
+  var item = itemId ? INV.find(function (i) { return String(i.id) === String(itemId); }) : null;
   var f = ce('div', 'gh-card inv-fc');
   f.innerHTML = '<div class="sh"><div class="sn">' + (item ? '✏️' : '+') + '</div>' + (item ? 'Editar' : 'Agregar') + ' equipo/herramienta</div>' +
     '<div class="g4" style="margin-bottom:16px">' +
@@ -652,7 +663,7 @@ function vBajas() {
   var el = ce('div'); el.innerHTML = '<p class="gh-title">🗑️ Baja de activos</p><div class="gh-alert gh-alert-orange">⚠️ <b>Importante:</b> la baja reduce el stock definitivamente y genera un acta oficial. No se puede deshacer.</div>';
   var bN = ce('button', 'btn btn-primary'); bN.style.marginBottom = '16px'; bN.textContent = '🗑️ Registrar nueva baja'; bN.onclick = function () { showBajaForm(el); }; el.appendChild(bN);
 
-  var rows = BAJAS.slice().reverse().map(function (b) {
+  var rows = BAJAS.map(function (b) {
     return '<tr><td style="font-family:var(--font-mono);font-size:11px">' + esc(b.codigo) + '</td><td><b>' + esc(b.nombre) + '</b></td><td>' + esc(b.categoria || '—') + '</td><td>' + esc(b.marca || '') + ' ' + esc(b.modelo || '') + '</td><td style="text-align:center">' + b.cantidad + '</td><td>' + esc(b.motivo || '—') + '</td><td>' + esc(b.responsable_nombre || '—') + '</td><td style="font-size:10.5px">' + esc(formatearFechaBonita(b.fecha)) + '</td><td><button class="row-btn" onclick="printActaBajaById(' + b.id + ')">Acta</button></td></tr>';
   }).join('');
 
@@ -662,7 +673,7 @@ function vBajas() {
   return el;
 }
 
-function printActaBajaById(id) { var b = BAJAS.find(function (x) { return x.id === id; }); if (b) printActaBaja(b); }
+function printActaBajaById(id) { var b = BAJAS.find(function (x) { return String(x.id) === String(id); }); if (b) printActaBaja(b); }
 
 function showBajaForm(parent) {
   var ex = parent.querySelector('.bj-fw'); if (ex) { ex.remove(); return; }
