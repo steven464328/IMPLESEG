@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
 // IMPLESEG SAS · Gestión Humana
-// Archivo BLINDADO. Incluye campos Identificación y Proceso en Bajas.
+// Archivo BLINDADO. Búsqueda inteligente por nombre, serial o marca.
 // ═══════════════════════════════════════════════════════════════
 
 var API_INV = "/api/gh/inventario";
@@ -301,16 +301,21 @@ function renderItems(cont, onChange) {
     }
     box.appendChild(hdr);
 
-    var invOptions = '<option value="">-- Vincular desde inventario (opcional) --</option>';
+    // NUEVO: Implementación de Datalist (Búsqueda Inteligente)
+    var dlId = 'dl-inv-' + Math.random().toString(36).substr(2, 9);
+    var invOptions = '';
+    var invMap = {}; // Mapa para recuperar los datos exactos del equipo
+    
     (INV || []).forEach(function (inv) {
       if(!inv) return;
-      var key = inv.nombre + '|||' + (inv.serial || '');
-      var sel = (inv.nombre === it.herramienta && (inv.serial || '') === (it.serialOriginal || '')) ? ' selected' : '';
       var stxt = inv.cantidad_stock > 0 ? 'Stock: ' + inv.cantidad_stock : '⚠ Sin stock';
-      invOptions += '<option value="' + esc(key) + '"' + sel + '>' + esc(inv.nombre) + ' · ' + esc(inv.marca || '') + ' ' + esc(inv.modelo || '') + ' [S/N: ' + esc(inv.serial || 'N/A') + '] — ' + stxt + '</option>';
+      var textStr = esc(inv.nombre) + ' · ' + esc(inv.marca || '') + ' ' + esc(inv.modelo || '') + ' [S/N: ' + esc(inv.serial || 'N/A') + '] — ' + stxt;
+      invOptions += '<option value="' + textStr + '">';
+      invMap[textStr] = inv;
     });
+    
     var selWrap = ce('div'); selWrap.style.marginBottom = '12px';
-    selWrap.innerHTML = '<label class="lbl-field">🔗 Vincular desde inventario<select class="sel-i">' + invOptions + '</select></label>';
+    selWrap.innerHTML = '<label class="lbl-field">🔎 Buscar en inventario (Nombre, Serial o Marca)<input class="sel-i" list="' + dlId + '" placeholder="Escribe para buscar o filtrar equipos..." autocomplete="off"><datalist id="' + dlId + '">' + invOptions + '</datalist></label>';
     box.appendChild(selWrap);
 
     var obsVal = it.observaciones !== undefined ? it.observaciones : (it.obs || '');
@@ -325,11 +330,16 @@ function renderItems(cont, onChange) {
       '<label class="lbl-field span-2">Observaciones / Novedades<input type="text" class="i-ob" value="' + esc(obsVal) + '" placeholder="Observaciones de este equipo..."></label>';
     box.appendChild(grid);
 
-    box.querySelector('.sel-i').onchange = function (ev) {
-      var pts = ev.target.value.split('|||'), n = pts[0], s = pts[1] || ''; if (!n) return;
-      var m = INV.find(function (i) { return i.nombre === n && (i.serial || '') === s; });
-      if (m) { box.querySelector('.i-hr').value = m.nombre; box.querySelector('.i-mr').value = (m.marca || '') + ' / ' + (m.modelo || '') + ' / S/N: ' + (m.serial || 'N/A'); if (onChange) onChange(); }
+    // Evento para el buscador inteligente
+    box.querySelector('.sel-i').oninput = function (ev) {
+      var m = invMap[ev.target.value];
+      if (m) { 
+        box.querySelector('.i-hr').value = m.nombre; 
+        box.querySelector('.i-mr').value = (m.marca || '') + ' / ' + (m.modelo || '') + ' / S/N: ' + (m.serial || 'N/A'); 
+        if (onChange) onChange(); 
+      }
     };
+    
     if (onChange) {
       box.querySelector('.i-hr').onchange = onChange;
       box.querySelector('.i-mr').oninput = onChange;
@@ -695,13 +705,20 @@ function showBajaForm(parent) {
   var ex = parent.querySelector('.bj-fw'); if (ex) { ex.remove(); return; }
   var wrap = ce('div', 'bj-fw'); wrap.style.marginBottom = '20px';
 
-  var c1 = ce('div', 'gh-card');
-  var sh = '<option value="">-- Selecciona un equipo disponible --</option>';
+  // NUEVO: Implementación de Datalist para el módulo de Bajas
+  var dlId = 'dl-baj-' + Math.random().toString(36).substr(2, 9);
+  var sh = '';
+  var bajMap = {}; // Mapa para recuperar los datos exactos del equipo
+  
   (INV || []).forEach(function (inv) { 
     if(!inv) return;
-    sh += '<option value="' + inv.id + '">' + esc(inv.nombre) + ' | ' + esc(inv.marca || '') + ' ' + esc(inv.modelo || '') + ' [S/N: ' + esc(inv.serial || 'N/A') + '] — Stock: ' + inv.cantidad_stock + '</option>'; 
+    var textStr = esc(inv.nombre) + ' | ' + esc(inv.marca || '') + ' ' + esc(inv.modelo || '') + ' [S/N: ' + esc(inv.serial || 'N/A') + '] — Stock: ' + inv.cantidad_stock;
+    sh += '<option value="' + textStr + '">'; 
+    bajMap[textStr] = inv;
   });
-  c1.innerHTML = '<div class="sh"><div class="sn">1</div>Equipo a dar de baja</div><label class="lbl-field">Seleccionar equipo *<select id="bj-s">' + sh + '</select></label><div id="bj-inf" style="display:none;margin:12px 0"></div><div class="g2"><label class="lbl-field">Cantidad a dar de baja *<input type="number" id="bj-q" value="1" min="1"></label><label class="lbl-field">Fecha de baja *<input type="text" id="bj-f" value="' + fechaHoraActual() + '" readonly></label></div>';
+
+  var c1 = ce('div', 'gh-card');
+  c1.innerHTML = '<div class="sh"><div class="sn">1</div>Equipo a dar de baja</div><label class="lbl-field">🔎 Buscar equipo (Nombre, Serial o Marca) *<input id="bj-s" list="' + dlId + '" placeholder="Escribe para buscar o filtrar equipos..." autocomplete="off"><datalist id="' + dlId + '">' + sh + '</datalist></label><div id="bj-inf" style="display:none;margin:12px 0"></div><div class="g2"><label class="lbl-field">Cantidad a dar de baja *<input type="number" id="bj-q" value="1" min="1"></label><label class="lbl-field">Fecha de baja *<input type="text" id="bj-f" value="' + fechaHoraActual() + '" readonly></label></div>';
   wrap.appendChild(c1);
 
   var c2 = ce('div', 'gh-card');
@@ -729,7 +746,7 @@ function showBajaForm(parent) {
   
   bSv.onclick = async function () {
     try {
-      var selEl = wrap.querySelector('#bj-s');
+      var selElVal = wrap.querySelector('#bj-s').value;
       var rn = wrap.querySelector('#bj-rn').value.trim(); 
       if (!rn) return toast('El nombre del responsable es obligatorio', false);
       
@@ -740,11 +757,14 @@ function showBajaForm(parent) {
       var sw = []; wrap.querySelectorAll('#bj-sw input:checked').forEach(function (cb) { sw.push(cb.value); });
       
       var itemIdVal = null, nomEq = "Equipo dado de baja", catEq = "", marEq = "", modEq = "", serEq = "";
-      if (selEl && selEl.value) {
-        var si = INV.find(function (i) { return String(i.id) === selEl.value; });
+      
+      if (selElVal) {
+        var si = bajMap[selElVal];
         if (si) {
           if (cnt > si.cantidad_stock) return toast('Cantidad supera el stock actual (' + si.cantidad_stock + ')', false);
           itemIdVal = String(si.id); nomEq = si.nombre; catEq = si.categoria; marEq = si.marca; modEq = si.modelo; serEq = si.serial;
+        } else {
+          nomEq = wrap.querySelector('#bj-hn').value.trim() || selElVal; // Usa lo escrito si no está en lista
         }
       } else {
         nomEq = wrap.querySelector('#bj-hn').value.trim() || 'Activo no inventariado';
@@ -788,11 +808,12 @@ function showBajaForm(parent) {
   var tw2 = parent.querySelector('.table-panel'); 
   parent.insertBefore(wrap, tw2);
 
+  // Evento autocompletar info al buscar en Bajas
   var bsSelect = wrap.querySelector('#bj-s');
   if(bsSelect) {
-    bsSelect.addEventListener('change', function () {
+    bsSelect.addEventListener('input', function () {
       var inf = wrap.querySelector('#bj-inf');
-      var m = INV.find(function (i) { return String(i.id) === bsSelect.value; });
+      var m = bajMap[bsSelect.value];
       if (m) { 
         inf.style.display = 'block'; 
         inf.innerHTML = '<div class="g4"><div><span class="lbl-field" style="display:block">Categoría</span><b>' + esc(m.categoria || '') + '</b></div><div><span class="lbl-field" style="display:block">Marca</span><b>' + esc(m.marca || '') + '</b></div><div><span class="lbl-field" style="display:block">Modelo</span><b>' + esc(m.modelo || '') + '</b></div><div><span class="lbl-field" style="display:block">Stock actual</span><b style="color:var(--accent)">' + m.cantidad_stock + '</b></div></div>'; 
