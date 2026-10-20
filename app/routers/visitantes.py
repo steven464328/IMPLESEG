@@ -19,6 +19,7 @@ class VisitantePayload(BaseModel):
     arl: Optional[str] = ""
     contacto: Optional[str] = ""
 
+# Payload exacto para la importación desde Excel
 class VisitanteImportPayload(BaseModel):
     nombre: str
     cedula: str
@@ -34,16 +35,6 @@ class VisitanteImportPayload(BaseModel):
 
 @router.get("")
 def listar_visitantes(session: Session = Depends(get_session)):
-    # CIERRE AUTOMÁTICO NOCTURNO (9:00 PM)
-    query_cierre = text("""
-        UPDATE registro_visitantes 
-        SET estado = 'SALIDA AUTO', hora_salida = CURRENT_TIMESTAMP
-        WHERE estado = 'DENTRO' 
-        AND (EXTRACT(HOUR FROM CURRENT_TIMESTAMP) >= 21 OR DATE(hora_entrada) < CURRENT_DATE);
-    """)
-    session.execute(query_cierre)
-    session.commit()
-
     query = text("SELECT * FROM registro_visitantes ORDER BY id DESC")
     result = session.execute(query).mappings().all()
     return [dict(r) for r in result]
@@ -123,9 +114,10 @@ def registrar_salida_manual(visitante_id: int, session: Session = Depends(get_se
 def importar_historico(visitantes: List[VisitanteImportPayload], session: Session = Depends(get_session)):
     try:
         for v in visitantes:
-            # Identificar si ya salió basado en si tiene hora de salida
+            # Identificar estado basado en si tiene hora de salida en el Excel
             estado = "SALIO" if v.hora_salida and v.hora_salida.strip() != "" else "DENTRO"
             
+            # Castear con cuidado las fechas ya arregladas desde el JavaScript
             query = text("""
                 INSERT INTO registro_visitantes (
                     nombre, cedula, empresa, correo, area, motivo,

@@ -8,7 +8,9 @@
   <style>
     :root {
       --orange-main: #f97316;
+      --orange-dark: #ea580c;
       --green-main: #10b981;
+      --green-dark: #059669;
       --bg-dark: #0f1c23;
       --card-bg: rgba(18, 30, 40, 0.75);
       --border-card: rgba(255, 255, 255, 0.08);
@@ -29,7 +31,7 @@
       position: relative;
     }
 
-    /* FONDO RELAJANTE CORPORATIVO + CANVAS SEGURO */
+    /* FONDO CORPORATIVO Y CANVAS */
     .bg-gradient {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -45,7 +47,7 @@
       filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.6));
     }
 
-    /* HEADER SUPERIOR */
+    /* HEADER */
     header {
       width: 100%; max-width: 1200px;
       padding: 25px 30px;
@@ -75,7 +77,7 @@
 
     main { width: 100%; max-width: 1100px; z-index: 10; padding: 10px 20px; display: flex; flex-direction: column; align-items: center; }
 
-    /* PASTILLA "SISTEMA ACTIVO" */
+    /* PASTILLA ESTADO */
     .status-pill {
       display: flex; align-items: center; justify-content: center; gap: 10px;
       background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.5);
@@ -86,7 +88,7 @@
     .status-dot { width: 10px; height: 10px; background: #10b981; border-radius: 50%; box-shadow: 0 0 12px #10b981; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.7); } }
 
-    /* TARJETAS DE INGRESO Y SALIDA */
+    /* TARJETAS INGRESO Y SALIDA */
     .kiosk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; width: 100%; max-width: 940px;}
     .kiosk-card {
       background: var(--card-bg); backdrop-filter: blur(15px);
@@ -111,7 +113,7 @@
     .card-salida h2 { color: var(--green-main); }
     .kiosk-card p { font-size: 13.5px; color: #cbd5e1; line-height: 1.5; }
 
-    /* FORMULARIOS CRISTALINOS */
+    /* FORMULARIOS */
     .form-panel {
       display: none; width: 100%; max-width: 840px;
       background: var(--card-bg); backdrop-filter: blur(25px);
@@ -146,9 +148,7 @@
     .btn-salida { background: linear-gradient(135deg, var(--green-main), var(--green-dark)); }
     .btn-action-submit:hover { filter: brightness(1.15); transform: translateY(-2px); }
 
-    /* =========================================
-       DASHBOARD ADMINISTRADOR / EXPORTAR / IMPORTAR
-       ========================================= */
+    /* DASHBOARD ADMINISTRADOR */
     .admin-trigger {
       position: fixed; bottom: 20px; right: 20px; font-size: 13px; font-weight: bold;
       color: #f97316; cursor: pointer; z-index: 100; background: rgba(0,0,0,0.5); padding: 8px 15px; border-radius: 8px; border: 1px solid #ea580c;
@@ -239,41 +239,15 @@
           </div>
           <div class="field-group">
             <label>area *</label>
-            <select id="in-area" required>
-              <option value="">-- Seleccione el área --</option>
-              <option>Sistemas / IT</option>
-              <option>Gestión Humana</option>
-              <option>Gerencia General</option>
-              <option>SST / Seguridad Industrial</option>
-              <option>Compras y Comercial</option>
-              <option>Contabilidad y Finanzas</option>
-              <option>Planta y Producción</option>
-            </select>
+            <input type="text" id="in-area" placeholder="Ej. Sistemas / IT" required>
           </div>
           <div class="field-group">
             <label>Motivo *</label>
-            <select id="in-motivo" required>
-              <option value="">-- Seleccione el motivo --</option>
-              <option>Reunión de Trabajo</option>
-              <option>Mantenimiento / Soporte</option>
-              <option>Entrevista de Trabajo</option>
-              <option>Entrega de Proveedores</option>
-              <option>Auditoría / Inspección</option>
-              <option>Otro</option>
-            </select>
+            <input type="text" id="in-motivo" placeholder="Ej. Reunión de Trabajo" required>
           </div>
           <div class="field-group">
             <label>arl *</label>
-            <select id="in-arl" required>
-              <option value="">-- Seleccione su ARL --</option>
-              <option>SURA</option>
-              <option>COLMENA</option>
-              <option>POSITIVA</option>
-              <option>AXA COLPATRIA</option>
-              <option>BOLÍVAR</option>
-              <option>LIBERTY</option>
-              <option>OTRA</option>
-            </select>
+            <input type="text" id="in-arl" placeholder="Ej. SURA" required>
           </div>
           <div class="field-group">
             <label>contacto *</label>
@@ -329,7 +303,6 @@
       <table class="admin-table">
         <thead style="position: sticky; top: 0; z-index: 10;">
           <tr>
-            <!-- ENCABEZADOS EXACTOS SOLICITADOS -->
             <th>Nombre</th>
             <th>cedula</th>
             <th>Empresa</th>
@@ -355,7 +328,7 @@
   </footer>
 
   <script>
-    // RELOJ EN TIEMPO REAL
+    // RELOJ
     function updateClock() {
       const now = new Date();
       document.getElementById('clock-time').textContent = now.toLocaleTimeString('es-CO');
@@ -382,7 +355,7 @@
       document.getElementById('badge-auto').style.display = 'none';
     }
 
-    // AUTO-COMPLETADO MÁGICO
+    // AUTO-COMPLETADO
     document.getElementById('in-cedula').addEventListener('blur', async (e) => {
       const ced = e.target.value.trim();
       if(ced.length >= 5) {
@@ -417,7 +390,7 @@
       };
       const res = await fetch('/api/visitantes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if(res.ok) {
-        alert('✅ Ingreso registrado exitosamente. Bienvenida(o) a IMPLESEG.');
+        alert('✅ Ingreso registrado exitosamente.');
         document.getElementById('form-ingreso-data').reset();
         volverMenu();
       }
@@ -430,7 +403,7 @@
       const res = await fetch(`/api/visitantes/salida-cedula/${cedula}`, { method: 'PUT' });
       const data = await res.json();
       if(res.ok && data.status === 'ok') {
-        alert('✅ Salida registrada exitosamente. ¡Gracias por visitarnos!');
+        alert('✅ Salida registrada exitosamente.');
         document.getElementById('form-salida-data').reset();
         volverMenu();
       } else {
@@ -438,24 +411,16 @@
       }
     };
 
-    // =========================================================================
-    // LÓGICA DASHBOARD, EXPORTACIÓN E IMPORTACIÓN CSV
-    // =========================================================================
+    // DASHBOARD E IMPORTACIÓN (CORREGIDO PARA COLOMBIA Y EXCEL)
     let globalData = [];
-
-    async function abrirAdmin() {
-      document.getElementById('admin-panel').style.display = 'block';
-      cargarAdmin();
-    }
+    async function abrirAdmin() { document.getElementById('admin-panel').style.display = 'block'; cargarAdmin(); }
     function cerrarAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
     
     async function cargarAdmin() {
       const res = await fetch('/api/visitantes');
       globalData = await res.json();
-      
       const hoy = new Date().toLocaleDateString();
-      let adentro = 0;
-      let visitasHoy = 0;
+      let adentro = 0, visitasHoy = 0;
 
       const filas = globalData.map(v => {
         const dEntrada = new Date(v.hora_entrada);
@@ -477,58 +442,70 @@
         </tr>`;
       }).join('');
 
-      document.getElementById('tb-admin-visitantes').innerHTML = filas || '<tr><td colspan="11">No hay registros en la base de datos.</td></tr>';
+      document.getElementById('tb-admin-visitantes').innerHTML = filas || '<tr><td colspan="11">No hay registros</td></tr>';
       document.getElementById('kpi-adentro').innerText = adentro;
       document.getElementById('kpi-hoy').innerText = visitasHoy;
       document.getElementById('kpi-historico').innerText = globalData.length;
     }
 
     function exportarCSV() {
-      if(!globalData.length) return alert("No hay datos para exportar");
-      let csv = 'Nombre,cedula,Empresa,Correo,area,Motivo,Nombre Persona que recibe,arl,contacto,Hora de entrada,Hora de salida\n';
+      if(!globalData.length) return alert("No hay datos");
+      let csv = 'Nombre;cedula;Empresa;Correo;area;Motivo;Nombre Persona que recibe;arl;contacto;Hora de entrada;Hora de salida\n';
       globalData.forEach(r => {
         let row = [
           `"${r.nombre}"`, r.cedula, `"${r.empresa}"`, r.correo, `"${r.area}"`, `"${r.motivo}"`, `"${r.persona_recibe}"`, r.arl, r.contacto, r.hora_entrada.substring(0, 19), r.hora_salida ? r.hora_salida.substring(0, 19) : ''
         ];
-        csv += row.join(',') + '\n';
+        csv += row.join(';') + '\n';
       });
-      
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob(["\ufeff"+csv], { type: 'text/csv;charset=utf-8;' }); // \ufeff para tildes en Excel
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.setAttribute("download", "Historial_Visitantes_IMPLESEG.csv");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      link.setAttribute("download", "Historial_Visitantes.csv");
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+
+    // FORMATEAR FECHAS DE EXCEL PARA LA BASE DE DATOS (DD/MM/YYYY -> YYYY-MM-DD)
+    function limpiarFecha(fechaStr) {
+      if (!fechaStr) return "";
+      fechaStr = fechaStr.replace(/"/g, '').trim();
+      const match = fechaStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}:\d{2}(:\d{2})?)/);
+      if (match) {
+        return `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')} ${match[4]}`;
+      }
+      return fechaStr; 
     }
 
     function importarCSV() {
       const fileInput = document.getElementById('file-csv');
       const file = fileInput.files[0];
-      if(!file) return alert('Por favor, selecciona un archivo .csv primero.');
+      if(!file) return alert('Selecciona un archivo CSV.');
       
       const reader = new FileReader();
       reader.onload = async function(e) {
         const text = e.target.result;
+        // Detecta si Excel guardó con punto y coma (;) o coma (,)
+        const sep = text.indexOf(';') > -1 ? ';' : ',';
         const rows = text.split('\n');
         const data = [];
         
         for(let i = 1; i < rows.length; i++) {
-          if(rows[i].trim() === '') continue;
-          const cols = rows[i].split(',');
+          const rowStr = rows[i].replace(/\r/g, '').trim();
+          if(rowStr === '') continue;
+          
+          const cols = rowStr.split(sep);
           if(cols.length >= 10) {
             data.push({
-              nombre: cols[0].replace(/"/g, '').trim(),
-              cedula: cols[1].replace(/"/g, '').trim(),
-              empresa: cols[2].replace(/"/g, '').trim(),
-              correo: cols[3].replace(/"/g, '').trim(),
-              area: cols[4].replace(/"/g, '').trim(),
-              motivo: cols[5].replace(/"/g, '').trim(),
-              persona_recibe: cols[6].replace(/"/g, '').trim(),
-              arl: cols[7].replace(/"/g, '').trim(),
-              contacto: cols[8].replace(/"/g, '').trim(),
-              hora_entrada: cols[9].replace(/"/g, '').trim(),
-              hora_salida: cols[10] ? cols[10].replace(/"/g, '').replace('\r','').trim() : ""
+              nombre: cols[0] ? cols[0].replace(/"/g, '').trim() : "SIN NOMBRE",
+              cedula: cols[1] ? cols[1].replace(/"/g, '').trim() : "0",
+              empresa: cols[2] ? cols[2].replace(/"/g, '').trim() : "-",
+              correo: cols[3] ? cols[3].replace(/"/g, '').trim() : "",
+              area: cols[4] ? cols[4].replace(/"/g, '').trim() : "-",
+              motivo: cols[5] ? cols[5].replace(/"/g, '').trim() : "-",
+              persona_recibe: cols[6] ? cols[6].replace(/"/g, '').trim() : "-",
+              arl: cols[7] ? cols[7].replace(/"/g, '').trim() : "NO APLICA",
+              contacto: cols[8] ? cols[8].replace(/"/g, '').trim() : "0",
+              hora_entrada: limpiarFecha(cols[9]),
+              hora_salida: limpiarFecha(cols[10] || "")
             });
           }
         }
@@ -540,11 +517,12 @@
             body: JSON.stringify(data)
           });
           if(res.ok) {
-            alert('✅ Archivo histórico subido y sincronizado correctamente con la base de datos.');
+            alert('✅ Archivo subido y sincronizado correctamente.');
             fileInput.value = "";
             cargarAdmin();
           } else {
-            alert('❌ Ocurrió un error. Verifica que tu Excel/CSV tenga las 11 columnas exactas solicitadas.');
+            const err = await res.json();
+            alert('❌ Ocurrió un error en la base de datos: ' + err.detail);
           }
         } catch(err) {
           alert('❌ Error de conexión al importar.');
@@ -554,7 +532,7 @@
     }
 
     // =========================================================================
-    // MOTOR DE ANIMACIÓN CANVAS: RÁPIDO, FLUIDO Y CON CASCOS NARANJAS/AMARILLOS
+    // ANIMACIÓN MÁS RÁPIDA, ORGÁNICA Y CON CASCOS INDUSTRIALES
     // =========================================================================
     const canvasObj = document.getElementById('canvas-real-3d');
     const ctx = canvasObj.getContext('2d');
@@ -563,28 +541,31 @@
     function resizeCanvas() { W = canvasObj.width = window.innerWidth; H = canvasObj.height = window.innerHeight; }
     window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
-    // Creación de Cascos de Construcción (Naranja y Amarillo) en formato Imagen SVG incrustada
     const svgCascoAmarillo = new Image(); 
     svgCascoAmarillo.src = "data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23facc15' d='M32 10 c-14 0-22 12-22 24 v6 h44 v-6 c0-12-8-24-22-24z'/%3E%3Cpath fill='%23ca8a04' d='M6 40 h52 v8 H6z'/%3E%3C/svg%3E";
     
     const svgCascoNaranja = new Image(); 
     svgCascoNaranja.src = "data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23f97316' d='M32 10 c-14 0-22 12-22 24 v6 h44 v-6 c0-12-8-24-22-24z'/%3E%3Cpath fill='%23c2410c' d='M6 40 h52 v8 H6z'/%3E%3C/svg%3E";
 
+    // Reemplacé el casco de policía militar por el casco naranja y amarillo real
     const securityItems = ['🧯', svgCascoAmarillo, svgCascoNaranja, '🪓', '🚨', '🧤', '🔥'];
     const floaters = [];
 
-    for (let i = 0; i < 30; i++) {
+    // Incrementé a 35 elementos para que se vea más lleno
+    for (let i = 0; i < 35; i++) {
       const zDepth = Math.random(); 
       floaters.push({
         item: securityItems[Math.floor(Math.random() * securityItems.length)],
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
-        size: 40 + (zDepth * 70),
-        vx: (Math.random() - 0.5) * 2.5, // 🚀 Velocidad horizontal aumentada
-        vy: -2.5 - (zDepth * 4.5),       // 🚀 Velocidad vertical muy aumentada (RÁPIDA)
+        size: 35 + (zDepth * 70),
+        vx: (Math.random() - 0.5) * 1.5,   // Movimiento lateral
+        vy: -1.5 - (zDepth * 3.5),         // VELOCIDAD VERTICAL MÁS RÁPIDA
         rot: Math.random() * Math.PI * 2,
-        vRot: (Math.random() - 0.5) * 0.08, // 🚀 Rotación aumentada
-        opacity: 0.15 + (zDepth * 0.4)
+        vRot: (Math.random() - 0.5) * 0.05, // Rotación natural
+        opacity: 0.2 + (zDepth * 0.4),
+        wobble: Math.random() * Math.PI * 2, // Movimiento orgánico tipo seno
+        wobbleSpeed: 0.01 + Math.random() * 0.02
       });
     }
 
@@ -592,7 +573,12 @@
       ctx.clearRect(0, 0, W, H);
       
       floaters.forEach(f => {
-        f.x += f.vx; f.y += f.vy; f.rot += f.vRot;
+        // Añadir el "wobble" para que floten de lado a lado orgánicamente
+        f.x += f.vx + Math.sin(f.wobble) * 1.5; 
+        f.y += f.vy; 
+        f.rot += f.vRot;
+        f.wobble += f.wobbleSpeed;
+
         if (f.y + f.size < -50) { f.y = H + 50; f.x = Math.random() * W; }
         if (f.x > W + 50) f.x = -50;
         if (f.x < -50) f.x = W + 50;
@@ -605,17 +591,14 @@
         ctx.shadowBlur = 15;
         
         if(typeof f.item === 'string') {
-          // Si es un Emoji (Extintor, Hacha, Sirena...)
           ctx.font = `${f.size}px Arial`;
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           ctx.shadowColor = f.item === '🧯' || f.item === '🚨' || f.item === '🔥' ? '#ea580c' : '#10b981';
           ctx.fillText(f.item, 0, 0);
         } else {
-          // Si es la imagen SVG del Casco Industrial Amarillo o Naranja
           ctx.shadowColor = f.item === svgCascoNaranja ? '#ea580c' : '#eab308';
           ctx.drawImage(f.item, -f.size/2, -f.size/2, f.size, f.size);
         }
-        
         ctx.restore();
       });
       requestAnimationFrame(renderCanvas);
