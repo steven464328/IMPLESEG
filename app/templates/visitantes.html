@@ -31,7 +31,6 @@
       position: relative;
     }
 
-    /* FONDO CORPORATIVO Y CANVAS */
     .bg-gradient {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -47,7 +46,6 @@
       filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.6));
     }
 
-    /* HEADER */
     header {
       width: 100%; max-width: 1200px;
       padding: 25px 30px;
@@ -77,7 +75,6 @@
 
     main { width: 100%; max-width: 1100px; z-index: 10; padding: 10px 20px; display: flex; flex-direction: column; align-items: center; }
 
-    /* PASTILLA ESTADO */
     .status-pill {
       display: flex; align-items: center; justify-content: center; gap: 10px;
       background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.5);
@@ -88,7 +85,6 @@
     .status-dot { width: 10px; height: 10px; background: #10b981; border-radius: 50%; box-shadow: 0 0 12px #10b981; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.7); } }
 
-    /* TARJETAS INGRESO Y SALIDA */
     .kiosk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; width: 100%; max-width: 940px;}
     .kiosk-card {
       background: var(--card-bg); backdrop-filter: blur(15px);
@@ -113,7 +109,6 @@
     .card-salida h2 { color: var(--green-main); }
     .kiosk-card p { font-size: 13.5px; color: #cbd5e1; line-height: 1.5; }
 
-    /* FORMULARIOS */
     .form-panel {
       display: none; width: 100%; max-width: 840px;
       background: var(--card-bg); backdrop-filter: blur(25px);
@@ -148,13 +143,17 @@
     .btn-salida { background: linear-gradient(135deg, var(--green-main), var(--green-dark)); }
     .btn-action-submit:hover { filter: brightness(1.15); transform: translateY(-2px); }
 
-    /* DASHBOARD ADMINISTRADOR */
-    .admin-trigger {
+    /* ELEMENTOS PROTEGIDOS ADMIN */
+    #btn-admin-trigger {
+      display: none; /* Oculto por defecto por seguridad */
       position: fixed; bottom: 20px; right: 20px; font-size: 13px; font-weight: bold;
       color: #f97316; cursor: pointer; z-index: 100; background: rgba(0,0,0,0.5); padding: 8px 15px; border-radius: 8px; border: 1px solid #ea580c;
     }
-    .admin-trigger:hover { background: #f97316; color: #fff; }
+    #btn-admin-trigger:hover { background: #f97316; color: #fff; }
     
+    #btn-volver-erp { display: none; position: fixed; bottom: 65px; right: 20px; font-size: 11px; color: #475569; text-decoration: none; z-index: 20; transition: color 0.2s; font-weight:bold; }
+    #btn-volver-erp:hover { color: var(--orange-main); }
+
     .admin-panel {
       display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(6, 9, 17, 0.98); z-index: 200; padding: 40px; overflow-y: auto;
@@ -186,7 +185,7 @@
 
   <header>
     <div class="brand-container">
-      <div class="brand-logo-icon" style="cursor:pointer;" onclick="window.location.href='/'">🔥</div>
+      <div class="brand-logo-icon">🔥</div>
       <div class="brand-text">
         <h1>IMPLESEG</h1>
         <span>CONTROL DE ACCESO · VISITANTES</span>
@@ -279,8 +278,10 @@
     </div>
   </main>
 
-  <!-- DASHBOARD ADMINISTRADOR -->
-  <div class="admin-trigger" onclick="abrirAdmin()">⚙️ Panel Admin / Informes</div>
+  <!-- ELEMENTOS DE ADMINISTRACIÓN (Se ocultan para usuarios sin sesión) -->
+  <a href="/" id="btn-volver-erp">🏠 Regresar al ERP</a>
+  <div id="btn-admin-trigger" class="admin-trigger" onclick="abrirAdmin()">⚙️ Panel Admin / Informes</div>
+  
   <div class="admin-panel" id="admin-panel">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
       <h2 style="color: var(--orange-main); font-family: 'Teko', sans-serif; font-size: 42px;">DASHBOARD DE VISITANTES</h2>
@@ -329,6 +330,21 @@
   </footer>
 
   <script>
+    // ==========================================
+    // SEGURIDAD FRONTEND: Verificar Cookie Admin
+    // ==========================================
+    document.addEventListener("DOMContentLoaded", () => {
+      const cookies = document.cookie;
+      const isAdmin = cookies.includes('sesion_erp=admin@impleseg.com') || 
+                      cookies.includes('sesion_erp=gerencia@impleseg.com') || 
+                      cookies.includes('sesion_erp=sistemas@impleseg.com');
+      
+      if(isAdmin) {
+        document.getElementById('btn-admin-trigger').style.display = 'block';
+        document.getElementById('btn-volver-erp').style.display = 'block';
+      }
+    });
+
     // RELOJ
     function updateClock() {
       const now = new Date();
@@ -411,39 +427,51 @@
 
     // DASHBOARD ADMINISTRADOR
     let globalData = [];
-    async function abrirAdmin() { document.getElementById('admin-panel').style.display = 'block'; cargarAdmin(); }
+    async function abrirAdmin() { 
+      document.getElementById('admin-panel').style.display = 'block'; 
+      cargarAdmin(); 
+    }
     function cerrarAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
     
     async function cargarAdmin() {
-      const res = await fetch('/api/visitantes');
-      globalData = await res.json();
-      const hoy = new Date().toLocaleDateString();
-      let adentro = 0, visitasHoy = 0;
+      try {
+        const res = await fetch('/api/visitantes/admin/lista');
+        if(!res.ok) {
+            alert("Acceso denegado: Tu sesión expiró o no eres administrador.");
+            window.location.href = '/login';
+            return;
+        }
+        globalData = await res.json();
+        const hoy = new Date().toLocaleDateString();
+        let adentro = 0, visitasHoy = 0;
 
-      const filas = globalData.map(v => {
-        const dEntrada = new Date(v.hora_entrada);
-        if(v.estado === 'DENTRO') adentro++;
-        if(dEntrada.toLocaleDateString() === hoy) visitasHoy++;
+        const filas = globalData.map(v => {
+          const dEntrada = new Date(v.hora_entrada);
+          if(v.estado === 'DENTRO') adentro++;
+          if(dEntrada.toLocaleDateString() === hoy) visitasHoy++;
 
-        return `<tr>
-          <td>${v.nombre}</td>
-          <td><b>${v.cedula}</b></td>
-          <td>${v.empresa}</td>
-          <td>${v.correo || ''}</td>
-          <td>${v.area}</td>
-          <td>${v.motivo}</td>
-          <td>${v.persona_recibe}</td>
-          <td>${v.arl}</td>
-          <td>${v.contacto}</td>
-          <td>${v.hora_entrada.replace('T', ' ').substring(0, 19)}</td>
-          <td>${v.hora_salida ? v.hora_salida.replace('T', ' ').substring(0, 19) : (v.estado === 'DENTRO' ? '<span style="color:#10b981">DENTRO</span>' : '')}</td>
-        </tr>`;
-      }).join('');
+          return `<tr>
+            <td>${v.nombre}</td>
+            <td><b>${v.cedula}</b></td>
+            <td>${v.empresa}</td>
+            <td>${v.correo || ''}</td>
+            <td>${v.area}</td>
+            <td>${v.motivo}</td>
+            <td>${v.persona_recibe}</td>
+            <td>${v.arl}</td>
+            <td>${v.contacto}</td>
+            <td>${v.hora_entrada.replace('T', ' ').substring(0, 19)}</td>
+            <td>${v.hora_salida ? v.hora_salida.replace('T', ' ').substring(0, 19) : (v.estado === 'DENTRO' ? '<span style="color:#10b981">DENTRO</span>' : '')}</td>
+          </tr>`;
+        }).join('');
 
-      document.getElementById('tb-admin-visitantes').innerHTML = filas || '<tr><td colspan="11">No hay registros</td></tr>';
-      document.getElementById('kpi-adentro').innerText = adentro;
-      document.getElementById('kpi-hoy').innerText = visitasHoy;
-      document.getElementById('kpi-historico').innerText = globalData.length;
+        document.getElementById('tb-admin-visitantes').innerHTML = filas || '<tr><td colspan="11">No hay registros</td></tr>';
+        document.getElementById('kpi-adentro').innerText = adentro;
+        document.getElementById('kpi-hoy').innerText = visitasHoy;
+        document.getElementById('kpi-historico').innerText = globalData.length;
+      } catch(e) {
+          console.error(e);
+      }
     }
 
     async function vaciarBaseDeDatos() {
@@ -455,7 +483,7 @@
             alert('✅ Base de datos limpiada correctamente. Ya puedes subir tu archivo limpio.');
             cargarAdmin(); 
           } else {
-            alert('❌ Ocurrió un error al limpiar la base de datos.');
+            alert('❌ Ocurrió un error (Requiere Permisos de Administrador).');
           }
         } catch(err) {
           alert('❌ Error de conexión al servidor.');
@@ -555,7 +583,7 @@
             cargarAdmin();
           } else {
             const err = await res.json();
-            alert('❌ Hubo un error procesando el archivo CSV.');
+            alert('❌ Acceso Denegado: No tienes permisos para importar datos o el archivo es incorrecto.');
           }
         } catch(err) {
           alert('❌ Error de conexión.');
@@ -591,11 +619,10 @@
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
         size: 35 + (zDepth * 80),
-        // Aumentado a un nivel visual de acción muy dinámico (de -15 a +15 por fotograma)
         vx: (Math.random() - 0.5) * 30, 
         vy: (Math.random() - 0.5) * 30, 
         rot: Math.random() * Math.PI * 2,
-        vRot: (Math.random() - 0.5) * 0.6, // Giros veloces
+        vRot: (Math.random() - 0.5) * 0.6, 
         opacity: 0.2 + (zDepth * 0.4)
       });
     }
@@ -608,7 +635,6 @@
         f.y += f.vy; 
         f.rot += f.vRot;
 
-        // Rebote Infinito si sale de la pantalla rápida
         if (f.y + f.size < -150) f.y = H + 150;
         if (f.y - f.size > H + 150) f.y = -150;
         if (f.x > W + 150) f.x = -150;

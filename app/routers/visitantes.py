@@ -1,5 +1,5 @@
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Cookie
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlmodel import Session
@@ -40,21 +40,19 @@ def es_fecha_valida(fecha_str):
         return False
     return True
 
-@router.get("")
-def listar_visitantes(session: Session = Depends(get_session)):
-    query_cierre = text("""
-        UPDATE registro_visitantes 
-        SET estado = 'SALIDA AUTO', hora_salida = CURRENT_TIMESTAMP
-        WHERE estado = 'DENTRO' 
-        AND (EXTRACT(HOUR FROM CURRENT_TIMESTAMP) >= 21 OR DATE(hora_entrada) < CURRENT_DATE);
-    """)
-    session.execute(query_cierre)
-    session.commit()
+# ==========================================================
+# DEPENDENCIA DE SEGURIDAD: SOLO ADMINISTRADORES
+# ==========================================================
+def validar_admin(sesion_erp: Optional[str] = Cookie(None)):
+    admin_users = ["admin@impleseg.com", "gerencia@impleseg.com", "sistemas@impleseg.com"]
+    if not sesion_erp or sesion_erp not in admin_users:
+        raise HTTPException(status_code=403, detail="Acceso denegado. Permisos de administrador requeridos.")
+    return sesion_erp
 
-    query = text("SELECT * FROM registro_visitantes ORDER BY id DESC")
-    result = session.execute(query).mappings().all()
-    return [dict(r) for r in result]
 
+# ==========================================================
+# RUTAS PUBLICAS (QUIOSCO / TABLET RECPCION)
+# ==========================================================
 @router.get("/buscar/{cedula}")
 def buscar_visitante(cedula: str, session: Session = Depends(get_session)):
     query = text("""
@@ -111,8 +109,28 @@ def registrar_salida_cedula(cedula: str, session: Session = Depends(get_session)
         session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ==========================================================
+# RUTAS BLINDADAS (SOLO ADMINISTRADORES LOGUEADOS EN ERP)
+# Se pasa la dependencia `Depends(validar_admin)`
+# ==========================================================
+@router.get("/admin/lista")
+def listar_visitantes_admin(session: Session = Depends(get_session), admin: str = Depends(validar_admin)):
+    query_cierre = text("""
+        UPDATE registro_visitantes 
+        SET estado = 'SALIDA AUTO', hora_salida = CURRENT_TIMESTAMP
+        WHERE estado = 'DENTRO' 
+        AND (EXTRACT(HOUR FROM CURRENT_TIMESTAMP) >= 21 OR DATE(hora_entrada) < CURRENT_DATE);
+    """)
+    session.execute(query_cierre)
+    session.commit()
+
+    query = text("SELECT * FROM registro_visitantes ORDER BY id DESC")
+    result = session.execute(query).mappings().all()
+    return [dict(r) for r in result]
+
 @router.put("/{visitante_id}/salida-manual")
-def registrar_salida_manual(visitante_id: int, session: Session = Depends(get_session)):
+def registrar_salida_manual(visitante_id: int, session: Session = Depends(get_session), admin: str = Depends(validar_admin)):
     try:
         query = text("""
             UPDATE registro_visitantes 
@@ -126,9 +144,8 @@ def registrar_salida_manual(visitante_id: int, session: Session = Depends(get_se
         session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-# NUEVA RUTA PARA LIMPIAR LA BASE DE DATOS
 @router.delete("/vaciar")
-def vaciar_base_datos(session: Session = Depends(get_session)):
+def vaciar_base_datos(session: Session = Depends(get_session), admin: str = Depends(validar_admin)):
     try:
         query = text("DELETE FROM registro_visitantes;")
         session.execute(query)
@@ -139,12 +156,11 @@ def vaciar_base_datos(session: Session = Depends(get_session)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/importar")
-def importar_historico(visitantes: List[VisitanteImportPayload], session: Session = Depends(get_session)):
+def importar_historico(visitantes: List[VisitanteImportPayload], session: Session = Depends(get_session), admin: str = Depends(validar_admin)):
     try:
         for v in visitantes:
             hora_in = v.hora_entrada if es_fecha_valida(v.hora_entrada) else datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             hora_out = v.hora_salida if es_fecha_valida(v.hora_salida) else None
-            
             estado = "SALIO" if hora_out else "DENTRO"
             
             query = text("""
