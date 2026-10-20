@@ -16,7 +16,7 @@ class UsuarioPayload(BaseModel):
 
 def validar_admin(sesion_erp: Optional[str] = Cookie(None), rol_erp: Optional[str] = Cookie(None)):
     if not sesion_erp or rol_erp != "administrador":
-        raise HTTPException(status_code=403, detail="Acceso denegado. Se requieren privilegios de Administrador del ERP.")
+        raise HTTPException(status_code=403, detail="Acceso denegado. Se requieren privilegios de Administrador.")
     return sesion_erp
 
 @router.get("")
@@ -26,10 +26,8 @@ def listar_usuarios(session: Session = Depends(get_session), admin: str = Depend
 
 @router.post("")
 def crear_usuario(payload: UsuarioPayload, session: Session = Depends(get_session), admin: str = Depends(validar_admin)):
-    # Validacion estricta de correo corporativo
     if not payload.correo.endswith("@impleseg.com"):
-        raise HTTPException(status_code=400, detail="Solo se permiten correos corporativos de @impleseg.com")
-    
+        raise HTTPException(status_code=400, detail="Solo se permiten correos corporativos (@impleseg.com)")
     try:
         query = text("""
             INSERT INTO usuarios (correo, password, rol, modulos, activo)
@@ -45,7 +43,7 @@ def crear_usuario(payload: UsuarioPayload, session: Session = Depends(get_sessio
 @router.delete("/{user_id}")
 def eliminar_usuario(user_id: int, session: Session = Depends(get_session), admin: str = Depends(validar_admin)):
     if user_id == 1:
-        raise HTTPException(status_code=400, detail="Por seguridad, el administrador principal (ID 1) no puede ser eliminado.")
+        raise HTTPException(status_code=400, detail="El administrador principal no puede ser eliminado.")
     try:
         session.execute(text("DELETE FROM usuarios WHERE id = :id"), {"id": user_id})
         session.commit()

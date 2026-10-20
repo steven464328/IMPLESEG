@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlmodel import Session
 
-from app.database import init_db, get_session, engine
+from app.database import init_db, get_session
 from app.routers import (
     dashboard, equipos, gh_inventario, gh_asignaciones,
     gh_bajas, recepcion, etiquetas_usb, dashboard_equipos,
@@ -14,14 +14,15 @@ from app.routers import (
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-app = FastAPI(title="ERP IMPLESEG SEGURO", version="3.0")
+app = FastAPI(title="ERP IMPLESEG", version="3.0")
 
 @app.on_event("startup")
 def startup():
     init_db()
-    # Crear la tabla de seguridad y el Administrador Maestro automáticamente
-    with Session(engine) as session:
-        session.execute(text("""
+    # Creación segura de la tabla de usuarios sin tumbar el servidor
+    try:
+        db = next(get_session())
+        db.execute(text("""
             CREATE TABLE IF NOT EXISTS usuarios (
                 id SERIAL PRIMARY KEY,
                 correo VARCHAR UNIQUE NOT NULL,
@@ -31,13 +32,15 @@ def startup():
                 activo BOOLEAN DEFAULT TRUE
             );
         """))
-        admin_check = session.execute(text("SELECT * FROM usuarios WHERE id = 1")).first()
+        admin_check = db.execute(text("SELECT * FROM usuarios WHERE id = 1")).first()
         if not admin_check:
-            session.execute(text("""
+            db.execute(text("""
                 INSERT INTO usuarios (correo, password, rol, modulos, activo) 
                 VALUES ('admin@impleseg.com', 'impleseg2026', 'administrador', 'todos', TRUE)
             """))
-        session.commit()
+        db.commit()
+    except Exception as e:
+        print(f"Advertencia: No se pudo verificar la tabla de usuarios en el inicio: {e}")
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
@@ -53,38 +56,42 @@ app.include_router(dashboard_equipos.router)
 app.include_router(impresoras.router)
 app.include_router(hv_equipos.router)
 app.include_router(visitantes.router)
-app.include_router(usuarios.router) # El nuevo router de seguridad
+app.include_router(usuarios.router)
 
 # ==============================================================================
-# MOTOR DE SEGURIDAD (INTERCEPTOR DE RUTAS)
+# MOTOR DE SEGURIDAD (RBAC - INTERCEPTOR DE RUTAS)
 # ==============================================================================
 def verificar_acceso(request: Request, session: Session, modulo_requerido: str = None):
     correo = request.cookies.get("sesion_erp")
     if not correo:
         return RedirectResponse(url="/login")
     
-    user = session.execute(text("SELECT * FROM usuarios WHERE correo = :c AND activo = TRUE"), {"c": correo}).mappings().first()
-    if not user:
-        return RedirectResponse(url="/logout") # Lo expulsa si fue desactivado
-        
-    if user["rol"] == "administrador":
-        return None # El administrador pasa derecho a todo
-        
-    if modulo_requerido:
-        modulos = user["modulos"].split(",")
-        if modulo_requerido not in modulos:
-            return HTMLResponse(content=f"""
-                <div style="font-family:sans-serif; text-align:center; padding:100px 20px; background:#0f172a; color:#fff; height:100vh;">
-                    <h1 style="color:#ef4444; font-size:45px;">🚫 ACCESO DENEGADO</h1>
-                    <p style="font-size:18px; color:#cbd5e1;">La cuenta corporativa <b>{correo}</b> no tiene permisos asignados por el administrador para ingresar al módulo de <b>{modulo_requerido.upper()}</b>.</p>
-                    <br><br>
-                    <button onclick="window.history.back()" style="padding:15px 30px; background:#f97316; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px; font-weight:bold;">← Volver atrás</button>
-                </div>
-            """, status_code=403)
-    return None
+    try:
+        user = session.execute(text("SELECT * FROM usuarios WHERE correo = :c AND activo = TRUE"), {"c": correo}).mappings().first()
+        if not user:
+            return RedirectResponse(url="/logout")
+            
+        if user["rol"] == "administrador":
+            return None
+            
+        if modulo_requerido:
+            modulos = user["modulos"].split(",")
+            if modulo_requerido not in modulos:
+                return HTMLResponse(content=f"""
+                    <div style="font-family:sans-serif; text-align:center; padding:100px 20px; background:#0f172a; color:#fff; height:100vh;">
+                        <h1 style="color:#ef4444; font-size:45px;">🚫 ACCESO RESTRINGIDO</h1>
+                        <p style="font-size:18px; color:#cbd5e1;">La cuenta <b>{correo}</b> no tiene privilegios para el módulo: <b>{modulo_requerido.upper()}</b>.</p>
+                        <br><br>
+                        <button onclick="window.history.back()" style="padding:15px 30px; background:#f97316; color:white; border:none; border-radius:8px; cursor:pointer;">← Volver atrás</button>
+                    </div>
+                """, status_code=403)
+        return None
+    except Exception:
+        # Falla de conexión segura (Fallback al login)
+        return RedirectResponse(url="/login")
 
 # ==============================================================================
-# SISTEMA DE LOGIN Y LOGOUT
+# LOGIN SEGURO
 # ==============================================================================
 @app.get("/login", response_class=HTMLResponse)
 def login_page():
@@ -93,7 +100,7 @@ def login_page():
     <html lang="es">
     <head>
         <meta charset="UTF-8">
-        <title>Login Seguro · IMPLESEG ERP</title>
+        <title>Acceso Corporativo · IMPLESEG ERP</title>
         <style>
             body { background: #070b14; color: #fff; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
             .login-box { background: #121e2d; padding: 40px; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); text-align: center; width: 340px; border-top: 4px solid #f97316; }
@@ -106,7 +113,7 @@ def login_page():
     <body>
         <div class="login-box">
             <h2 style="color:#f97316; margin-top:0;">IMPLESEG ERP</h2>
-            <p style="font-size:13px; color:#94a3b8; margin-bottom:20px;">Utilice su cuenta corporativa Google Workspace (@impleseg.com)</p>
+            <p style="font-size:13px; color:#94a3b8; margin-bottom:20px;">Inicie sesión con su cuenta asignada</p>
             <form method="POST" action="/login">
                 <input type="email" name="correo" placeholder="usuario@impleseg.com" required>
                 <input type="password" name="password" placeholder="Contraseña de acceso" required>
@@ -120,26 +127,23 @@ def login_page():
 
 @app.post("/login")
 def procesar_login(correo: str = Form(...), password: str = Form(...), session: Session = Depends(get_session)):
-    if not correo.endswith("@impleseg.com"):
-        return HTMLResponse("<script>alert('ALERTA: Solo se admiten correos corporativos autorizados (@impleseg.com)'); window.location.href='/login';</script>")
-        
-    user = session.execute(text("SELECT * FROM usuarios WHERE correo = :c AND password = :p AND activo = TRUE"), {"c": correo, "p": password}).mappings().first()
-    
-    if user:
-        # Enrutamiento inteligente: Si no es admin, mándalo a su primer módulo asignado
-        url_destino = "/"
-        if user["rol"] != "administrador":
-            modulos = user["modulos"].split(",")
-            if "visitantes" in modulos: url_destino = "/visitantes"
-            elif "gestion_humana" in modulos: url_destino = "/gestion-humana"
-            elif "hojas_vida" in modulos: url_destino = "/hojas_vida"
+    try:
+        user = session.execute(text("SELECT * FROM usuarios WHERE correo = :c AND password = :p AND activo = TRUE"), {"c": correo, "p": password}).mappings().first()
+        if user:
+            url_destino = "/"
+            if user["rol"] != "administrador":
+                modulos = user["modulos"].split(",")
+                if "visitantes" in modulos: url_destino = "/visitantes"
+                elif "gestion_humana" in modulos: url_destino = "/gestion-humana"
+                elif "hojas_vida" in modulos: url_destino = "/hojas_vida"
 
-        response = RedirectResponse(url=url_destino, status_code=302)
-        response.set_cookie(key="sesion_erp", value=correo, max_age=86400)
-        response.set_cookie(key="rol_erp", value=user["rol"], max_age=86400)
-        return response
-        
-    return HTMLResponse("<script>alert('Credenciales incorrectas o usuario desactivado.'); window.location.href='/login';</script>")
+            response = RedirectResponse(url=url_destino, status_code=302)
+            response.set_cookie(key="sesion_erp", value=correo, max_age=86400)
+            response.set_cookie(key="rol_erp", value=user["rol"], max_age=86400)
+            return response
+    except Exception:
+        pass
+    return HTMLResponse("<script>alert('Credenciales incorrectas o usuario bloqueado.'); window.location.href='/login';</script>")
 
 @app.get("/logout")
 def logout():
@@ -153,21 +157,21 @@ def logout():
 # ==============================================================================
 @app.get("/")
 def index(request: Request, session: Session = Depends(get_session)):
-    fallo = verificar_acceso(request, session) # Menu general requiere logueo basico
+    fallo = verificar_acceso(request, session)
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "index.html"))
 
-@app.get("/admin-usuarios")
+# RUTA PROFESIONAL PARA LA CONFIGURACIÓN DE SEGURIDAD
+@app.get("/configuracion/seguridad")
 def admin_usuarios_view(request: Request, session: Session = Depends(get_session)):
-    # Esta ruta ni siquiera tiene nombre de modulo, SOLO administrador la pasa.
-    fallo = verificar_acceso(request, session, "MODULO_IMPOSIBLE_SOLO_ADMIN")
+    # Solo un administrador puede acceder a esta ruta
+    fallo = verificar_acceso(request, session, "ACCESO_RESTRINGIDO_SISTEMA_ROOT")
     if fallo: return fallo
-    return FileResponse(os.path.join(BASE_DIR, "templates", "admin_usuarios.html"))
+    return FileResponse(os.path.join(BASE_DIR, "templates", "seguridad.html"))
 
+# EL QUIOSCO QUEDA LIBRE PARA RECEPCIÓN, PERO EL PANEL INTERNO ESTÁ BLOQUEADO
 @app.get("/visitantes")
-def visitantes_view(request: Request, session: Session = Depends(get_session)):
-    fallo = verificar_acceso(request, session, "visitantes")
-    if fallo: return fallo
+def visitantes_view(request: Request):
     return FileResponse(os.path.join(BASE_DIR, "templates", "visitantes.html"))
 
 @app.get("/gestion-humana")

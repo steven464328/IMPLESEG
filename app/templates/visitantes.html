@@ -143,17 +143,14 @@
     .btn-salida { background: linear-gradient(135deg, var(--green-main), var(--green-dark)); }
     .btn-action-submit:hover { filter: brightness(1.15); transform: translateY(-2px); }
 
-    /* ELEMENTOS PROTEGIDOS ADMIN */
-    #btn-admin-trigger {
-      display: none; /* Oculto por defecto por seguridad */
+    /* SEGURIDAD: BOTONES INVISIBLES HASTA DETECTAR ROL ADMIN */
+    .admin-trigger {
+      display: none; 
       position: fixed; bottom: 20px; right: 20px; font-size: 13px; font-weight: bold;
       color: #f97316; cursor: pointer; z-index: 100; background: rgba(0,0,0,0.5); padding: 8px 15px; border-radius: 8px; border: 1px solid #ea580c;
     }
-    #btn-admin-trigger:hover { background: #f97316; color: #fff; }
+    .admin-trigger:hover { background: #f97316; color: #fff; }
     
-    #btn-volver-erp { display: none; position: fixed; bottom: 65px; right: 20px; font-size: 11px; color: #475569; text-decoration: none; z-index: 20; transition: color 0.2s; font-weight:bold; }
-    #btn-volver-erp:hover { color: var(--orange-main); }
-
     .admin-panel {
       display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(6, 9, 17, 0.98); z-index: 200; padding: 40px; overflow-y: auto;
@@ -185,7 +182,7 @@
 
   <header>
     <div class="brand-container">
-      <div class="brand-logo-icon">🔥</div>
+      <div class="brand-logo-icon" style="cursor:pointer;" onclick="window.location.href='/'">🔥</div>
       <div class="brand-text">
         <h1>IMPLESEG</h1>
         <span>CONTROL DE ACCESO · VISITANTES</span>
@@ -278,8 +275,7 @@
     </div>
   </main>
 
-  <!-- ELEMENTOS DE ADMINISTRACIÓN (Se ocultan para usuarios sin sesión) -->
-  <a href="/" id="btn-volver-erp">🏠 Regresar al ERP</a>
+  <!-- DASHBOARD ADMINISTRADOR -->
   <div id="btn-admin-trigger" class="admin-trigger" onclick="abrirAdmin()">⚙️ Panel Admin / Informes</div>
   
   <div class="admin-panel" id="admin-panel">
@@ -331,17 +327,11 @@
 
   <script>
     // ==========================================
-    // SEGURIDAD FRONTEND: Verificar Cookie Admin
+    // SEGURIDAD: MOSTRAR BOTÓN SÓLO AL ADMIN
     // ==========================================
     document.addEventListener("DOMContentLoaded", () => {
-      const cookies = document.cookie;
-      const isAdmin = cookies.includes('sesion_erp=admin@impleseg.com') || 
-                      cookies.includes('sesion_erp=gerencia@impleseg.com') || 
-                      cookies.includes('sesion_erp=sistemas@impleseg.com');
-      
-      if(isAdmin) {
+      if(document.cookie.includes('rol_erp=administrador')) {
         document.getElementById('btn-admin-trigger').style.display = 'block';
-        document.getElementById('btn-volver-erp').style.display = 'block';
       }
     });
 
@@ -425,23 +415,6 @@
       }
     };
 
-    // ==========================================
-    // SEGURIDAD FRONTEND: Verificar Rol Real de BD
-    // ==========================================
-    document.addEventListener("DOMContentLoaded", () => {
-      const cookies = document.cookie;
-      // Ahora lee directamente el rol que asignaste en el Panel de Administrador
-      const isAdmin = cookies.includes('rol_erp=administrador');
-      
-      if(isAdmin) {
-        const btnAdmin = document.getElementById('btn-admin-trigger');
-        const btnVolver = document.getElementById('btn-volver-erp');
-        if(btnAdmin) btnAdmin.style.display = 'block';
-        if(btnVolver) btnVolver.style.display = 'block';
-      }
-    });
-
-    // DASHBOARD ADMINISTRADOR
     let globalData = [];
     async function abrirAdmin() { 
       document.getElementById('admin-panel').style.display = 'block'; 
@@ -450,62 +423,47 @@
     function cerrarAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
     
     async function cargarAdmin() {
-      try {
-        const res = await fetch('/api/visitantes/admin/lista');
-        if(!res.ok) {
-            alert("Acceso denegado: Tu sesión expiró o no eres administrador.");
-            window.location.href = '/login';
-            return;
-        }
-        globalData = await res.json();
-        const hoy = new Date().toLocaleDateString();
-        let adentro = 0, visitasHoy = 0;
-
-        const filas = globalData.map(v => {
-          const dEntrada = new Date(v.hora_entrada);
-          if(v.estado === 'DENTRO') adentro++;
-          if(dEntrada.toLocaleDateString() === hoy) visitasHoy++;
-
-          return `<tr>
-            <td>${v.nombre}</td>
-            <td><b>${v.cedula}</b></td>
-            <td>${v.empresa}</td>
-            <td>${v.correo || ''}</td>
-            <td>${v.area}</td>
-            <td>${v.motivo}</td>
-            <td>${v.persona_recibe}</td>
-            <td>${v.arl}</td>
-            <td>${v.contacto}</td>
-            <td>${v.hora_entrada.replace('T', ' ').substring(0, 19)}</td>
-            <td>${v.hora_salida ? v.hora_salida.replace('T', ' ').substring(0, 19) : (v.estado === 'DENTRO' ? '<span style="color:#10b981">DENTRO</span>' : '')}</td>
-          </tr>`;
-        }).join('');
-
-        document.getElementById('tb-admin-visitantes').innerHTML = filas || '<tr><td colspan="11">No hay registros</td></tr>';
-        document.getElementById('kpi-adentro').innerText = adentro;
-        document.getElementById('kpi-hoy').innerText = visitasHoy;
-        document.getElementById('kpi-historico').innerText = globalData.length;
-      } catch(e) {
-          console.error(e);
+      const res = await fetch('/api/visitantes/admin/lista');
+      if(!res.ok) {
+          alert('🚫 Acceso denegado: Necesitas cuenta de Administrador.');
+          return;
       }
+      globalData = await res.json();
+      const hoy = new Date().toLocaleDateString();
+      let adentro = 0, visitasHoy = 0;
+
+      const filas = globalData.map(v => {
+        const dEntrada = new Date(v.hora_entrada);
+        if(v.estado === 'DENTRO') adentro++;
+        if(dEntrada.toLocaleDateString() === hoy) visitasHoy++;
+
+        return `<tr>
+          <td>${v.nombre}</td>
+          <td><b>${v.cedula}</b></td>
+          <td>${v.empresa}</td>
+          <td>${v.correo || ''}</td>
+          <td>${v.area}</td>
+          <td>${v.motivo}</td>
+          <td>${v.persona_recibe}</td>
+          <td>${v.arl}</td>
+          <td>${v.contacto}</td>
+          <td>${v.hora_entrada.replace('T', ' ').substring(0, 19)}</td>
+          <td>${v.hora_salida ? v.hora_salida.replace('T', ' ').substring(0, 19) : (v.estado === 'DENTRO' ? '<span style="color:#10b981">DENTRO</span>' : '')}</td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('tb-admin-visitantes').innerHTML = filas || '<tr><td colspan="11">No hay registros</td></tr>';
+      document.getElementById('kpi-adentro').innerText = adentro;
+      document.getElementById('kpi-hoy').innerText = visitasHoy;
+      document.getElementById('kpi-historico').innerText = globalData.length;
     }
 
     async function vaciarBaseDeDatos() {
-      const confirmacion = prompt("ATENCIÓN: Esto borrará TODOS los registros. Escribe la palabra 'ELIMINAR' para confirmar:");
+      const confirmacion = prompt("Escribe 'ELIMINAR' para borrar todos los registros:");
       if (confirmacion === "ELIMINAR") {
-        try {
-          const res = await fetch('/api/visitantes/vaciar', { method: 'DELETE' });
-          if(res.ok) {
-            alert('✅ Base de datos limpiada correctamente. Ya puedes subir tu archivo limpio.');
-            cargarAdmin(); 
-          } else {
-            alert('❌ Ocurrió un error (Requiere Permisos de Administrador).');
-          }
-        } catch(err) {
-          alert('❌ Error de conexión al servidor.');
-        }
-      } else if (confirmacion !== null) {
-        alert("❌ Operación cancelada.");
+        const res = await fetch('/api/visitantes/vaciar', { method: 'DELETE' });
+        if(res.ok) { alert('✅ Base de datos limpiada.'); cargarAdmin(); }
+        else alert('❌ Error. Verifique sus permisos de admin.');
       }
     }
 
@@ -513,9 +471,7 @@
       if(!globalData.length) return alert("No hay datos");
       let csv = 'Nombre;cedula;Empresa;Correo;area;Motivo;Nombre Persona que recibe;arl;contacto;Hora de entrada;Hora de salida\n';
       globalData.forEach(r => {
-        let row = [
-          `"${r.nombre}"`, r.cedula, `"${r.empresa}"`, r.correo, `"${r.area}"`, `"${r.motivo}"`, `"${r.persona_recibe}"`, r.arl, r.contacto, r.hora_entrada.substring(0, 19), r.hora_salida ? r.hora_salida.substring(0, 19) : ''
-        ];
+        let row = [ `"${r.nombre}"`, r.cedula, `"${r.empresa}"`, r.correo, `"${r.area}"`, `"${r.motivo}"`, `"${r.persona_recibe}"`, r.arl, r.contacto, r.hora_entrada.substring(0, 19), r.hora_salida ? r.hora_salida.substring(0, 19) : '' ];
         csv += row.join(';') + '\n';
       });
       const blob = new Blob(["\ufeff"+csv], { type: 'text/csv;charset=utf-8;' });
@@ -525,85 +481,50 @@
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
 
-    function limpiarFecha(fechaStr) {
-      if (!fechaStr) return "";
-      fechaStr = fechaStr.replace(/"/g, '').trim();
-      const match = fechaStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}:\d{2}(:\d{2})?)/);
-      if (match) {
-        return `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')} ${match[4]}`;
-      }
-      return fechaStr; 
+    function limpiarFecha(fStr) {
+      if (!fStr) return "";
+      fStr = fStr.replace(/"/g, '').trim();
+      const match = fStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}:\d{2}(:\d{2})?)/);
+      if (match) return `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')} ${match[4]}`;
+      return fStr; 
     }
 
     function importarCSV() {
-      const fileInput = document.getElementById('file-csv');
-      const file = fileInput.files[0];
+      const file = document.getElementById('file-csv').files[0];
       if(!file) return alert('Selecciona un archivo CSV.');
-      
       const reader = new FileReader();
       reader.onload = async function(e) {
         const text = e.target.result;
         const sep = text.indexOf(';') > -1 ? ';' : ',';
         const rows = text.split('\n');
+        if(rows.length < 2) return alert("Archivo vacío");
         
-        if(rows.length < 2) return alert("El archivo está vacío");
-        
-        const headers = rows[0].replace(/\r/g, '').split(sep).map(h => h.trim().toLowerCase());
-        const iNombre = headers.findIndex(h => h.includes("nombre") && !h.includes("recibe"));
-        const iCedula = headers.findIndex(h => h.includes("cedula") || h.includes("cédula"));
-        const iEmpresa = headers.findIndex(h => h.includes("empresa"));
-        const iCorreo = headers.findIndex(h => h.includes("correo"));
-        const iArea = headers.findIndex(h => h.includes("area") || h.includes("área"));
-        const iMotivo = headers.findIndex(h => h.includes("motivo"));
-        const iRecibe = headers.findIndex(h => h.includes("recibe"));
-        const iArl = headers.findIndex(h => h.includes("arl"));
-        const iContacto = headers.findIndex(h => h.includes("contacto"));
-        const iHoraIn = headers.findIndex(h => h.includes("entrada"));
-        const iHoraOut = headers.findIndex(h => h.includes("salida"));
-
-        if (iNombre === -1 || iCedula === -1) {
-            return alert("No se encontraron las columnas 'Nombre' o 'cedula' en el archivo.");
-        }
+        const h = rows[0].replace(/\r/g, '').split(sep).map(x => x.trim().toLowerCase());
+        const iNom=h.findIndex(x=>x.includes("nombre") && !x.includes("recibe")), iCed=h.findIndex(x=>x.includes("cedula")||x.includes("cédula")), iEmp=h.findIndex(x=>x.includes("empresa")), iCor=h.findIndex(x=>x.includes("correo")), iAre=h.findIndex(x=>x.includes("area")||x.includes("área")), iMot=h.findIndex(x=>x.includes("motivo")), iRec=h.findIndex(x=>x.includes("recibe")), iArl=h.findIndex(x=>x.includes("arl")), iCon=h.findIndex(x=>x.includes("contacto")), iHIn=h.findIndex(x=>x.includes("entrada")), iHOut=h.findIndex(x=>x.includes("salida"));
 
         const data = [];
-        for(let i = 1; i < rows.length; i++) {
-          const rowStr = rows[i].replace(/\r/g, '').trim();
-          if(rowStr === '') continue;
-          
-          const cols = rowStr.split(sep);
-          
+        for(let i=1; i<rows.length; i++) {
+          const rStr = rows[i].replace(/\r/g, '').trim();
+          if(rStr==='') continue;
+          const c = rStr.split(sep);
           data.push({
-            nombre: cols[iNombre] ? cols[iNombre].replace(/"/g, '').trim() : "SIN NOMBRE",
-            cedula: cols[iCedula] ? cols[iCedula].replace(/"/g, '').trim() : "0",
-            empresa: iEmpresa > -1 && cols[iEmpresa] ? cols[iEmpresa].replace(/"/g, '').trim() : "-",
-            correo: iCorreo > -1 && cols[iCorreo] ? cols[iCorreo].replace(/"/g, '').trim() : "",
-            area: iArea > -1 && cols[iArea] ? cols[iArea].replace(/"/g, '').trim() : "-",
-            motivo: iMotivo > -1 && cols[iMotivo] ? cols[iMotivo].replace(/"/g, '').trim() : "-",
-            persona_recibe: iRecibe > -1 && cols[iRecibe] ? cols[iRecibe].replace(/"/g, '').trim() : "-",
-            arl: iArl > -1 && cols[iArl] ? cols[iArl].replace(/"/g, '').trim() : "NO APLICA",
-            contacto: iContacto > -1 && cols[iContacto] ? cols[iContacto].replace(/"/g, '').trim() : "0",
-            hora_entrada: iHoraIn > -1 ? limpiarFecha(cols[iHoraIn]) : "",
-            hora_salida: iHoraOut > -1 ? limpiarFecha(cols[iHoraOut]) : ""
+            nombre: c[iNom]?c[iNom].replace(/"/g,'').trim():"SIN NOMBRE",
+            cedula: c[iCed]?c[iCed].replace(/"/g,'').trim():"0",
+            empresa: iEmp>-1&&c[iEmp]?c[iEmp].replace(/"/g,'').trim():"-",
+            correo: iCor>-1&&c[iCor]?c[iCor].replace(/"/g,'').trim():"",
+            area: iAre>-1&&c[iAre]?c[iAre].replace(/"/g,'').trim():"-",
+            motivo: iMot>-1&&c[iMot]?c[iMot].replace(/"/g,'').trim():"-",
+            persona_recibe: iRec>-1&&c[iRec]?c[iRec].replace(/"/g,'').trim():"-",
+            arl: iArl>-1&&c[iArl]?c[iArl].replace(/"/g,'').trim():"NO APLICA",
+            contacto: iCon>-1&&c[iCon]?c[iCon].replace(/"/g,'').trim():"0",
+            hora_entrada: iHIn>-1?limpiarFecha(c[iHIn]):"",
+            hora_salida: iHOut>-1?limpiarFecha(c[iHOut]):""
           });
         }
         
-        try {
-          const res = await fetch('/api/visitantes/importar', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-          });
-          if(res.ok) {
-            alert('✅ Archivo subido y sincronizado correctamente.');
-            fileInput.value = "";
-            cargarAdmin();
-          } else {
-            const err = await res.json();
-            alert('❌ Acceso Denegado: No tienes permisos para importar datos o el archivo es incorrecto.');
-          }
-        } catch(err) {
-          alert('❌ Error de conexión.');
-        }
+        const res = await fetch('/api/visitantes/importar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+        if(res.ok) { alert('✅ Subido.'); document.getElementById('file-csv').value=""; cargarAdmin(); }
+        else { const err = await res.json(); alert('❌ Error: ' + err.detail); }
       };
       reader.readAsText(file);
     }
@@ -620,14 +541,13 @@
 
     const svgCascoAmarillo = new Image(); 
     svgCascoAmarillo.src = "data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23facc15' d='M32 10 c-14 0-22 12-22 24 v6 h44 v-6 c0-12-8-24-22-24z'/%3E%3Cpath fill='%23ca8a04' d='M6 40 h52 v8 H6z'/%3E%3C/svg%3E";
-    
     const svgCascoNaranja = new Image(); 
     svgCascoNaranja.src = "data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23f97316' d='M32 10 c-14 0-22 12-22 24 v6 h44 v-6 c0-12-8-24-22-24z'/%3E%3Cpath fill='%23c2410c' d='M6 40 h52 v8 H6z'/%3E%3C/svg%3E";
 
     const securityItems = ['🧯', svgCascoAmarillo, svgCascoNaranja, '🪓', '🚨', '🧤', '🔥'];
     const floaters = [];
 
-    // Velocidad multiplicada al máximo extremo para eliminar el aburrimiento
+    // Velocidad extrema
     for (let i = 0; i < 45; i++) {
       const zDepth = Math.random(); 
       floaters.push({

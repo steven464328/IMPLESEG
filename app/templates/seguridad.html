@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Configuración y Seguridad | IMPLESEG ERP</title>
+    <style>
+        body { background: #0b1121; color: #e2e8f0; font-family: system-ui; padding: 40px; margin: 0; }
+        h1 { color: #f97316; border-bottom: 2px solid #1e293b; padding-bottom: 10px; margin-top: 5px; }
+        .panel-grid { display: grid; grid-template-columns: 350px 1fr; gap: 30px; margin-top: 30px; }
+        .form-box, .table-box { background: #121e2d; padding: 25px; border-radius: 12px; border: 1px solid #1e293b; }
+        label { display: block; font-size: 12px; color: #94a3b8; font-weight: bold; margin: 15px 0 5px; text-transform: uppercase; }
+        input[type="email"], input[type="text"], select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #070b14; color: #fff; }
+        .checkbox-group { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; background: #070b14; padding: 15px; border-radius: 8px; border: 1px solid #334155;}
+        .checkbox-group label { display: inline; margin: 0; font-weight: normal; font-size: 14px; text-transform: none; color:#e2e8f0;}
+        button.btn-guardar { width: 100%; padding: 15px; background: #10b981; color: white; font-weight: bold; border: none; border-radius: 6px; margin-top: 25px; cursor: pointer; }
+        button.btn-guardar:hover { background: #059669; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #1e293b; font-size: 14px; }
+        th { color: #94a3b8; font-size: 12px; text-transform: uppercase; background: #0f172a;}
+        .btn-estado { background: #3b82f6; color: #fff; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .btn-borrar { background: #ef4444; color: #fff; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .badge { background: #334155; padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-right: 5px; border: 1px solid #475569;}
+    </style>
+</head>
+<body>
+
+    <a href="/" style="color: #94a3b8; text-decoration: none; font-weight:bold;">← Volver al ERP Principal</a>
+    <h1>🛡️ Módulo de Configuración y Seguridad (RBAC)</h1>
+    <p style="color: #94a3b8;">Gestione las cuentas corporativas (@impleseg.com) y limite el acceso estricto a los módulos del ERP.</p>
+
+    <div class="panel-grid">
+        <div class="form-box">
+            <h3 style="margin-top:0; color:#10b981;">Añadir Colaborador</h3>
+            <form id="form-user">
+                <label>Correo Corporativo</label>
+                <input type="email" id="u-correo" placeholder="ejemplo@impleseg.com" required>
+                
+                <label>Contraseña Asignada</label>
+                <input type="text" id="u-pass" required>
+                
+                <label>Nivel de Seguridad</label>
+                <select id="u-rol" onchange="toggleModulos()">
+                    <option value="usuario">Usuario Estándar (Accesos Limitados)</option>
+                    <option value="administrador">Administrador Total del Sistema</option>
+                </select>
+
+                <div id="caja-modulos">
+                    <label>Módulos Permitidos (Solo para Usuarios Estándar)</label>
+                    <div class="checkbox-group">
+                        <div><input type="checkbox" value="visitantes" class="chk-mod"> <label>Recepción y Visitantes</label></div>
+                        <div><input type="checkbox" value="gestion_humana" class="chk-mod"> <label>Gestión Humana</label></div>
+                        <div><input type="checkbox" value="hojas_vida" class="chk-mod"> <label>Hojas de Vida</label></div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-guardar">+ Registrar en Base de Datos</button>
+            </form>
+        </div>
+
+        <div class="table-box">
+            <h3 style="margin-top:0;">Directorio de Credenciales</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th><th>Correo Corporativo</th><th>Rol</th><th>Accesos Concedidos</th><th>Estado</th><th>Auditoría</th>
+                    </tr>
+                </thead>
+                <tbody id="tb-usuarios"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function toggleModulos() {
+            const rol = document.getElementById('u-rol').value;
+            document.getElementById('caja-modulos').style.display = rol === 'administrador' ? 'none' : 'block';
+        }
+
+        async function cargarUsuarios() {
+            const res = await fetch('/api/usuarios');
+            const data = await res.json();
+            document.getElementById('tb-usuarios').innerHTML = data.map(u => `
+                <tr>
+                    <td style="color:#64748b;">#${u.id}</td>
+                    <td style="font-weight:bold;">${u.correo}</td>
+                    <td><span style="color:${u.rol === 'administrador' ? '#f97316' : '#3b82f6'}">${u.rol.toUpperCase()}</span></td>
+                    <td>${u.rol === 'administrador' ? '<span class="badge" style="background:#f97316;color:#fff;">ACCESO TOTAL</span>' : u.modulos.split(',').map(m => m ? `<span class="badge">${m}</span>` : '').join('')}</td>
+                    <td><span style="color:${u.activo ? '#10b981' : '#ef4444'}; font-weight:bold;">${u.activo ? 'ACTIVO' : 'DENEGADO'}</span></td>
+                    <td>
+                        <button class="btn-estado" onclick="cambiarEstado(${u.id})">Inhabilitar / Activar</button>
+                        <button class="btn-borrar" onclick="borrarUsuario(${u.id})">Borrar Ficha</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('form-user').onsubmit = async (e) => {
+            e.preventDefault();
+            const mods = Array.from(document.querySelectorAll('.chk-mod:checked')).map(c => c.value).join(',');
+            
+            const payload = {
+                correo: document.getElementById('u-correo').value,
+                password: document.getElementById('u-pass').value,
+                rol: document.getElementById('u-rol').value,
+                modulos: document.getElementById('u-rol').value === 'administrador' ? 'todos' : mods
+            };
+
+            const res = await fetch('/api/usuarios', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            if(res.ok) { alert('✅ Creado con éxito.'); document.getElementById('form-user').reset(); cargarUsuarios(); }
+            else { const err = await res.json(); alert('❌ ' + err.detail); }
+        };
+
+        async function borrarUsuario(id) {
+            if(confirm('¿Eliminar usuario definitivamente del sistema ERP?')) {
+                const res = await fetch('/api/usuarios/' + id, { method: 'DELETE' });
+                if(res.ok) cargarUsuarios(); else { const err = await res.json(); alert(err.detail); }
+            }
+        }
+
+        async function cambiarEstado(id) {
+            const res = await fetch(`/api/usuarios/${id}/estado`, { method: 'PUT' });
+            if(res.ok) cargarUsuarios(); else { const err = await res.json(); alert(err.detail); }
+        }
+
+        cargarUsuarios();
+    </script>
+</body>
+</html>
