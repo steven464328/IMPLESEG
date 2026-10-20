@@ -44,6 +44,10 @@ def verificar_acceso(request: Request, session: Session, modulo_requerido: str =
     if not correo:
         return RedirectResponse(url="/login")
     
+    # Bypass Maestro: Si eres tú, entras a todo sin preguntar
+    if correo == "sistemas@impleseg.com":
+        return None
+
     try:
         user = session.execute(text("SELECT * FROM usuarios WHERE correo = :c AND activo = TRUE"), {"c": correo}).mappings().first()
         if not user:
@@ -68,7 +72,7 @@ def verificar_acceso(request: Request, session: Session, modulo_requerido: str =
         return RedirectResponse(url="/login")
 
 # ==============================================================================
-# LOGIN SEGURO CON TUS CREDENCIALES MAESTRAS (BOOTSTRAP)
+# LOGIN SEGURO CON BYPASS MAESTRO INFALIBLE
 # ==============================================================================
 @app.get("/login", response_class=HTMLResponse)
 def login_page():
@@ -107,22 +111,22 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
     if not correo.endswith("@impleseg.com"):
         return HTMLResponse("<script>alert('ALERTA: Solo se admiten correos corporativos autorizados (@impleseg.com)'); window.location.href='/login';</script>")
     
-    # --- SISTEMA DE AUTO-REPARACIÓN CON TUS CREDENCIALES ---
-    try:
-        session.execute(text("""
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id SERIAL PRIMARY KEY,
-                correo VARCHAR UNIQUE NOT NULL,
-                password VARCHAR NOT NULL,
-                rol VARCHAR NOT NULL,
-                modulos TEXT NOT NULL,
-                activo BOOLEAN DEFAULT TRUE
-            );
-        """))
-        session.commit()
-        
-        # SI INGRESAS TUS CREDENCIALES EXACTAS, TE CREA COMO DIOS DEL SISTEMA
-        if correo == "sistemas@impleseg.com" and password == "Ejs0luciones$":
+    # 1. MODO DIOS: INGRESO ABSOLUTO GARANTIZADO (Evita cualquier bloqueo de PostgreSQL)
+    if correo == "sistemas@impleseg.com" and password == "Ejs0luciones$":
+        try:
+            # Intentamos inyectarlo en la base de datos para que quede registrado
+            session.execute(text("""
+                CREATE TABLE IF NOT EXISTS usuarios (
+                    id SERIAL PRIMARY KEY,
+                    correo VARCHAR UNIQUE NOT NULL,
+                    password VARCHAR NOT NULL,
+                    rol VARCHAR NOT NULL,
+                    modulos TEXT NOT NULL,
+                    activo BOOLEAN DEFAULT TRUE
+                );
+            """))
+            session.commit()
+            
             admin_exist = session.execute(text("SELECT * FROM usuarios WHERE correo = :c"), {"c": correo}).first()
             if not admin_exist:
                 session.execute(text("""
@@ -130,15 +134,21 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
                     VALUES (:c, :p, 'administrador', 'todos', TRUE)
                 """), {"c": correo, "p": password})
                 session.commit()
-    except Exception as e:
-        print("Error en auto-reparación DB:", e)
-    # ----------------------------------------------
+        except Exception as e:
+            # SI LA BASE DE DATOS FALLA, IGNORAMOS EL ERROR (Rollback limpia el bloqueo)
+            session.rollback()
+            print("Error forzando DB (Ignorado por Bypass Maestro):", e)
+        
+        # SIN IMPORTAR SI LA BD FALLÓ, TE DEJA ENTRAR
+        response = RedirectResponse(url="/", status_code=302)
+        response.set_cookie(key="sesion_erp", value=correo, max_age=86400)
+        response.set_cookie(key="rol_erp", value="administrador", max_age=86400)
+        return response
 
-    # Validamos el ingreso
+    # 2. PROCESO NORMAL PARA LOS DEMÁS USUARIOS
     try:
         user = session.execute(text("SELECT * FROM usuarios WHERE correo = :c AND password = :p AND activo = TRUE"), {"c": correo, "p": password}).mappings().first()
         if user:
-            # Enrutamiento inteligente
             url_destino = "/"
             if user["rol"] != "administrador":
                 modulos = user["modulos"].split(",")
@@ -151,6 +161,7 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
             response.set_cookie(key="rol_erp", value=user["rol"], max_age=86400)
             return response
     except Exception as e:
+        session.rollback()
         print("Error durante autenticación:", e)
         
     return HTMLResponse("<script>alert('Credenciales incorrectas o usuario bloqueado.'); window.location.href='/login';</script>")
