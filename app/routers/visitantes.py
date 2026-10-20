@@ -36,7 +36,6 @@ class VisitanteImportPayload(BaseModel):
 def es_fecha_valida(fecha_str):
     if not fecha_str or fecha_str.strip() == "":
         return False
-    # Filtra números gigantes o errores de Excel
     if len(fecha_str) > 25 or " " not in fecha_str or "-" not in fecha_str:
         return False
     return True
@@ -127,11 +126,22 @@ def registrar_salida_manual(visitante_id: int, session: Session = Depends(get_se
         session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+# NUEVA RUTA PARA LIMPIAR LA BASE DE DATOS
+@router.delete("/vaciar")
+def vaciar_base_datos(session: Session = Depends(get_session)):
+    try:
+        query = text("DELETE FROM registro_visitantes;")
+        session.execute(query)
+        session.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/importar")
 def importar_historico(visitantes: List[VisitanteImportPayload], session: Session = Depends(get_session)):
     try:
         for v in visitantes:
-            # Blindaje contra fechas corruptas de Excel
             hora_in = v.hora_entrada if es_fecha_valida(v.hora_entrada) else datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             hora_out = v.hora_salida if es_fecha_valida(v.hora_salida) else None
             
