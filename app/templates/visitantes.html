@@ -425,6 +425,22 @@
       }
     };
 
+    // ==========================================
+    // SEGURIDAD FRONTEND: Verificar Rol Real de BD
+    // ==========================================
+    document.addEventListener("DOMContentLoaded", () => {
+      const cookies = document.cookie;
+      // Ahora lee directamente el rol que asignaste en el Panel de Administrador
+      const isAdmin = cookies.includes('rol_erp=administrador');
+      
+      if(isAdmin) {
+        const btnAdmin = document.getElementById('btn-admin-trigger');
+        const btnVolver = document.getElementById('btn-volver-erp');
+        if(btnAdmin) btnAdmin.style.display = 'block';
+        if(btnVolver) btnVolver.style.display = 'block';
+      }
+    });
+
     // DASHBOARD ADMINISTRADOR
     let globalData = [];
     async function abrirAdmin() { 
