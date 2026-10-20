@@ -14,33 +14,12 @@ from app.routers import (
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-app = FastAPI(title="ERP IMPLESEG", version="3.0")
+app = FastAPI(title="ERP IMPLESEG SEGURO", version="3.0")
 
 @app.on_event("startup")
 def startup():
     init_db()
-    # Creación segura de la tabla de usuarios sin tumbar el servidor
-    try:
-        db = next(get_session())
-        db.execute(text("""
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id SERIAL PRIMARY KEY,
-                correo VARCHAR UNIQUE NOT NULL,
-                password VARCHAR NOT NULL,
-                rol VARCHAR NOT NULL,
-                modulos TEXT NOT NULL,
-                activo BOOLEAN DEFAULT TRUE
-            );
-        """))
-        admin_check = db.execute(text("SELECT * FROM usuarios WHERE id = 1")).first()
-        if not admin_check:
-            db.execute(text("""
-                INSERT INTO usuarios (correo, password, rol, modulos, activo) 
-                VALUES ('admin@impleseg.com', 'impleseg2026', 'administrador', 'todos', TRUE)
-            """))
-        db.commit()
-    except Exception as e:
-        print(f"Advertencia: No se pudo verificar la tabla de usuarios en el inicio: {e}")
+    # La creación de usuarios se movió al Login para evitar caídas del servidor en el arranque.
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
@@ -87,11 +66,10 @@ def verificar_acceso(request: Request, session: Session, modulo_requerido: str =
                 """, status_code=403)
         return None
     except Exception:
-        # Falla de conexión segura (Fallback al login)
         return RedirectResponse(url="/login")
 
 # ==============================================================================
-# LOGIN SEGURO
+# LOGIN SEGURO CON AUTO-REPARACIÓN (BOOTSTRAP)
 # ==============================================================================
 @app.get("/login", response_class=HTMLResponse)
 def login_page():
@@ -127,9 +105,42 @@ def login_page():
 
 @app.post("/login")
 def procesar_login(correo: str = Form(...), password: str = Form(...), session: Session = Depends(get_session)):
+    if not correo.endswith("@impleseg.com"):
+        return HTMLResponse("<script>alert('ALERTA: Solo se admiten correos corporativos autorizados (@impleseg.com)'); window.location.href='/login';</script>")
+    
+    # --- SISTEMA DE AUTO-REPARACIÓN (BOOTSTRAP) ---
+    # Garantiza que la tabla y el usuario maestro siempre existan antes de validar
+    try:
+        session.execute(text("""
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id SERIAL PRIMARY KEY,
+                correo VARCHAR UNIQUE NOT NULL,
+                password VARCHAR NOT NULL,
+                rol VARCHAR NOT NULL,
+                modulos TEXT NOT NULL,
+                activo BOOLEAN DEFAULT TRUE
+            );
+        """))
+        session.commit()
+        
+        # Si alguien intenta entrar con la clave maestra, aseguramos que exista en BD
+        if correo == "admin@impleseg.com" and password == "impleseg2026":
+            admin_exist = session.execute(text("SELECT * FROM usuarios WHERE correo = 'admin@impleseg.com'")).first()
+            if not admin_exist:
+                session.execute(text("""
+                    INSERT INTO usuarios (correo, password, rol, modulos, activo) 
+                    VALUES ('admin@impleseg.com', 'impleseg2026', 'administrador', 'todos', TRUE)
+                """))
+                session.commit()
+    except Exception as e:
+        print("Error en auto-reparación DB:", e)
+    # ----------------------------------------------
+
+    # Validamos las credenciales
     try:
         user = session.execute(text("SELECT * FROM usuarios WHERE correo = :c AND password = :p AND activo = TRUE"), {"c": correo, "p": password}).mappings().first()
         if user:
+            # Enrutamiento inteligente según el rol
             url_destino = "/"
             if user["rol"] != "administrador":
                 modulos = user["modulos"].split(",")
@@ -141,8 +152,9 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
             response.set_cookie(key="sesion_erp", value=correo, max_age=86400)
             response.set_cookie(key="rol_erp", value=user["rol"], max_age=86400)
             return response
-    except Exception:
-        pass
+    except Exception as e:
+        print("Error durante autenticación:", e)
+        
     return HTMLResponse("<script>alert('Credenciales incorrectas o usuario bloqueado.'); window.location.href='/login';</script>")
 
 @app.get("/logout")
@@ -164,12 +176,11 @@ def index(request: Request, session: Session = Depends(get_session)):
 # RUTA PROFESIONAL PARA LA CONFIGURACIÓN DE SEGURIDAD
 @app.get("/configuracion/seguridad")
 def admin_usuarios_view(request: Request, session: Session = Depends(get_session)):
-    # Solo un administrador puede acceder a esta ruta
     fallo = verificar_acceso(request, session, "ACCESO_RESTRINGIDO_SISTEMA_ROOT")
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "seguridad.html"))
 
-# EL QUIOSCO QUEDA LIBRE PARA RECEPCIÓN, PERO EL PANEL INTERNO ESTÁ BLOQUEADO
+# EL QUIOSCO QUEDA LIBRE PARA LA TABLET DE RECEPCIÓN
 @app.get("/visitantes")
 def visitantes_view(request: Request):
     return FileResponse(os.path.join(BASE_DIR, "templates", "visitantes.html"))
