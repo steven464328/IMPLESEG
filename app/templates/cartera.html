@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Cartera | IMPLESEG ERP</title>
+    <style>
+        body { background: #0b1121; color: #e2e8f0; font-family: system-ui; padding: 40px; margin: 0; }
+        h1 { color: #f97316; border-bottom: 2px solid #1e293b; padding-bottom: 10px; margin-top: 5px; }
+        .panel { background: #121e2d; padding: 25px; border-radius: 12px; border: 1px solid #1e293b; margin-bottom: 20px; }
+        .admin-only { display: none; }
+        button { padding: 12px 20px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; color: white; transition: 0.2s;}
+        .btn-upload { background: #3b82f6; } .btn-upload:hover { background: #2563eb; }
+        .btn-notify { background: #ef4444; float: right; } .btn-notify:hover { background: #dc2626; }
+        .btn-save { background: #10b981; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; border-bottom: 1px solid #1e293b; text-align: left; font-size: 13px; }
+        th { color: #94a3b8; background: #0f172a; text-transform: uppercase; }
+        input[type="text"], input[type="email"], input[type="file"] { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #070b14; color: white; }
+        .stat-box { display: inline-block; padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; margin-bottom: 15px; }
+        .stat-val { font-size: 24px; color: #10b981; font-weight: bold; font-family: monospace;}
+    </style>
+</head>
+<body>
+
+    <a href="/" style="color: #94a3b8; text-decoration: none; font-weight:bold;">← Volver al ERP</a>
+    <h1>💸 Módulo de Cartera Vencida</h1>
+
+    <!-- SECCIÓN ADMINISTRADOR -->
+    <div id="panel-admin" class="admin-only">
+        <div class="panel">
+            <h3 style="color:#10b981; margin-top:0;">1. Matriz de Correos Corporativos</h3>
+            <form id="form-vendedor" style="display:flex; gap:10px; align-items:center;">
+                <input type="text" id="v-nombre" placeholder="Nombre en SIESA (Ej: GÓMEZ FERNEY)" required style="flex:1;">
+                <input type="email" id="v-correo" placeholder="Correo corporativo asignado" required style="flex:1;">
+                <button type="submit" class="btn-save">Guardar Relación</button>
+            </form>
+            <table id="tabla-correos"></table>
+        </div>
+
+        <div class="panel">
+            <h3 style="color:#3b82f6; margin-top:0;">2. Ingestión y Despacho de Reportes</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <input type="file" id="file-excel" accept=".xlsx, .xls">
+                    <button class="btn-upload" onclick="subirExcel()">⚙️ Cargar SIESA</button>
+                </div>
+                <button class="btn-notify" onclick="enviarCorreos()">📧 Ejecutar Envíos Masivos</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN VENDEDORES (FUERZA DE VENTAS) -->
+    <div class="panel" id="panel-vendedor">
+        <h3 style="color:#f97316; margin-top:0;">Mi Cartera Asignada (Mora Activa)</h3>
+        <div class="stat-box">Saldo Total Vencido: <br><span class="stat-val" id="total-saldo">$0.00</span></div>
+        <table id="tabla-mi-cartera">
+            <thead>
+                <tr><th>Cliente</th><th>NIT</th><th>Factura</th><th>Vencimiento</th><th>Valor (COP)</th></tr>
+            </thead>
+            <tbody id="tb-datos-cartera"></tbody>
+        </table>
+    </div>
+
+    <script>
+        fetch('/api/cartera/init');
+        const isAdmin = document.cookie.includes('rol_erp=administrador');
+
+        if(isAdmin) {
+            document.getElementById('panel-admin').style.display = 'block';
+            cargarMapeos();
+        } else {
+            cargarMiCartera();
+        }
+
+        async function cargarMapeos() {
+            const res = await fetch('/api/cartera/vendedores');
+            const data = await res.json();
+            document.getElementById('tabla-correos').innerHTML = `
+                <tr><th>Nombre exacto SIESA</th><th>Correo Configurado</th></tr>
+                ${data.map(v => `<tr><td><b>${v.vendedor}</b></td><td>${v.correo}</td></tr>`).join('')}
+            `;
+        }
+
+        document.getElementById('form-vendedor').onsubmit = async (e) => {
+            e.preventDefault();
+            await fetch('/api/cartera/vendedores', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ vendedor: document.getElementById('v-nombre').value, correo: document.getElementById('v-correo').value })
+            });
+            document.getElementById('form-vendedor').reset();
+            cargarMapeos();
+        };
+
+        async function subirExcel() {
+            const file = document.getElementById('file-excel').files[0];
+            if(!file) return alert("Seleccione el archivo .xlsx");
+            const formData = new FormData(); formData.append("file", file);
+            
+            alert("Procesando datos...");
+            const res = await fetch('/api/cartera/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if(res.ok) alert(`✅ Completado. Facturas vencidas filtradas: ${data.registros_vencidos}`);
+            else alert(`❌ Error: ${data.detail}`);
+        }
+
+        async function enviarCorreos() {
+            if(confirm("¿Proceder con el envío de notificaciones a toda la fuerza de ventas?")) {
+                const res = await fetch('/api/cartera/notificar', { method: 'POST' });
+                const data = await res.json();
+                if(res.ok) alert(`✅ Operación exitosa. Correos despachados: ${data.correos_enviados}`);
+                else alert(`❌ Error: ${data.detail}`);
+            }
+        }
+
+        async function cargarMiCartera() {
+            const res = await fetch('/api/cartera/mis-datos');
+            const data = await res.json();
+            let total = 0;
+            document.getElementById('tb-datos-cartera').innerHTML = data.map(f => {
+                total += parseFloat(f.valor);
+                return `<tr><td>${f.cliente}</td><td>${f.nit}</td><td>${f.factura}</td><td style="color:#ef4444;">${f.fecha_vencimiento}</td><td>$${parseFloat(f.valor).toLocaleString('es-CO')}</td></tr>`;
+            }).join('');
+            document.getElementById('total-saldo').innerText = `$${total.toLocaleString('es-CO')}`;
+        }
+    </script>
+</body>
+</html>

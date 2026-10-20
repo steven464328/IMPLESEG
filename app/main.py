@@ -5,6 +5,11 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlmodel import Session
 
+from app.routers import (
+    dashboard, equipos, gh_inventario, gh_asignaciones,
+    gh_bajas, recepcion, etiquetas_usb, dashboard_equipos,
+    impresoras, hv_equipos, visitantes, usuarios, cartera # <-- AGREGADO
+)
 from app.database import init_db, get_session
 from app.routers import (
     dashboard, equipos, gh_inventario, gh_asignaciones,
@@ -35,6 +40,9 @@ app.include_router(impresoras.router)
 app.include_router(hv_equipos.router)
 app.include_router(visitantes.router)
 app.include_router(usuarios.router)
+app.include_router(visitantes.router)
+app.include_router(usuarios.router)
+app.include_router(cartera.router) # <-- AGREGADO
 
 # ==============================================================================
 # MOTOR DE SEGURIDAD (RBAC - INTERCEPTOR DE RUTAS)
@@ -203,3 +211,9 @@ def hojas_vida(request: Request, session: Session = Depends(get_session)):
     fallo = verificar_acceso(request, session, "hojas_vida")
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "hojas_vida.html"))
+
+@app.get("/cartera")
+def cartera_view(request: Request, session: Session = Depends(get_session)):
+    fallo = verificar_acceso(request, session, "cartera")
+    if fallo: return fallo
+    return FileResponse(os.path.join(BASE_DIR, "templates", "cartera.html"))
