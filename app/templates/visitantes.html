@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IMPLESEG | Control de Acceso - Visitantes 3D Pro</title>
+  <title>IMPLESEG | Control de Acceso - Visitantes Pro</title>
   <link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -12,8 +12,8 @@
       --green-main: #10b981;
       --green-dark: #059669;
       --bg-dark: #060911;
-      --card-bg: rgba(13, 19, 33, 0.85);
-      --border-card: rgba(255, 255, 255, 0.12);
+      --card-bg: rgba(13, 19, 33, 0.75);
+      --border-card: rgba(255, 255, 255, 0.1);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
@@ -31,12 +31,22 @@
       position: relative;
     }
 
-    /* CANVAS DE RENDERIZADO 3D WEBGL EN VIVO */
-    #canvas-3d-render {
+    /* CANVAS FOTORREALISTA EN VIVO */
+    #canvas-real-3d {
       position: fixed;
       top: 0; left: 0;
       width: 100vw; height: 100vh;
       z-index: 0;
+      pointer-events: none;
+    }
+
+    /* CAPA DE GRADIENTE PARA MEJORAR LA LECTURA */
+    .overlay-gradient {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: radial-gradient(circle at center, transparent 0%, rgba(6,9,17,0.8) 100%);
+      z-index: 1;
       pointer-events: none;
     }
 
@@ -149,7 +159,7 @@
       50% { opacity: 0.3; transform: scale(0.75); }
     }
 
-    /* TARJETAS QUIOSCO */
+    /* TARJETAS DE ACCESO INTERACTIVAS */
     .kiosk-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -232,13 +242,13 @@
       line-height: 1.6;
     }
 
-    /* FORMULARIOS */
+    /* PANELES DE FORMULARIO CRISTALINOS */
     .form-panel {
       display: none;
       width: 100%;
       max-width: 840px;
-      background: var(--card-bg);
-      backdrop-filter: blur(24px);
+      background: rgba(13, 19, 33, 0.85);
+      backdrop-filter: blur(25px);
       border: 1px solid var(--border-card);
       border-radius: 24px;
       padding: 40px;
@@ -372,7 +382,12 @@
       letter-spacing: 1px;
     }
 
-    .sst-item span { font-size: 22px; margin-bottom: 4px; }
+    .sst-item img {
+      width: 28px;
+      height: 28px;
+      margin-bottom: 6px;
+      filter: drop-shadow(0 0 5px rgba(255,255,255,0.2));
+    }
 
     .footer-credits {
       font-size: 10px;
@@ -395,8 +410,9 @@
 </head>
 <body>
 
-  <!-- Canvas WebGL/Render 3D en Vivo -->
-  <canvas id="canvas-3d-render"></canvas>
+  <!-- Lienzo de la animación fotorealista -->
+  <canvas id="canvas-real-3d"></canvas>
+  <div class="overlay-gradient"></div>
 
   <!-- Header -->
   <header>
@@ -533,15 +549,14 @@
     </div>
   </main>
 
-  <!-- Footer SST -->
+  <!-- Footer SST con Imágenes Reales -->
   <footer>
     <div class="sst-icons-bar">
-      <div class="sst-item"><span>🧯</span>EXTINTOR</div>
-      <div class="sst-item"><span>🪖</span>EPP</div>
-      <div class="sst-item"><span>🔥</span>BOMBERIL</div>
-      <div class="sst-item"><span>🚨</span>RED CI</div>
-      <div class="sst-item"><span>⚠️</span>SEÑALIZ.</div>
-      <div class="sst-item"><span>📡</span>DETECTOR</div>
+      <div class="sst-item"><img src="https://em-content.zobj.net/source/apple/391/fire-extinguisher_1f9ef.png" alt="Extintor">EXTINTOR</div>
+      <div class="sst-item"><img src="https://em-content.zobj.net/source/apple/391/rescue-worker-helmet_26d1-fe0f.png" alt="Casco">EPP</div>
+      <div class="sst-item"><img src="https://em-content.zobj.net/source/apple/391/axe_1fa93.png" alt="Hacha">BOMBERIL</div>
+      <div class="sst-item"><img src="https://em-content.zobj.net/source/apple/391/police-car-light_1f6a8.png" alt="Alarma">RED CI</div>
+      <div class="sst-item"><img src="https://em-content.zobj.net/source/apple/391/gloves_1f9e4.png" alt="Guantes">GUANTES</div>
     </div>
     <div class="footer-credits">
       IMPLEMENTOS DE SEGURIDAD INDUSTRIAL IMPLESEG S.A.S · EST. 1978 · MEDELLÍN, COLOMBIA
@@ -550,8 +565,6 @@
 
   <a href="/" class="admin-link">🏠 Regresar al ERP</a>
 
-  <!-- Cargar Librería Three.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
     // RELOJ EN TIEMPO REAL
     function updateClock() {
@@ -578,141 +591,94 @@
       document.getElementById('kiosk-menu').style.display = 'grid';
     }
 
-    // SCENE & RENDERER 3D REALISTA CON PRODUCTOS CATÁLOGO IMPLESEG
-    const canvas = document.getElementById('canvas-3d-render');
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+    // ANIMACIÓN FOTORREALISTA EN CANVAS (IMÁGENES 3D RENDERIZADAS)
+    const canvas = document.getElementById('canvas-real-3d');
+    const ctx = canvas.getContext('2d');
+    let width, height;
 
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
 
-    // ILUMINACIÓN MULTI-FUENTE
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambientLight);
+    // URLs de Renders 3D fotorrealistas de alta calidad
+    const imageUrls = [
+      'https://em-content.zobj.net/source/apple/391/fire-extinguisher_1f9ef.png',  // Extintor Realista
+      'https://em-content.zobj.net/source/apple/391/rescue-worker-helmet_26d1-fe0f.png', // Casco Rescate
+      'https://em-content.zobj.net/source/apple/391/axe_1fa93.png', // Hacha
+      'https://em-content.zobj.net/source/apple/391/police-car-light_1f6a8.png', // Sirena/Baliza
+      'https://em-content.zobj.net/source/apple/391/gloves_1f9e4.png', // Guantes carnaza
+      'https://em-content.zobj.net/source/apple/391/fire_1f525.png' // Fuego volumétrico
+    ];
 
-    const fireLight = new THREE.PointLight(0xf97316, 2.5, 60);
-    fireLight.position.set(12, 15, 10);
-    scene.add(fireLight);
+    const loadedImages = [];
+    let imagesLoadedCount = 0;
 
-    const metallicLight = new THREE.DirectionalLight(0xe2e8f0, 1.2);
-    metallicLight.position.set(-10, 20, 15);
-    scene.add(metallicLight);
+    imageUrls.forEach(url => {
+      const img = new Image();
+      img.src = url;
+      img.onload = () => {
+        imagesLoadedCount++;
+      };
+      loadedImages.push(img);
+    });
 
-    // MATERIALES CATALOGO IMPLESEG
-    const matRojoExtintor = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.75, roughness: 0.2 }); // Extintor ABC/AVD IMPLESEG
-    const matAmarilloCasco = new THREE.MeshStandardMaterial({ color: 0xeab308, metalness: 0.2, roughness: 0.3 }); // Casco Portwest
-    const matMetalicoBrillante = new THREE.MeshStandardMaterial({ color: 0xc084fc, metalness: 0.9, roughness: 0.1 }); // Acoples manguera
-    const matGuanteCarnaza = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.1, roughness: 0.8 }); // Guante multiflex
-    const matHachaPico = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.85, roughness: 0.15 }); // Hacha bomberil
+    // Crear el arreglo de objetos flotantes
+    const floatingItems = [];
+    for (let i = 0; i < 28; i++) {
+      // Profundidad simulada (Z-index manual)
+      const zDepth = Math.random(); // 0 (lejos) a 1 (cerca)
+      const baseSize = 40 + (zDepth * 80); // Los más cercanos son más grandes
 
-    const items3D = [];
-    const mainGroup = new THREE.Group();
-    scene.add(mainGroup);
+      floatingItems.push({
+        imgIndex: Math.floor(Math.random() * imageUrls.length),
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        size: baseSize,
+        vx: (Math.random() - 0.5) * 0.8,
+        vy: -0.5 - (zDepth * 1.5), // Los más cercanos suben más rápido (Efecto Parallax real)
+        rotation: Math.random() * 360,
+        vRot: (Math.random() - 0.5) * 1.5,
+        opacity: 0.15 + (zDepth * 0.4) // Los cercanos son más visibles
+      });
+    }
 
-    // FUNCIÓN CONSTRUCTORA DE OBJETOS DETALLADOS CATÁLOGO IMPLESEG
-    function crearObjetoSeguridad(tipo) {
-      const g = new THREE.Group();
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
 
-      if (tipo === 'extintor') {
-        // EXTINTOR REALISTA: Cuerpo, Válvula, Manija, Manguera y Manómetro
-        const cuerpo = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 2.2, 24), matRojoExtintor);
-        const tapa = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 12, 0, Math.PI*2, 0, Math.PI/2), matRojoExtintor);
-        tapa.position.y = 1.1;
+      // Dibujar solo si las imágenes fotorrealistas ya cargaron
+      if (imagesLoadedCount === imageUrls.length) {
+        floatingItems.forEach(item => {
+          item.x += item.vx;
+          item.y += item.vy;
+          item.rotation += item.vRot;
 
-        const manija = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.4), matMetalicoBrillante);
-        manija.position.set(0, 1.4, 0.2);
+          // Bucle infinito: si salen por arriba, vuelven por abajo
+          if (item.y + item.size < -50) {
+            item.y = height + 50;
+            item.x = Math.random() * width;
+          }
+          if (item.x > width + 50) item.x = -50;
+          if (item.x < -50) item.x = width + 50;
 
-        const manguera = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.06, 12, 24, Math.PI), matMetalicoBrillante);
-        manguera.position.set(0.3, 0.8, 0);
-
-        g.add(cuerpo, tapa, manija, manguera);
-      } else if (tipo === 'casco') {
-        // CASCO DE RESCATE/ALTURA: Cúpula, Visera y Perfil Ergonomico
-        const cupula = new THREE.Mesh(new THREE.SphereGeometry(0.85, 24, 16, 0, Math.PI*2, 0, Math.PI/1.9), matAmarilloCasco);
-        const visera = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 0.06, 24), matAmarilloCasco);
-        visera.position.y = -0.05;
-        const cresta = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.3, 1.4), matAmarilloCasco);
-        cresta.position.y = 0.6;
-
-        g.add(cupula, visera, cresta);
-      } else if (tipo === 'hacha') {
-        // HACHA BOMBERIL: Mango y Cabeza con filo y pico
-        const mango = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.5, 16), matMetalicoBrillante);
-        const cabeza = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.3, 0.1), matHachaPico);
-        cabeza.position.set(0.3, 1, 0);
-
-        g.add(mango, cabeza);
-      } else {
-        // GUANTE INDUSTRIAL: Palma y Muñequera
-        const palma = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 0.3), matGuanteCarnaza);
-        const muneca = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.4, 16), matMetalicoBrillante);
-        muneca.position.y = -0.7;
-
-        g.add(palma, muneca);
+          ctx.save();
+          ctx.translate(item.x, item.y);
+          ctx.rotate((item.rotation * Math.PI) / 180);
+          ctx.globalAlpha = item.opacity;
+          
+          // Dibujar la imagen real centrada
+          const img = loadedImages[item.imgIndex];
+          ctx.drawImage(img, -item.size / 2, -item.size / 2, item.size, item.size);
+          
+          ctx.restore();
+        });
       }
 
-      return g;
+      requestAnimationFrame(animate);
     }
-
-    // GENERACIÓN DE 28 ELEMENTOS REALISTAS FLOTANDO
-    const tipos = ['extintor', 'casco', 'hacha', 'guante'];
-
-    for (let i = 0; i < 28; i++) {
-      const tipo = tipos[i % tipos.length];
-      const obj3D = crearObjetoSeguridad(tipo);
-
-      // Posicionamiento 3D Profundo
-      obj3D.position.set(
-        (Math.random() - 0.5) * 38,
-        (Math.random() - 0.5) * 38,
-        (Math.random() - 0.5) * 22 - 6
-      );
-
-      obj3D.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-
-      const esc = Math.random() * 0.45 + 0.5;
-      obj3D.scale.set(esc, esc, esc);
-
-      items3D.push({
-        mesh: obj3D,
-        vx: (Math.random() - 0.5) * 0.008,
-        vy: Math.random() * 0.016 + 0.006,
-        vRotX: (Math.random() - 0.5) * 0.008,
-        vRotY: (Math.random() - 0.5) * 0.008
-      });
-
-      mainGroup.add(obj3D);
-    }
-
-    camera.position.z = 20;
-
-    // BUCLE DE ANIMACIÓN 3D CONTINUO
-    function animate3D() {
-      requestAnimationFrame(animate3D);
-
-      items3D.forEach(item => {
-        item.mesh.position.y += item.vy;
-        item.mesh.position.x += item.vx;
-        item.mesh.rotation.x += item.vRotX;
-        item.mesh.rotation.y += item.vRotY;
-
-        // Reinicio cuando salen de pantalla
-        if (item.mesh.position.y > 20) {
-          item.mesh.position.y = -20;
-          item.mesh.position.x = (Math.random() - 0.5) * 38;
-        }
-      });
-
-      renderer.render(scene, camera);
-    }
-    animate3D();
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    animate();
 
     // REGISTRO DE INGRESO
     document.getElementById('form-ingreso-data').onsubmit = async (e) => {
