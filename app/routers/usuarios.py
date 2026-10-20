@@ -19,10 +19,38 @@ def validar_admin(sesion_erp: Optional[str] = Cookie(None), rol_erp: Optional[st
         raise HTTPException(status_code=403, detail="Acceso denegado. Se requieren privilegios de Administrador.")
     return sesion_erp
 
+# =======================================================
+# RUTA DE AUTO-REPARACIÓN DE BASE DE DATOS
+# =======================================================
+@router.get("/fix-db")
+def reparar_base_datos(session: Session = Depends(get_session)):
+    try:
+        session.execute(text("DROP TABLE IF EXISTS usuarios CASCADE;"))
+        session.execute(text("""
+            CREATE TABLE usuarios (
+                id SERIAL PRIMARY KEY,
+                correo VARCHAR UNIQUE NOT NULL,
+                password VARCHAR NOT NULL,
+                rol VARCHAR NOT NULL,
+                modulos TEXT NOT NULL,
+                activo BOOLEAN DEFAULT TRUE
+            );
+        """))
+        session.commit()
+        return {"mensaje": "✅ Tabla de usuarios reconstruida con éxito. Ya puedes volver al panel y crear los usuarios."}
+    except Exception as e:
+        session.rollback()
+        return {"error": f"Fallo al reparar: {str(e)}"}
+
+# =======================================================
+
 @router.get("")
 def listar_usuarios(session: Session = Depends(get_session), admin: str = Depends(validar_admin)):
-    query = text("SELECT id, correo, rol, modulos, activo FROM usuarios ORDER BY id ASC")
-    return [dict(r) for r in session.execute(query).mappings().all()]
+    try:
+        query = text("SELECT id, correo, rol, modulos, activo FROM usuarios ORDER BY id ASC")
+        return [dict(r) for r in session.execute(query).mappings().all()]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("")
 def crear_usuario(payload: UsuarioPayload, session: Session = Depends(get_session), admin: str = Depends(validar_admin)):
@@ -38,7 +66,7 @@ def crear_usuario(payload: UsuarioPayload, session: Session = Depends(get_sessio
         return {"status": "ok"}
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=500, detail="Error al crear. Es posible que el correo ya exista.")
+        raise HTTPException(status_code=500, detail=f"Fallo en BD: {str(e)}")
 
 @router.delete("/{user_id}")
 def eliminar_usuario(user_id: int, session: Session = Depends(get_session), admin: str = Depends(validar_admin)):
@@ -56,6 +84,10 @@ def eliminar_usuario(user_id: int, session: Session = Depends(get_session), admi
 def cambiar_estado(user_id: int, session: Session = Depends(get_session), admin: str = Depends(validar_admin)):
     if user_id == 1:
         raise HTTPException(status_code=400, detail="No puedes desactivar al administrador principal.")
-    session.execute(text("UPDATE usuarios SET activo = NOT activo WHERE id = :id"), {"id": user_id})
-    session.commit()
-    return {"status": "ok"}
+    try:
+        session.execute(text("UPDATE usuarios SET activo = NOT activo WHERE id = :id"), {"id": user_id})
+        session.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
