@@ -3,17 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IMPLESEG | Control de Acceso - Visitantes Pro</title>
+  <title>IMPLESEG | Control de Visitantes Profesional</title>
   <link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --orange-main: #f97316;
-      --orange-dark: #ea580c;
       --green-main: #10b981;
-      --green-dark: #059669;
-      --bg-dark: #060911;
-      --card-bg: rgba(13, 19, 33, 0.75);
-      --border-card: rgba(255, 255, 255, 0.1);
+      --bg-dark: #0f1c23;
+      --card-bg: rgba(18, 30, 40, 0.75);
+      --border-card: rgba(255, 255, 255, 0.08);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
@@ -21,7 +19,7 @@
     body {
       font-family: 'Space Grotesk', sans-serif;
       background: var(--bg-dark);
-      color: #fff;
+      color: #e2e8f0;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -31,405 +29,153 @@
       position: relative;
     }
 
-    /* CANVAS DE ANIMACIÓN VECTORIAL */
+    /* FONDO RELAJANTE CORPORATIVO + CANVAS */
+    .bg-gradient {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(circle at top, #0f2e24 0%, #0a131a 100%);
+      z-index: -2;
+    }
     #canvas-real-3d {
       position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      z-index: 0;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: -1;
       pointer-events: none;
-    }
-
-    /* CAPA DE GRADIENTE OSCURO (Mejora el contraste) */
-    .overlay-gradient {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: radial-gradient(circle at center, rgba(6,9,17,0.4) 0%, rgba(6,9,17,0.95) 100%);
-      z-index: 1;
-      pointer-events: none;
+      filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.5));
     }
 
     /* HEADER SUPERIOR */
     header {
-      width: 100%;
-      max-width: 1200px;
+      width: 100%; max-width: 1200px;
       padding: 25px 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      display: flex; justify-content: space-between; align-items: center;
       z-index: 10;
     }
-
-    .brand-container {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-
+    .brand-container { display: flex; align-items: center; gap: 15px; }
     .brand-logo-icon {
       width: 50px; height: 50px;
       background: linear-gradient(135deg, #f97316, #c2410c);
       clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
       display: flex; align-items: center; justify-content: center;
-      font-size: 26px;
-      box-shadow: 0 0 30px rgba(249, 115, 22, 0.6);
+      font-size: 26px; box-shadow: 0 0 20px rgba(249, 115, 22, 0.4);
     }
-
-    .brand-text h1 {
-      font-family: 'Teko', sans-serif;
-      font-size: 44px;
-      letter-spacing: 2px;
-      line-height: 0.85;
-      color: #fff;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
-    }
-
-    .brand-text span {
-      font-size: 11px;
-      letter-spacing: 3px;
-      color: var(--orange-main);
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
+    .brand-text h1 { font-family: 'Teko', sans-serif; font-size: 42px; line-height: 0.85; color: #fff; letter-spacing: 2px;}
+    .brand-text span { font-size: 11px; letter-spacing: 3px; color: var(--green-main); font-weight: 700; }
+    
     .clock-box {
-      background: rgba(13, 19, 33, 0.85);
+      background: rgba(18, 30, 40, 0.6);
       border: 1px solid var(--border-card);
-      padding: 8px 22px;
-      border-radius: 12px;
-      text-align: right;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      padding: 8px 22px; border-radius: 12px;
+      text-align: right; backdrop-filter: blur(12px);
     }
+    .clock-time { font-family: 'Teko', sans-serif; font-size: 34px; color: #fff; line-height: 1; }
+    .clock-date { font-size: 10px; color: #94a3b8; letter-spacing: 1.5px; text-transform: uppercase; }
 
-    .clock-time {
-      font-family: 'Teko', sans-serif;
-      font-size: 34px;
-      letter-spacing: 1px;
-      color: #fff;
-      line-height: 1;
-    }
+    main { width: 100%; max-width: 1100px; z-index: 10; padding: 10px 20px; display: flex; flex-direction: column; align-items: center; }
 
-    .clock-date {
-      font-size: 10px;
-      color: #64748b;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-    }
-
-    /* CONTENIDO CENTRAL */
-    main {
-      width: 100%;
-      max-width: 1100px;
-      z-index: 10;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.4);
-      padding: 8px 22px;
-      border-radius: 25px;
-      font-size: 11px;
-      letter-spacing: 2px;
-      color: var(--green-main);
-      font-weight: 700;
-      margin-bottom: 35px;
-      text-transform: uppercase;
-      backdrop-filter: blur(8px);
-    }
-
-    .status-dot {
-      width: 8px; height: 8px;
-      background: var(--green-main);
-      border-radius: 50%;
-      box-shadow: 0 0 12px var(--green-main);
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.3; transform: scale(0.75); }
-    }
-
-    /* TARJETAS INTERACTIVAS */
-    .kiosk-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 40px;
-      width: 100%;
-      max-width: 940px;
-    }
-
+    /* TARJETAS DE INGRESO Y SALIDA */
+    .kiosk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; width: 100%; max-width: 940px; margin-top: 20px;}
     .kiosk-card {
-      background: var(--card-bg);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--border-card);
-      border-radius: 24px;
-      padding: 50px 35px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 20px 45px rgba(0,0,0,0.6);
+      background: var(--card-bg); backdrop-filter: blur(15px);
+      border: 1px solid var(--border-card); border-radius: 20px;
+      padding: 50px 35px; text-align: center; cursor: pointer;
+      transition: all 0.3s; position: relative; overflow: hidden;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.4);
     }
-
-    .kiosk-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 5px;
-    }
-
-    .card-ingreso::before { background: linear-gradient(90deg, #f97316, #ea580c); }
-    .card-salida::before { background: linear-gradient(90deg, #10b981, #059669); }
-
-    .kiosk-card:hover {
-      transform: translateY(-10px) scale(1.02);
-      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
-    }
-
-    .card-ingreso:hover { border-color: rgba(249, 115, 22, 0.7); }
-    .card-salida:hover { border-color: rgba(16, 185, 129, 0.7); }
-
+    .kiosk-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 5px; }
+    .card-ingreso::before { background: var(--orange-main); }
+    .card-salida::before { background: var(--green-main); }
+    .kiosk-card:hover { transform: translateY(-8px); border-color: rgba(255,255,255,0.3); }
+    
     .icon-circle {
-      width: 95px; height: 95px;
-      border-radius: 50%;
-      margin: 0 auto 25px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 42px;
-      transition: transform 0.35s;
+      width: 90px; height: 90px; border-radius: 50%; margin: 0 auto 25px;
+      display: flex; align-items: center; justify-content: center; font-size: 40px;
     }
-
-    .card-ingreso .icon-circle {
-      background: rgba(249, 115, 22, 0.15);
-      border: 1.5px solid rgba(249, 115, 22, 0.45);
-      color: var(--orange-main);
-      box-shadow: 0 0 30px rgba(249, 115, 22, 0.2);
-    }
-
-    .card-salida .icon-circle {
-      background: rgba(16, 185, 129, 0.15);
-      border: 1.5px solid rgba(16, 185, 129, 0.45);
-      color: var(--green-main);
-      box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
-    }
-
-    .kiosk-card:hover .icon-circle {
-      transform: scale(1.12);
-    }
-
-    .kiosk-card h2 {
-      font-family: 'Teko', sans-serif;
-      font-size: 48px;
-      letter-spacing: 2px;
-      margin-bottom: 12px;
-    }
-
+    .card-ingreso .icon-circle { background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.3); color: var(--orange-main); }
+    .card-salida .icon-circle { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--green-main); }
+    .kiosk-card h2 { font-family: 'Teko', sans-serif; font-size: 45px; letter-spacing: 2px; margin-bottom: 12px; }
     .card-ingreso h2 { color: var(--orange-main); }
     .card-salida h2 { color: var(--green-main); }
+    .kiosk-card p { font-size: 13.5px; color: #cbd5e1; line-height: 1.5; }
 
-    .kiosk-card p {
-      font-size: 13.5px;
-      color: #94a3b8;
-      line-height: 1.6;
-    }
-
-    /* PANELES DE FORMULARIO */
+    /* FORMULARIOS CRISTALINOS */
     .form-panel {
-      display: none;
-      width: 100%;
-      max-width: 840px;
-      background: rgba(13, 19, 33, 0.85);
-      backdrop-filter: blur(25px);
-      border: 1px solid var(--border-card);
-      border-radius: 24px;
-      padding: 40px;
-      box-shadow: 0 30px 70px rgba(0,0,0,0.85);
-      animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      display: none; width: 100%; max-width: 840px;
+      background: var(--card-bg); backdrop-filter: blur(25px);
+      border: 1px solid var(--border-card); border-radius: 20px;
+      padding: 35px; box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+      animation: fadeIn 0.3s ease;
     }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(25px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .btn-back {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--border-card);
-      color: #94a3b8;
-      padding: 9px 20px;
-      border-radius: 8px;
-      font-size: 12px;
-      cursor: pointer;
-      margin-bottom: 22px;
-      transition: all 0.2s;
-      font-weight: 600;
-    }
-
-    .btn-back:hover {
-      background: rgba(255, 255, 255, 0.15);
-      color: #fff;
-    }
-
-    .form-header-title {
-      font-family: 'Teko', sans-serif;
-      font-size: 40px;
-      letter-spacing: 1.5px;
-      margin-bottom: 25px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .grid-fields {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-
-    .field-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
+    .btn-back { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-card); color: #cbd5e1; padding: 8px 20px; border-radius: 8px; font-size: 12px; cursor: pointer; margin-bottom: 20px; font-weight: bold; }
+    .btn-back:hover { background: rgba(255, 255, 255, 0.15); color: #fff; }
+    .form-header-title { font-family: 'Teko', sans-serif; font-size: 38px; letter-spacing: 1.5px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    
+    .grid-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .field-group { display: flex; flex-direction: column; gap: 5px; }
     .field-group.full { grid-column: span 2; }
-
-    .field-group label {
-      font-size: 11px;
-      font-weight: 700;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
+    .field-group label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
     .field-group input, .field-group select {
-      background: rgba(7, 10, 18, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 10px;
-      padding: 13px 15px;
-      color: #fff;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.25s, box-shadow 0.25s;
+      background: rgba(10, 15, 22, 0.6); border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px; padding: 12px 14px; color: #fff; font-size: 14px; outline: none; transition: 0.2s;
     }
-
-    .field-group input:focus, .field-group select:focus {
-      border-color: var(--orange-main);
-      box-shadow: 0 0 15px rgba(249, 115, 22, 0.25);
-    }
+    .field-group input:focus, .field-group select:focus { border-color: var(--orange-main); }
+    
+    /* INDICADOR DE AUTOCOMPLETADO */
+    .auto-fill-badge { font-size: 10px; color: var(--green-main); display: none; float: right;}
 
     .btn-action-submit {
-      width: 100%;
-      padding: 18px;
-      border: none;
-      border-radius: 12px;
-      font-family: 'Teko', sans-serif;
-      font-size: 28px;
-      letter-spacing: 2px;
-      color: #fff;
-      cursor: pointer;
-      margin-top: 22px;
-      transition: transform 0.2s, filter 0.2s, box-shadow 0.2s;
+      width: 100%; padding: 15px; border: none; border-radius: 10px;
+      font-family: 'Teko', sans-serif; font-size: 26px; letter-spacing: 2px;
+      color: #fff; cursor: pointer; margin-top: 20px; transition: transform 0.2s;
     }
+    .btn-ingreso { background: var(--orange-main); }
+    .btn-salida { background: var(--green-main); }
+    .btn-action-submit:hover { filter: brightness(1.15); transform: translateY(-2px); }
 
-    .btn-ingreso {
-      background: linear-gradient(135deg, var(--orange-main), var(--orange-dark));
-      box-shadow: 0 10px 25px rgba(249, 115, 22, 0.3);
+    /* PANEL ADMINISTRADOR OCULTO */
+    .admin-trigger {
+      position: fixed; bottom: 20px; right: 20px; font-size: 12px;
+      color: #64748b; cursor: pointer; z-index: 100;
     }
-
-    .btn-salida {
-      background: linear-gradient(135deg, var(--green-main), var(--green-dark));
-      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+    .admin-trigger:hover { color: #fff; }
+    
+    .admin-panel {
+      display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(6, 9, 17, 0.95); z-index: 200; padding: 40px; overflow-y: auto;
     }
+    .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #121e28; border-radius: 10px; overflow: hidden;}
+    .admin-table th, .admin-table td { padding: 12px; text-align: left; border-bottom: 1px solid #1f2937; font-size: 13px;}
+    .admin-table th { background: #1e293b; color: #94a3b8; text-transform: uppercase; font-size: 11px;}
+    .btn-close-admin { background: #ef4444; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold;}
 
-    .btn-action-submit:hover {
-      transform: translateY(-2px);
-      filter: brightness(1.15);
-    }
-
-    /* FOOTER SST - NATIVO SIN ERRORES DE CARGA */
-    footer {
-      width: 100%;
-      max-width: 1000px;
-      padding: 20px;
-      text-align: center;
-      z-index: 10;
-    }
-
-    .sst-icons-bar {
-      display: flex;
-      justify-content: center;
-      gap: 40px;
-      margin-bottom: 15px;
-      opacity: 0.75;
-    }
-
-    .sst-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      font-size: 10px;
-      color: #94a3b8;
-      letter-spacing: 1px;
-    }
-
-    .sst-item span { font-size: 24px; margin-bottom: 6px; }
-
-    .footer-credits {
-      font-size: 10px;
-      color: #475569;
-      letter-spacing: 1.5px;
-    }
-
-    .admin-link {
-      position: fixed;
-      bottom: 15px;
-      right: 20px;
-      font-size: 11px;
-      color: #475569;
-      text-decoration: none;
-      z-index: 20;
-      transition: color 0.2s;
-    }
-    .admin-link:hover { color: var(--orange-main); }
+    footer { width: 100%; max-width: 1000px; padding: 20px; text-align: center; z-index: 10; opacity: 0.6; }
+    .footer-credits { font-size: 10px; color: #94a3b8; letter-spacing: 1.5px; }
   </style>
 </head>
 <body>
 
-  <!-- Canvas de Animación Segura Vectorial -->
+  <div class="bg-gradient"></div>
   <canvas id="canvas-real-3d"></canvas>
-  <div class="overlay-gradient"></div>
 
-  <!-- Header -->
   <header>
     <div class="brand-container">
-      <div class="brand-logo-icon">🔥</div>
+      <div class="brand-logo-icon" style="cursor:pointer;" onclick="window.location.href='/'">🔥</div>
       <div class="brand-text">
         <h1>IMPLESEG</h1>
         <span>CONTROL DE ACCESO · VISITANTES</span>
       </div>
     </div>
-
     <div class="clock-box">
       <div class="clock-time" id="clock-time">00:00:00</div>
       <div class="clock-date" id="clock-date">Cargando fecha...</div>
     </div>
   </header>
 
-  <!-- Contenido Principal -->
   <main>
     <div class="status-pill">
-      <div class="status-dot"></div>
-      SISTEMA ACTIVO · SELECCIONE UNA OPCIÓN
+      <div class="status-dot"></div> SISTEMA ACTIVO · PROTECCIÓN 24/7
     </div>
 
     <!-- PANTALLA PRINCIPAL -->
@@ -437,32 +183,29 @@
       <div class="kiosk-card card-ingreso" onclick="mostrarFormulario('ingreso')">
         <div class="icon-circle">🪖</div>
         <h2>INGRESO</h2>
-        <p>Registre su entrada completando el formulario de visitante. Tenga su cédula a la mano.</p>
+        <p>Registre su entrada completando el formulario. Si ya nos ha visitado, solo digite su cédula.</p>
       </div>
-
       <div class="kiosk-card card-salida" onclick="mostrarFormulario('salida')">
         <div class="icon-circle">🧯</div>
         <h2>SALIDA</h2>
-        <p>Registre su salida de las instalaciones con el número de cédula que usó al ingresar.</p>
+        <p>Registre su salida de las instalaciones digitando el número de cédula que usó al ingresar.</p>
       </div>
     </div>
 
     <!-- FORMULARIO DE INGRESO -->
     <div class="form-panel" id="panel-ingreso">
-      <button class="btn-back" onclick="volverMenu()">← VOLVER</button>
-      <div class="form-header-title" style="color: var(--orange-main);">
-        🪖 REGISTRO DE INGRESO
-      </div>
+      <button class="btn-back" onclick="volverMenu()">← VOLVER AL MENÚ</button>
+      <div class="form-header-title" style="color: var(--orange-main);">🪖 REGISTRO DE INGRESO</div>
 
       <form id="form-ingreso-data">
         <div class="grid-fields">
           <div class="field-group">
-            <label>Nombre y Apellido *</label>
-            <input type="text" id="in-nombre" placeholder="Ej. Juan Pérez García" required>
+            <label>Cédula de Ciudadanía * <span id="badge-auto" class="auto-fill-badge">✓ Datos recuperados</span></label>
+            <input type="text" id="in-cedula" placeholder="Ej. 1023456789" required autocomplete="off">
           </div>
           <div class="field-group">
-            <label>Cédula de Ciudadanía *</label>
-            <input type="text" id="in-cedula" placeholder="Ej. 1023456789" required>
+            <label>Nombre y Apellido *</label>
+            <input type="text" id="in-nombre" placeholder="Ej. Juan Pérez García" required>
           </div>
           <div class="field-group">
             <label>Empresa / Organización *</label>
@@ -511,7 +254,7 @@
             </select>
           </div>
           <div class="field-group">
-            <label>Número en caso de Emergencia *</label>
+            <label>Número de Contacto *</label>
             <input type="text" id="in-contacto" placeholder="Ej. 3001234567" required>
           </div>
           <div class="field-group full">
@@ -525,40 +268,50 @@
 
     <!-- FORMULARIO DE SALIDA -->
     <div class="form-panel" id="panel-salida">
-      <button class="btn-back" onclick="volverMenu()">← VOLVER</button>
-      <div class="form-header-title" style="color: var(--green-main);">
-        🧯 REGISTRO DE SALIDA
-      </div>
-
-      <p style="font-size: 13.5px; color: #94a3b8; text-align: center; margin-bottom: 22px;">
-        Ingrese su número de cédula para confirmar y registrar su salida de las instalaciones Impleseg.
+      <button class="btn-back" onclick="volverMenu()">← VOLVER AL MENÚ</button>
+      <div class="form-header-title" style="color: var(--green-main);">🧯 REGISTRO DE SALIDA</div>
+      <p style="font-size: 13.5px; color: #94a3b8; text-align: center; margin-bottom: 20px;">
+        Ingrese su número de cédula para confirmar y registrar su salida.
       </p>
-
       <form id="form-salida-data">
         <div class="field-group full" style="margin-bottom: 20px;">
           <label style="text-align: center;">Cédula de Ciudadanía</label>
-          <input type="text" id="out-cedula" placeholder="- - - - - - - - - -" style="text-align: center; font-size: 28px; font-family: 'Teko', sans-serif; letter-spacing: 4px;" required>
+          <input type="text" id="out-cedula" placeholder="Digite su documento..." style="text-align: center; font-size: 24px; font-family: 'Teko', sans-serif; letter-spacing: 3px;" required>
         </div>
         <button type="submit" class="btn-action-submit btn-salida">CONFIRMAR SALIDA →</button>
       </form>
     </div>
   </main>
 
-  <!-- Footer SST Usando Emojis Nativos (Nunca Fallan) -->
-  <footer>
-    <div class="sst-icons-bar">
-      <div class="sst-item"><span>🧯</span>EXTINTOR</div>
-      <div class="sst-item"><span>🪖</span>EPP</div>
-      <div class="sst-item"><span>🪓</span>BOMBERIL</div>
-      <div class="sst-item"><span>🚨</span>RED CI</div>
-      <div class="sst-item"><span>🧤</span>GUANTES</div>
+  <!-- PANEL ADMINISTRADOR OCULTO -->
+  <div class="admin-trigger" onclick="abrirAdmin()">⚙️ Gestión Interna (Admin)</div>
+  <div class="admin-panel" id="admin-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h2 style="color: var(--orange-main); font-family: 'Teko', sans-serif; font-size: 32px;">Panel de Control de Visitantes</h2>
+      <button class="btn-close-admin" onclick="cerrarAdmin()">Cerrar Panel X</button>
     </div>
-    <div class="footer-credits">
-      IMPLEMENTOS DE SEGURIDAD INDUSTRIAL IMPLESEG S.A.S · EST. 1978 · MEDELLÍN, COLOMBIA
-    </div>
-  </footer>
+    <p style="color: #94a3b8; font-size: 13px; margin-bottom: 20px;">Aquí se muestran las personas que están actualmente DENTRO de las instalaciones. El sistema cerrará visitas automáticamente a las 9 PM.</p>
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Cédula</th>
+          <th>Nombre</th>
+          <th>Empresa</th>
+          <th>Área / Recibe</th>
+          <th>Hora Ingreso</th>
+          <th>Estado</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody id="tb-admin-visitantes">
+        <tr><td colspan="7">Cargando datos...</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-  <a href="/" class="admin-link">🏠 Regresar al ERP</a>
+  <footer>
+    <div class="footer-credits">IMPLEMENTOS DE SEGURIDAD INDUSTRIAL IMPLESEG S.A.S · EST. 1978 · MEDELLÍN, COLOMBIA</div>
+  </footer>
 
   <script>
     // RELOJ EN TIEMPO REAL
@@ -568,15 +321,16 @@
       const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
       document.getElementById('clock-date').textContent = now.toLocaleDateString('es-CO', options).toUpperCase();
     }
-    setInterval(updateClock, 1000);
-    updateClock();
+    setInterval(updateClock, 1000); updateClock();
 
     function mostrarFormulario(tipo) {
       document.getElementById('kiosk-menu').style.display = 'none';
       if(tipo === 'ingreso') {
         document.getElementById('panel-ingreso').style.display = 'block';
+        document.getElementById('in-cedula').focus();
       } else {
         document.getElementById('panel-salida').style.display = 'block';
+        document.getElementById('out-cedula').focus();
       }
     }
 
@@ -584,129 +338,27 @@
       document.getElementById('panel-ingreso').style.display = 'none';
       document.getElementById('panel-salida').style.display = 'none';
       document.getElementById('kiosk-menu').style.display = 'grid';
+      document.getElementById('badge-auto').style.display = 'none';
     }
 
-    // ANIMACIÓN DE OBJETOS SVG INCRUSTADOS (NUNCA FALLAN, SIN DEPENDENCIAS EXTERNAS)
-    const canvas = document.getElementById('canvas-real-3d');
-    const ctx = canvas.getContext('2d');
-    let width, height;
-
-    function resize() {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    // Vectores SVG codificados directamente para evitar errores de red o CORS
-    const rawSvgs = [
-      // Extintor Rojo
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#dc2626" d="M24 20h16v36H24z"/><path fill="#1f2937" d="M30 8h4v12h-4z"/><path fill="#9ca3af" d="M22 14h20v4H22z"/><path fill="#111827" d="M20 14c-4 0-4 6 0 6h2v24h-2c-2 0-2 2 0 2h4V14h-4z"/><rect x="26" y="28" width="12" height="8" fill="#facc15"/></svg>`,
-      // Casco Amarillo
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#eab308" d="M32 12c-12 0-20 10-20 22v6h40v-6c0-12-8-22-20-22z"/><path fill="#ca8a04" d="M8 40h48v6H8z"/><path fill="#fef08a" d="M30 12h4v28h-4z"/></svg>`,
-      // Hacha Bomberil
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#b91c1c" d="M30 8l-4 48 8 2 4-48z"/><path fill="#9ca3af" d="M34 16l16-8-4 24zM26 20l-12 4 4-12z"/></svg>`,
-      // Sirena / Red CI
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#ef4444" d="M32 16c-10 0-16 8-16 18v6h32v-6c0-10-6-18-16-18z"/><path fill="#1f2937" d="M12 40h40v8H12z"/><path fill="#fca5a5" d="M28 20h8v16h-8z"/></svg>`,
-      // Fuego Volumétrico
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#ea580c" d="M32 4c0 0-16 16-16 32 0 8.8 7.2 16 16 16s16-7.2 16-16c0-16-16-32-16-32z"/><path fill="#facc15" d="M32 20c0 0-8 8-8 16 0 4.4 3.6 8 8 8s8-3.6 8-8c0-8-8-16-8-16z"/></svg>`
-    ];
-
-    // Convertir SVG a URIs de datos
-    const imageUrls = rawSvgs.map(svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
-    let loadedImages = [];
-
-    // Promesa para cargar todas las imágenes y luego iniciar la animación
-    Promise.all(imageUrls.map(url => {
-      return new Promise(resolve => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.src = url;
-      });
-    })).then(images => {
-      loadedImages = images;
-      startAnimation();
-    });
-
-    function startAnimation() {
-      const floatingItems = [];
-      const sparks = [];
-
-      // Crear objetos principales
-      for (let i = 0; i < 30; i++) {
-        const zDepth = Math.random(); 
-        const baseSize = 30 + (zDepth * 70); 
-
-        floatingItems.push({
-          img: loadedImages[Math.floor(Math.random() * loadedImages.length)],
-          x: Math.random() * window.innerWidth,
-          y: Math.random() * window.innerHeight,
-          size: baseSize,
-          vx: (Math.random() - 0.5) * 1.5,
-          vy: -0.6 - (zDepth * 1.8),
-          angle: Math.random() * 360,
-          vAngle: (Math.random() - 0.5) * 2,
-          opacity: 0.15 + (zDepth * 0.4),
-          wobble: Math.random() * Math.PI * 2,
-          wobbleSpeed: 0.02 + Math.random() * 0.03
-        });
-      }
-
-      // Crear partículas de polvo/chispas
-      for(let i=0; i<60; i++) {
-        sparks.push({
-          x: Math.random() * window.innerWidth,
-          y: Math.random() * window.innerHeight,
-          size: Math.random() * 2.5 + 0.5,
-          vy: -Math.random() * 1 - 0.5,
-          color: Math.random() > 0.5 ? '#f97316' : '#eab308',
-          alpha: Math.random() * 0.5 + 0.1
-        });
-      }
-
-      function animate() {
-        ctx.clearRect(0, 0, width, height);
-
-        // Dibujar Chispas
-        sparks.forEach(s => {
-          s.y += s.vy;
-          if(s.y < -10) s.y = height + 10;
-          ctx.globalAlpha = s.alpha;
-          ctx.fillStyle = s.color;
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, s.size, 0, Math.PI*2);
-          ctx.fill();
-        });
-
-        // Dibujar Elementos de Seguridad
-        floatingItems.forEach(item => {
-          item.y += item.vy;
-          item.x += Math.sin(item.wobble) * 0.5; // Movimiento orgánico
-          item.wobble += item.wobbleSpeed;
-          item.angle += item.vAngle;
-
-          if (item.y + item.size < -50) {
-            item.y = height + 50;
-            item.x = Math.random() * width;
+    // AUTO-COMPLETADO MÁGICO POR CÉDULA
+    document.getElementById('in-cedula').addEventListener('blur', async (e) => {
+      const ced = e.target.value.trim();
+      if(ced.length >= 5) {
+        try {
+          const res = await fetch('/api/visitantes/buscar/' + ced);
+          if(res.ok) {
+            const data = await res.json();
+            document.getElementById('in-nombre').value = data.nombre || '';
+            document.getElementById('in-empresa').value = data.empresa || '';
+            document.getElementById('in-correo').value = data.correo || '';
+            document.getElementById('in-arl').value = data.arl || '';
+            document.getElementById('in-contacto').value = data.contacto || '';
+            document.getElementById('badge-auto').style.display = 'inline-block';
           }
-
-          ctx.save();
-          ctx.translate(item.x, item.y);
-          ctx.rotate((item.angle * Math.PI) / 180);
-          ctx.globalAlpha = item.opacity;
-          
-          // Efecto de Resplandor 3D (Glow)
-          ctx.shadowColor = item.img.src.includes('eab308') ? '#eab308' : '#ef4444';
-          ctx.shadowBlur = 20;
-          
-          ctx.drawImage(item.img, -item.size / 2, -item.size / 2, item.size, item.size);
-          ctx.restore();
-        });
-
-        requestAnimationFrame(animate);
+        } catch(err) {}
       }
-      animate();
-    }
+    });
 
     // REGISTRO DE INGRESO
     document.getElementById('form-ingreso-data').onsubmit = async (e) => {
@@ -722,22 +374,11 @@
         contacto: document.getElementById('in-contacto').value,
         persona_recibe: document.getElementById('in-recibe').value
       };
-
-      try {
-        const res = await fetch('/api/visitantes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if(res.ok) {
-          alert('✅ Ingreso registrado exitosamente. Bienvenida(o) a IMPLESEG.');
-          document.getElementById('form-ingreso-data').reset();
-          volverMenu();
-        } else {
-          alert('❌ Ocurrió un error al registrar el ingreso.');
-        }
-      } catch(e) {
-        alert('❌ Error de conexión.');
+      const res = await fetch('/api/visitantes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if(res.ok) {
+        alert('✅ Ingreso registrado exitosamente. Bienvenida(o) a IMPLESEG.');
+        document.getElementById('form-ingreso-data').reset();
+        volverMenu();
       }
     };
 
@@ -745,21 +386,129 @@
     document.getElementById('form-salida-data').onsubmit = async (e) => {
       e.preventDefault();
       const cedula = document.getElementById('out-cedula').value;
-
-      try {
-        const res = await fetch(`/api/visitantes/salida-cedula/${cedula}`, { method: 'PUT' });
-        const data = await res.json();
-        if(res.ok && data.status === 'ok') {
-          alert('✅ Salida registrada exitosamente. ¡Gracias por visitarnos!');
-          document.getElementById('form-salida-data').reset();
-          volverMenu();
-        } else {
-          alert('⚠️ No se encontró ningún ingreso activo para esa cédula.');
-        }
-      } catch(e) {
-        alert('❌ Error de conexión.');
+      const res = await fetch(`/api/visitantes/salida-cedula/${cedula}`, { method: 'PUT' });
+      const data = await res.json();
+      if(res.ok && data.status === 'ok') {
+        alert('✅ Salida registrada exitosamente. ¡Gracias por visitarnos!');
+        document.getElementById('form-salida-data').reset();
+        volverMenu();
+      } else {
+        alert('⚠️ No se encontró ningún ingreso activo para esa cédula.');
       }
     };
+
+    // FUNCIONES DEL PANEL ADMINISTRADOR
+    async function abrirAdmin() {
+      document.getElementById('admin-panel').style.display = 'block';
+      cargarAdmin();
+    }
+    function cerrarAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
+    
+    async function cargarAdmin() {
+      const res = await fetch('/api/visitantes');
+      const data = await res.json();
+      // Filtrar solo los que están DENTRO
+      const activos = data.filter(v => v.estado === 'DENTRO');
+      const tb = document.getElementById('tb-admin-visitantes');
+      if(activos.length === 0) {
+        tb.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay visitantes activos en este momento.</td></tr>';
+        return;
+      }
+      tb.innerHTML = activos.map(v => `
+        <tr>
+          <td><b>${v.cedula}</b></td>
+          <td>${v.nombre}</td>
+          <td>${v.empresa}</td>
+          <td>${v.area} (${v.persona_recibe})</td>
+          <td>${new Date(v.hora_entrada).toLocaleTimeString()}</td>
+          <td><span style="color:#10b981; font-weight:bold;">DENTRO</span></td>
+          <td><button onclick="forzarSalida(${v.id})" style="background:#ea580c; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer;">Dar Salida</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function forzarSalida(id) {
+      if(confirm('¿Confirmar salida manual de este visitante?')) {
+        await fetch(`/api/visitantes/${id}/salida-manual`, { method: 'PUT' });
+        cargarAdmin();
+      }
+    }
+
+    // =========================================================================
+    // ANIMACIÓN FOTORREALISTA CDN APPLE EMOJIS (3D RENDERS)
+    // =========================================================================
+    const canvas = document.getElementById('canvas-real-3d');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+
+    function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
+
+    // URLs de la librería ultrarrealista de Apple (CORS permitido siempre)
+    const baseCdn = 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@14.0.0/img/apple/256/';
+    const imageUrls = [
+      baseCdn + '1f9ef.png', // Extintor
+      baseCdn + '26d1-fe0f.png', // Casco Rescate
+      baseCdn + '1fa93.png', // Hacha
+      baseCdn + '1f6a8.png', // Sirena
+      baseCdn + '1f9e4.png', // Guantes
+      baseCdn + '1f525.png'  // Fuego
+    ];
+
+    const loadedImages = [];
+    let loadedCount = 0;
+
+    imageUrls.forEach(url => {
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.src = url;
+      img.onload = () => { loadedCount++; };
+      loadedImages.push(img);
+    });
+
+    const floatingItems = [];
+    for (let i = 0; i < 24; i++) {
+      const zDepth = Math.random(); 
+      floatingItems.push({
+        imgIndex: Math.floor(Math.random() * imageUrls.length),
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        size: 35 + (zDepth * 70),
+        vx: (Math.random() - 0.5) * 0.8,
+        vy: -0.4 - (zDepth * 1.5),
+        rotation: Math.random() * 360,
+        vRot: (Math.random() - 0.5) * 1.2,
+        opacity: 0.15 + (zDepth * 0.4)
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+
+      if (loadedCount === imageUrls.length) {
+        floatingItems.forEach(item => {
+          item.x += item.vx;
+          item.y += item.vy;
+          item.rotation += item.vRot;
+
+          if (item.y + item.size < -50) {
+            item.y = height + 50;
+            item.x = Math.random() * width;
+          }
+          if (item.x > width + 50) item.x = -50;
+          if (item.x < -50) item.x = width + 50;
+
+          ctx.save();
+          ctx.translate(item.x, item.y);
+          ctx.rotate((item.rotation * Math.PI) / 180);
+          ctx.globalAlpha = item.opacity;
+          ctx.drawImage(loadedImages[item.imgIndex], -item.size / 2, -item.size / 2, item.size, item.size);
+          ctx.restore();
+        });
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
   </script>
 </body>
 </html>
