@@ -31,7 +31,6 @@
       position: relative;
     }
 
-    /* FONDO CORPORATIVO Y CANVAS */
     .bg-gradient {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -47,7 +46,6 @@
       filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.6));
     }
 
-    /* HEADER */
     header {
       width: 100%; max-width: 1200px;
       padding: 25px 30px;
@@ -77,7 +75,6 @@
 
     main { width: 100%; max-width: 1100px; z-index: 10; padding: 10px 20px; display: flex; flex-direction: column; align-items: center; }
 
-    /* PASTILLA ESTADO */
     .status-pill {
       display: flex; align-items: center; justify-content: center; gap: 10px;
       background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.5);
@@ -88,7 +85,6 @@
     .status-dot { width: 10px; height: 10px; background: #10b981; border-radius: 50%; box-shadow: 0 0 12px #10b981; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.7); } }
 
-    /* TARJETAS INGRESO Y SALIDA */
     .kiosk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; width: 100%; max-width: 940px;}
     .kiosk-card {
       background: var(--card-bg); backdrop-filter: blur(15px);
@@ -113,7 +109,6 @@
     .card-salida h2 { color: var(--green-main); }
     .kiosk-card p { font-size: 13.5px; color: #cbd5e1; line-height: 1.5; }
 
-    /* FORMULARIOS */
     .form-panel {
       display: none; width: 100%; max-width: 840px;
       background: var(--card-bg); backdrop-filter: blur(25px);
@@ -148,7 +143,6 @@
     .btn-salida { background: linear-gradient(135deg, var(--green-main), var(--green-dark)); }
     .btn-action-submit:hover { filter: brightness(1.15); transform: translateY(-2px); }
 
-    /* DASHBOARD ADMINISTRADOR */
     .admin-trigger {
       position: fixed; bottom: 20px; right: 20px; font-size: 13px; font-weight: bold;
       color: #f97316; cursor: pointer; z-index: 100; background: rgba(0,0,0,0.5); padding: 8px 15px; border-radius: 8px; border: 1px solid #ea580c;
@@ -214,7 +208,6 @@
       </div>
     </div>
 
-    <!-- FORMULARIO INGRESO -->
     <div class="form-panel" id="panel-ingreso">
       <button class="btn-back" onclick="volverMenu()">← VOLVER AL MENÚ</button>
       <div class="form-header-title" style="color: var(--orange-main);">👷 REGISTRO DE INGRESO</div>
@@ -262,7 +255,6 @@
       </form>
     </div>
 
-    <!-- FORMULARIO SALIDA -->
     <div class="form-panel" id="panel-salida">
       <button class="btn-back" onclick="volverMenu()">← VOLVER AL MENÚ</button>
       <div class="form-header-title" style="color: var(--green-main);">🧯 REGISTRO DE SALIDA</div>
@@ -279,7 +271,7 @@
     </div>
   </main>
 
-  <!-- DASHBOARD ADMINISTRADOR Y CARGA MASIVA DE CSV -->
+  <!-- DASHBOARD ADMINISTRADOR -->
   <div class="admin-trigger" onclick="abrirAdmin()">⚙️ Panel Admin / Informes</div>
   <div class="admin-panel" id="admin-panel">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
@@ -355,7 +347,6 @@
       document.getElementById('badge-auto').style.display = 'none';
     }
 
-    // AUTO-COMPLETADO
     document.getElementById('in-cedula').addEventListener('blur', async (e) => {
       const ced = e.target.value.trim();
       if(ced.length >= 5) {
@@ -374,7 +365,6 @@
       }
     });
 
-    // REGISTRO DE INGRESO
     document.getElementById('form-ingreso-data').onsubmit = async (e) => {
       e.preventDefault();
       const payload = {
@@ -396,7 +386,6 @@
       }
     };
 
-    // REGISTRO DE SALIDA
     document.getElementById('form-salida-data').onsubmit = async (e) => {
       e.preventDefault();
       const cedula = document.getElementById('out-cedula').value;
@@ -411,7 +400,7 @@
       }
     };
 
-    // DASHBOARD E IMPORTACIÓN (CORREGIDO PARA COLOMBIA Y EXCEL)
+    // DASHBOARD E IMPORTACIÓN DE EXCEL SEGURO
     let globalData = [];
     async function abrirAdmin() { document.getElementById('admin-panel').style.display = 'block'; cargarAdmin(); }
     function cerrarAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
@@ -457,14 +446,14 @@
         ];
         csv += row.join(';') + '\n';
       });
-      const blob = new Blob(["\ufeff"+csv], { type: 'text/csv;charset=utf-8;' }); // \ufeff para tildes en Excel
+      const blob = new Blob(["\ufeff"+csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.setAttribute("download", "Historial_Visitantes.csv");
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
 
-    // FORMATEAR FECHAS DE EXCEL PARA LA BASE DE DATOS (DD/MM/YYYY -> YYYY-MM-DD)
+    // LIMPIEZA DE FECHAS EXCEL
     function limpiarFecha(fechaStr) {
       if (!fechaStr) return "";
       fechaStr = fechaStr.replace(/"/g, '').trim();
@@ -483,7 +472,6 @@
       const reader = new FileReader();
       reader.onload = async function(e) {
         const text = e.target.result;
-        // Detecta si Excel guardó con punto y coma (;) o coma (,)
         const sep = text.indexOf(';') > -1 ? ';' : ',';
         const rows = text.split('\n');
         const data = [];
@@ -522,17 +510,17 @@
             cargarAdmin();
           } else {
             const err = await res.json();
-            alert('❌ Ocurrió un error en la base de datos: ' + err.detail);
+            alert('❌ Hubo un error procesando el archivo CSV.');
           }
         } catch(err) {
-          alert('❌ Error de conexión al importar.');
+          alert('❌ Error de conexión.');
         }
       };
       reader.readAsText(file);
     }
 
     // =========================================================================
-    // ANIMACIÓN MÁS RÁPIDA, ORGÁNICA Y CON CASCOS INDUSTRIALES
+    // ANIMACIÓN VIVA, RÁPIDA Y POR TODAS LAS DIRECCIONES
     // =========================================================================
     const canvasObj = document.getElementById('canvas-real-3d');
     const ctx = canvasObj.getContext('2d');
@@ -547,25 +535,22 @@
     const svgCascoNaranja = new Image(); 
     svgCascoNaranja.src = "data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23f97316' d='M32 10 c-14 0-22 12-22 24 v6 h44 v-6 c0-12-8-24-22-24z'/%3E%3Cpath fill='%23c2410c' d='M6 40 h52 v8 H6z'/%3E%3C/svg%3E";
 
-    // Reemplacé el casco de policía militar por el casco naranja y amarillo real
     const securityItems = ['🧯', svgCascoAmarillo, svgCascoNaranja, '🪓', '🚨', '🧤', '🔥'];
     const floaters = [];
 
-    // Incrementé a 35 elementos para que se vea más lleno
-    for (let i = 0; i < 35; i++) {
+    // Velocidad incrementada x3, movimiento por todos los ejes
+    for (let i = 0; i < 40; i++) {
       const zDepth = Math.random(); 
       floaters.push({
         item: securityItems[Math.floor(Math.random() * securityItems.length)],
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
-        size: 35 + (zDepth * 70),
-        vx: (Math.random() - 0.5) * 1.5,   // Movimiento lateral
-        vy: -1.5 - (zDepth * 3.5),         // VELOCIDAD VERTICAL MÁS RÁPIDA
+        size: 35 + (zDepth * 80),
+        vx: (Math.random() - 0.5) * 4.5, // Super Rápido Horizontal
+        vy: (Math.random() - 0.5) * 4.5, // Movimiento Hacia Arriba y Abajo
         rot: Math.random() * Math.PI * 2,
-        vRot: (Math.random() - 0.5) * 0.05, // Rotación natural
-        opacity: 0.2 + (zDepth * 0.4),
-        wobble: Math.random() * Math.PI * 2, // Movimiento orgánico tipo seno
-        wobbleSpeed: 0.01 + Math.random() * 0.02
+        vRot: (Math.random() - 0.5) * 0.15, // Rotación violenta y viva
+        opacity: 0.2 + (zDepth * 0.4)
       });
     }
 
@@ -573,13 +558,13 @@
       ctx.clearRect(0, 0, W, H);
       
       floaters.forEach(f => {
-        // Añadir el "wobble" para que floten de lado a lado orgánicamente
-        f.x += f.vx + Math.sin(f.wobble) * 1.5; 
+        f.x += f.vx; 
         f.y += f.vy; 
         f.rot += f.vRot;
-        f.wobble += f.wobbleSpeed;
 
-        if (f.y + f.size < -50) { f.y = H + 50; f.x = Math.random() * W; }
+        // Bounding box infinito (rebota o cruza la pantalla)
+        if (f.y + f.size < -50) f.y = H + 50;
+        if (f.y - f.size > H + 50) f.y = -50;
         if (f.x > W + 50) f.x = -50;
         if (f.x < -50) f.x = W + 50;
 
@@ -588,7 +573,7 @@
         ctx.rotate(f.rot);
         ctx.globalAlpha = f.opacity;
         
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 12;
         
         if(typeof f.item === 'string') {
           ctx.font = `${f.size}px Arial`;
