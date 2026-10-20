@@ -19,7 +19,6 @@ app = FastAPI(title="ERP IMPLESEG SEGURO", version="3.0")
 @app.on_event("startup")
 def startup():
     init_db()
-    # La creación de usuarios se movió al Login para evitar caídas del servidor en el arranque.
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
@@ -69,7 +68,7 @@ def verificar_acceso(request: Request, session: Session, modulo_requerido: str =
         return RedirectResponse(url="/login")
 
 # ==============================================================================
-# LOGIN SEGURO CON AUTO-REPARACIÓN (BOOTSTRAP)
+# LOGIN SEGURO CON TUS CREDENCIALES MAESTRAS (BOOTSTRAP)
 # ==============================================================================
 @app.get("/login", response_class=HTMLResponse)
 def login_page():
@@ -108,8 +107,7 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
     if not correo.endswith("@impleseg.com"):
         return HTMLResponse("<script>alert('ALERTA: Solo se admiten correos corporativos autorizados (@impleseg.com)'); window.location.href='/login';</script>")
     
-    # --- SISTEMA DE AUTO-REPARACIÓN (BOOTSTRAP) ---
-    # Garantiza que la tabla y el usuario maestro siempre existan antes de validar
+    # --- SISTEMA DE AUTO-REPARACIÓN CON TUS CREDENCIALES ---
     try:
         session.execute(text("""
             CREATE TABLE IF NOT EXISTS usuarios (
@@ -123,24 +121,24 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
         """))
         session.commit()
         
-        # Si alguien intenta entrar con la clave maestra, aseguramos que exista en BD
-        if correo == "admin@impleseg.com" and password == "impleseg2026":
-            admin_exist = session.execute(text("SELECT * FROM usuarios WHERE correo = 'admin@impleseg.com'")).first()
+        # SI INGRESAS TUS CREDENCIALES EXACTAS, TE CREA COMO DIOS DEL SISTEMA
+        if correo == "sistemas@impleseg.com" and password == "Ejs0luciones$":
+            admin_exist = session.execute(text("SELECT * FROM usuarios WHERE correo = :c"), {"c": correo}).first()
             if not admin_exist:
                 session.execute(text("""
                     INSERT INTO usuarios (correo, password, rol, modulos, activo) 
-                    VALUES ('admin@impleseg.com', 'impleseg2026', 'administrador', 'todos', TRUE)
-                """))
+                    VALUES (:c, :p, 'administrador', 'todos', TRUE)
+                """), {"c": correo, "p": password})
                 session.commit()
     except Exception as e:
         print("Error en auto-reparación DB:", e)
     # ----------------------------------------------
 
-    # Validamos las credenciales
+    # Validamos el ingreso
     try:
         user = session.execute(text("SELECT * FROM usuarios WHERE correo = :c AND password = :p AND activo = TRUE"), {"c": correo, "p": password}).mappings().first()
         if user:
-            # Enrutamiento inteligente según el rol
+            # Enrutamiento inteligente
             url_destino = "/"
             if user["rol"] != "administrador":
                 modulos = user["modulos"].split(",")
@@ -173,14 +171,12 @@ def index(request: Request, session: Session = Depends(get_session)):
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "index.html"))
 
-# RUTA PROFESIONAL PARA LA CONFIGURACIÓN DE SEGURIDAD
 @app.get("/configuracion/seguridad")
 def admin_usuarios_view(request: Request, session: Session = Depends(get_session)):
     fallo = verificar_acceso(request, session, "ACCESO_RESTRINGIDO_SISTEMA_ROOT")
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "seguridad.html"))
 
-# EL QUIOSCO QUEDA LIBRE PARA LA TABLET DE RECEPCIÓN
 @app.get("/visitantes")
 def visitantes_view(request: Request):
     return FileResponse(os.path.join(BASE_DIR, "templates", "visitantes.html"))
