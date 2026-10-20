@@ -31,7 +31,7 @@
       position: relative;
     }
 
-    /* CANVAS FOTORREALISTA EN VIVO */
+    /* CANVAS DE ANIMACIÓN VECTORIAL */
     #canvas-real-3d {
       position: fixed;
       top: 0; left: 0;
@@ -40,12 +40,12 @@
       pointer-events: none;
     }
 
-    /* CAPA DE GRADIENTE PARA MEJORAR LA LECTURA */
+    /* CAPA DE GRADIENTE OSCURO (Mejora el contraste) */
     .overlay-gradient {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: radial-gradient(circle at center, transparent 0%, rgba(6,9,17,0.8) 100%);
+      background: radial-gradient(circle at center, rgba(6,9,17,0.4) 0%, rgba(6,9,17,0.95) 100%);
       z-index: 1;
       pointer-events: none;
     }
@@ -159,7 +159,7 @@
       50% { opacity: 0.3; transform: scale(0.75); }
     }
 
-    /* TARJETAS DE ACCESO INTERACTIVAS */
+    /* TARJETAS INTERACTIVAS */
     .kiosk-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -242,7 +242,7 @@
       line-height: 1.6;
     }
 
-    /* PANELES DE FORMULARIO CRISTALINOS */
+    /* PANELES DE FORMULARIO */
     .form-panel {
       display: none;
       width: 100%;
@@ -356,7 +356,7 @@
       filter: brightness(1.15);
     }
 
-    /* FOOTER SST */
+    /* FOOTER SST - NATIVO SIN ERRORES DE CARGA */
     footer {
       width: 100%;
       max-width: 1000px;
@@ -382,12 +382,7 @@
       letter-spacing: 1px;
     }
 
-    .sst-item img {
-      width: 28px;
-      height: 28px;
-      margin-bottom: 6px;
-      filter: drop-shadow(0 0 5px rgba(255,255,255,0.2));
-    }
+    .sst-item span { font-size: 24px; margin-bottom: 6px; }
 
     .footer-credits {
       font-size: 10px;
@@ -410,7 +405,7 @@
 </head>
 <body>
 
-  <!-- Lienzo de la animación fotorealista -->
+  <!-- Canvas de Animación Segura Vectorial -->
   <canvas id="canvas-real-3d"></canvas>
   <div class="overlay-gradient"></div>
 
@@ -437,7 +432,7 @@
       SISTEMA ACTIVO · SELECCIONE UNA OPCIÓN
     </div>
 
-    <!-- PANTALLA PRINCIPAL CON TARJETAS -->
+    <!-- PANTALLA PRINCIPAL -->
     <div class="kiosk-grid" id="kiosk-menu">
       <div class="kiosk-card card-ingreso" onclick="mostrarFormulario('ingreso')">
         <div class="icon-circle">🪖</div>
@@ -549,14 +544,14 @@
     </div>
   </main>
 
-  <!-- Footer SST con Imágenes Reales -->
+  <!-- Footer SST Usando Emojis Nativos (Nunca Fallan) -->
   <footer>
     <div class="sst-icons-bar">
-      <div class="sst-item"><img src="https://em-content.zobj.net/source/apple/391/fire-extinguisher_1f9ef.png" alt="Extintor">EXTINTOR</div>
-      <div class="sst-item"><img src="https://em-content.zobj.net/source/apple/391/rescue-worker-helmet_26d1-fe0f.png" alt="Casco">EPP</div>
-      <div class="sst-item"><img src="https://em-content.zobj.net/source/apple/391/axe_1fa93.png" alt="Hacha">BOMBERIL</div>
-      <div class="sst-item"><img src="https://em-content.zobj.net/source/apple/391/police-car-light_1f6a8.png" alt="Alarma">RED CI</div>
-      <div class="sst-item"><img src="https://em-content.zobj.net/source/apple/391/gloves_1f9e4.png" alt="Guantes">GUANTES</div>
+      <div class="sst-item"><span>🧯</span>EXTINTOR</div>
+      <div class="sst-item"><span>🪖</span>EPP</div>
+      <div class="sst-item"><span>🪓</span>BOMBERIL</div>
+      <div class="sst-item"><span>🚨</span>RED CI</div>
+      <div class="sst-item"><span>🧤</span>GUANTES</div>
     </div>
     <div class="footer-credits">
       IMPLEMENTOS DE SEGURIDAD INDUSTRIAL IMPLESEG S.A.S · EST. 1978 · MEDELLÍN, COLOMBIA
@@ -591,7 +586,7 @@
       document.getElementById('kiosk-menu').style.display = 'grid';
     }
 
-    // ANIMACIÓN FOTORREALISTA EN CANVAS (IMÁGENES 3D RENDERIZADAS)
+    // ANIMACIÓN DE OBJETOS SVG INCRUSTADOS (NUNCA FALLAN, SIN DEPENDENCIAS EXTERNAS)
     const canvas = document.getElementById('canvas-real-3d');
     const ctx = canvas.getContext('2d');
     let width, height;
@@ -603,82 +598,115 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // URLs de Renders 3D fotorrealistas de alta calidad
-    const imageUrls = [
-      'https://em-content.zobj.net/source/apple/391/fire-extinguisher_1f9ef.png',  // Extintor Realista
-      'https://em-content.zobj.net/source/apple/391/rescue-worker-helmet_26d1-fe0f.png', // Casco Rescate
-      'https://em-content.zobj.net/source/apple/391/axe_1fa93.png', // Hacha
-      'https://em-content.zobj.net/source/apple/391/police-car-light_1f6a8.png', // Sirena/Baliza
-      'https://em-content.zobj.net/source/apple/391/gloves_1f9e4.png', // Guantes carnaza
-      'https://em-content.zobj.net/source/apple/391/fire_1f525.png' // Fuego volumétrico
+    // Vectores SVG codificados directamente para evitar errores de red o CORS
+    const rawSvgs = [
+      // Extintor Rojo
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#dc2626" d="M24 20h16v36H24z"/><path fill="#1f2937" d="M30 8h4v12h-4z"/><path fill="#9ca3af" d="M22 14h20v4H22z"/><path fill="#111827" d="M20 14c-4 0-4 6 0 6h2v24h-2c-2 0-2 2 0 2h4V14h-4z"/><rect x="26" y="28" width="12" height="8" fill="#facc15"/></svg>`,
+      // Casco Amarillo
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#eab308" d="M32 12c-12 0-20 10-20 22v6h40v-6c0-12-8-22-20-22z"/><path fill="#ca8a04" d="M8 40h48v6H8z"/><path fill="#fef08a" d="M30 12h4v28h-4z"/></svg>`,
+      // Hacha Bomberil
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#b91c1c" d="M30 8l-4 48 8 2 4-48z"/><path fill="#9ca3af" d="M34 16l16-8-4 24zM26 20l-12 4 4-12z"/></svg>`,
+      // Sirena / Red CI
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#ef4444" d="M32 16c-10 0-16 8-16 18v6h32v-6c0-10-6-18-16-18z"/><path fill="#1f2937" d="M12 40h40v8H12z"/><path fill="#fca5a5" d="M28 20h8v16h-8z"/></svg>`,
+      // Fuego Volumétrico
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#ea580c" d="M32 4c0 0-16 16-16 32 0 8.8 7.2 16 16 16s16-7.2 16-16c0-16-16-32-16-32z"/><path fill="#facc15" d="M32 20c0 0-8 8-8 16 0 4.4 3.6 8 8 8s8-3.6 8-8c0-8-8-16-8-16z"/></svg>`
     ];
 
-    const loadedImages = [];
-    let imagesLoadedCount = 0;
+    // Convertir SVG a URIs de datos
+    const imageUrls = rawSvgs.map(svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
+    let loadedImages = [];
 
-    imageUrls.forEach(url => {
-      const img = new Image();
-      img.src = url;
-      img.onload = () => {
-        imagesLoadedCount++;
-      };
-      loadedImages.push(img);
+    // Promesa para cargar todas las imágenes y luego iniciar la animación
+    Promise.all(imageUrls.map(url => {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = url;
+      });
+    })).then(images => {
+      loadedImages = images;
+      startAnimation();
     });
 
-    // Crear el arreglo de objetos flotantes
-    const floatingItems = [];
-    for (let i = 0; i < 28; i++) {
-      // Profundidad simulada (Z-index manual)
-      const zDepth = Math.random(); // 0 (lejos) a 1 (cerca)
-      const baseSize = 40 + (zDepth * 80); // Los más cercanos son más grandes
+    function startAnimation() {
+      const floatingItems = [];
+      const sparks = [];
 
-      floatingItems.push({
-        imgIndex: Math.floor(Math.random() * imageUrls.length),
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        size: baseSize,
-        vx: (Math.random() - 0.5) * 0.8,
-        vy: -0.5 - (zDepth * 1.5), // Los más cercanos suben más rápido (Efecto Parallax real)
-        rotation: Math.random() * 360,
-        vRot: (Math.random() - 0.5) * 1.5,
-        opacity: 0.15 + (zDepth * 0.4) // Los cercanos son más visibles
-      });
-    }
+      // Crear objetos principales
+      for (let i = 0; i < 30; i++) {
+        const zDepth = Math.random(); 
+        const baseSize = 30 + (zDepth * 70); 
 
-    function animate() {
-      ctx.clearRect(0, 0, width, height);
+        floatingItems.push({
+          img: loadedImages[Math.floor(Math.random() * loadedImages.length)],
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          size: baseSize,
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: -0.6 - (zDepth * 1.8),
+          angle: Math.random() * 360,
+          vAngle: (Math.random() - 0.5) * 2,
+          opacity: 0.15 + (zDepth * 0.4),
+          wobble: Math.random() * Math.PI * 2,
+          wobbleSpeed: 0.02 + Math.random() * 0.03
+        });
+      }
 
-      // Dibujar solo si las imágenes fotorrealistas ya cargaron
-      if (imagesLoadedCount === imageUrls.length) {
+      // Crear partículas de polvo/chispas
+      for(let i=0; i<60; i++) {
+        sparks.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          size: Math.random() * 2.5 + 0.5,
+          vy: -Math.random() * 1 - 0.5,
+          color: Math.random() > 0.5 ? '#f97316' : '#eab308',
+          alpha: Math.random() * 0.5 + 0.1
+        });
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, width, height);
+
+        // Dibujar Chispas
+        sparks.forEach(s => {
+          s.y += s.vy;
+          if(s.y < -10) s.y = height + 10;
+          ctx.globalAlpha = s.alpha;
+          ctx.fillStyle = s.color;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size, 0, Math.PI*2);
+          ctx.fill();
+        });
+
+        // Dibujar Elementos de Seguridad
         floatingItems.forEach(item => {
-          item.x += item.vx;
           item.y += item.vy;
-          item.rotation += item.vRot;
+          item.x += Math.sin(item.wobble) * 0.5; // Movimiento orgánico
+          item.wobble += item.wobbleSpeed;
+          item.angle += item.vAngle;
 
-          // Bucle infinito: si salen por arriba, vuelven por abajo
           if (item.y + item.size < -50) {
             item.y = height + 50;
             item.x = Math.random() * width;
           }
-          if (item.x > width + 50) item.x = -50;
-          if (item.x < -50) item.x = width + 50;
 
           ctx.save();
           ctx.translate(item.x, item.y);
-          ctx.rotate((item.rotation * Math.PI) / 180);
+          ctx.rotate((item.angle * Math.PI) / 180);
           ctx.globalAlpha = item.opacity;
           
-          // Dibujar la imagen real centrada
-          const img = loadedImages[item.imgIndex];
-          ctx.drawImage(img, -item.size / 2, -item.size / 2, item.size, item.size);
+          // Efecto de Resplandor 3D (Glow)
+          ctx.shadowColor = item.img.src.includes('eab308') ? '#eab308' : '#ef4444';
+          ctx.shadowBlur = 20;
           
+          ctx.drawImage(item.img, -item.size / 2, -item.size / 2, item.size, item.size);
           ctx.restore();
         });
-      }
 
-      requestAnimationFrame(animate);
+        requestAnimationFrame(animate);
+      }
+      animate();
     }
-    animate();
 
     // REGISTRO DE INGRESO
     document.getElementById('form-ingreso-data').onsubmit = async (e) => {
