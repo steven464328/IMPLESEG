@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -19,9 +19,22 @@ class VisitantePayload(BaseModel):
     arl: Optional[str] = ""
     contacto: Optional[str] = ""
 
+class VisitanteImportPayload(BaseModel):
+    nombre: str
+    cedula: str
+    empresa: str
+    correo: str
+    area: str
+    motivo: str
+    persona_recibe: str
+    arl: str
+    contacto: str
+    hora_entrada: str
+    hora_salida: Optional[str] = ""
+
 @router.get("")
 def listar_visitantes(session: Session = Depends(get_session)):
-    # 1. CIERRE AUTOMÁTICO (9:00 PM en adelante o días anteriores)
+    # CIERRE AUTOMÁTICO NOCTURNO (9:00 PM)
     query_cierre = text("""
         UPDATE registro_visitantes 
         SET estado = 'SALIDA AUTO', hora_salida = CURRENT_TIMESTAMP
@@ -31,14 +44,12 @@ def listar_visitantes(session: Session = Depends(get_session)):
     session.execute(query_cierre)
     session.commit()
 
-    # 2. Obtener la lista actualizada
     query = text("SELECT * FROM registro_visitantes ORDER BY id DESC")
     result = session.execute(query).mappings().all()
     return [dict(r) for r in result]
 
 @router.get("/buscar/{cedula}")
 def buscar_visitante(cedula: str, session: Session = Depends(get_session)):
-    # AUTOCOMPLETADO: Busca si la cédula ya existe para traer sus datos
     query = text("""
         SELECT nombre, empresa, correo, arl, contacto 
         FROM registro_visitantes 
@@ -95,7 +106,6 @@ def registrar_salida_cedula(cedula: str, session: Session = Depends(get_session)
 
 @router.put("/{visitante_id}/salida-manual")
 def registrar_salida_manual(visitante_id: int, session: Session = Depends(get_session)):
-    # Función para que el admin le de salida a alguien desde el panel
     try:
         query = text("""
             UPDATE registro_visitantes 
@@ -105,6 +115,45 @@ def registrar_salida_manual(visitante_id: int, session: Session = Depends(get_se
         session.execute(query, {"id": visitante_id})
         session.commit()
         return {"status": "ok"}
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/importar")
+def importar_historico(visitantes: List[VisitanteImportPayload], session: Session = Depends(get_session)):
+    try:
+        for v in visitantes:
+            # Identificar si ya salió basado en si tiene hora de salida
+            estado = "SALIO" if v.hora_salida and v.hora_salida.strip() != "" else "DENTRO"
+            
+            query = text("""
+                INSERT INTO registro_visitantes (
+                    nombre, cedula, empresa, correo, area, motivo,
+                    persona_recibe, arl, contacto, hora_entrada, hora_salida, estado
+                ) VALUES (
+                    :nombre, :cedula, :empresa, :correo, :area, :motivo,
+                    :persona_recibe, :arl, :contacto, 
+                    CAST(:hora_entrada AS TIMESTAMP), 
+                    CASE WHEN :hora_salida = '' THEN NULL ELSE CAST(:hora_salida AS TIMESTAMP) END, 
+                    :estado
+                )
+            """)
+            session.execute(query, {
+                "nombre": v.nombre,
+                "cedula": v.cedula,
+                "empresa": v.empresa,
+                "correo": v.correo,
+                "area": v.area,
+                "motivo": v.motivo,
+                "persona_recibe": v.persona_recibe,
+                "arl": v.arl,
+                "contacto": v.contacto,
+                "hora_entrada": v.hora_entrada,
+                "hora_salida": v.hora_salida,
+                "estado": estado
+            })
+        session.commit()
+        return {"status": "ok", "importados": len(visitantes)}
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
