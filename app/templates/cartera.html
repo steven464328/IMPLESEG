@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dashboard de Cartera Vencida | IMPLESEG ERP</title>
+    <title>Módulo Dashboard de Cartera Vencida | IMPLESEG ERP</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -18,7 +18,7 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 10px 12px; border-bottom: 1px solid #1e293b; text-align: left; font-size: 13px; }
         th { color: #94a3b8; background: #0f172a; text-transform: uppercase; }
-        input, select { background: #070b14; color: white; border: 1px solid #334155; padding: 8px 12px; border-radius: 6px; }
+        input, select { background: #070b14; color: white; border: 1px solid #334155; padding: 9px 12px; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -28,10 +28,23 @@
             <a href="/" class="text-decoration-none text-secondary fw-bold">← Volver al ERP</a>
             <h1 class="m-0">💸 Módulo Dashboard de Cartera Vencida</h1>
         </div>
-        <button class="btn btn-outline-warning btn-custom" onclick="actualizarDashboard()">🔄 Actualizar Métricas</button>
+        <button class="btn btn-outline-warning btn-custom" onclick="actualizarTodo()">🔄 Actualizar Panel</button>
     </div>
 
-    <!-- 1. DASHBOARD DE INDICADORES (KPIs) -->
+    <!-- 1. SECCIÓN PRINCIPAL: INGESTIÓN DE ARCHIVO SIESA -->
+    <div class="panel border-primary">
+        <h5 class="text-primary fw-bold mb-3">📂 2. Carga e Ingesta de Datos (ERP SIESA)</h5>
+        <div class="row g-3 align-items-center">
+            <div class="col-md-8">
+                <input type="file" id="file-excel" class="form-control" accept=".xlsx, .xls">
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-primary btn-custom w-100" id="btn-cargar" onclick="subirExcel()">⚙️ Cargar SIESA</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. PANEL DE CONTROL ANALÍTICO (KPIs + GRÁFICOS) -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="kpi-card">
@@ -59,44 +72,44 @@
         </div>
     </div>
 
-    <!-- 2. GRÁFICOS ANALÍTICOS -->
     <div class="row g-3 mb-4">
         <div class="col-md-6">
             <div class="panel">
-                <h5 class="text-info fw-bold mb-3">📊 Edades de Mora (Días)</h5>
-                <canvas id="chartEdades" height="150"></canvas>
+                <h5 class="text-info fw-bold mb-3">📊 Distribución por Edades de Mora</h5>
+                <canvas id="chartEdades" height="140"></canvas>
             </div>
         </div>
         <div class="col-md-6">
             <div class="panel">
-                <h5 class="text-warning fw-bold mb-3">🏆 Top Vendedores con Mayor Vencimiento</h5>
-                <canvas id="chartVendedores" height="150"></canvas>
+                <h5 class="text-warning fw-bold mb-3">🏆 Vendedores con Mayor Vencimiento</h5>
+                <canvas id="chartVendedores" height="140"></canvas>
             </div>
         </div>
     </div>
 
-    <!-- 3. INGESTIÓN DE REPORTES SIESA Y CONFIGURACIÓN -->
-    <div class="panel">
-        <h5 class="text-success fw-bold">1. Ingestión de Reportes SIESA y Matriz de Correos</h5>
-        <div class="row g-3 align-items-center mt-1">
-            <div class="col-md-5">
-                <input type="file" id="file-excel" class="form-control" accept=".xlsx, .xls">
+    <!-- 3. CONSULTA INTERACTIVA Y GESTIÓN DE ENVÍOS POR VENDEDOR -->
+    <div class="panel border-warning">
+        <h5 class="text-warning fw-bold mb-3">👤 4. Consulta Interactiva y Envío de Correos</h5>
+        
+        <div class="row g-3 align-items-center mb-3">
+            <!-- Selector de Vendedor -->
+            <div class="col-md-4">
+                <label class="small text-secondary fw-bold mb-1">SELECCIONAR VENDEDOR:</label>
+                <select id="select-vendedor" class="w-100" onchange="seleccionarVendedor()">
+                    <option value="TODOS">-- TODOS LOS VENDEDORES --</option>
+                </select>
             </div>
-            <div class="col-md-3">
-                <button class="btn btn-primary btn-custom w-100" id="btn-cargar" onclick="subirExcel()">⚙️ Cargar Excel SIESA</button>
-            </div>
-            <div class="col-md-4 text-end">
-                <button class="btn btn-danger btn-custom w-100" onclick="enviarCorreosMasivos()">📧 Ejecutar Envíos Masivos</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- 4. CONSULTA INTERACTIVA POR VENDEDOR -->
-    <div class="panel">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="text-warning fw-bold m-0">2. Consulta de Cartera Detallada</h5>
-            <div class="d-flex gap-2">
-                <input type="text" id="busqueda-vendedor" placeholder="Filtrar por Vendedor o Cliente..." onkeyup="filtrarTabla()" style="width: 280px;">
+            <!-- Campo de Correo Editable -->
+            <div class="col-md-4">
+                <label class="small text-secondary fw-bold mb-1">CORREO DESTINATARIO (EDITABLE):</label>
+                <input type="email" id="correo-vendedor" class="w-100" placeholder="correo@impleseg.com">
+            </div>
+
+            <!-- Acciones de Envío -->
+            <div class="col-md-4 d-flex gap-2 pt-3">
+                <button class="btn btn-warning btn-custom flex-grow-1" onclick="enviarIndividual()">✉️ Enviar Seleccionado</button>
+                <button class="btn btn-danger btn-custom flex-grow-1" onclick="enviarCorreosMasivos()">📧 Envíos Masivos</button>
             </div>
         </div>
 
@@ -113,14 +126,14 @@
                 </tr>
             </thead>
             <tbody id="tbody-cartera">
-                <tr><td colspan="7" class="text-center text-muted py-4">No hay información cargada. Sube el archivo Excel de SIESA.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-4">Carga el archivo de SIESA para desplegar la información.</td></tr>
             </tbody>
         </table>
     </div>
 
-    <!-- 5. BITÁCORA DE CONFIRMACIÓN DE LECTURA -->
+    <!-- 4. TRAZABILIDAD Y CONFIRMACIÓN DE LECTURA -->
     <div class="panel">
-        <h5 class="text-primary fw-bold">3. Bitácora de Trazabilidad y Confirmación de Lectura</h5>
+        <h5 class="text-success fw-bold">📜 6. Bitácora de Trazabilidad y Confirmación de Lectura</h5>
         <table id="tabla-bitacora">
             <thead>
                 <tr>
@@ -132,7 +145,7 @@
                 </tr>
             </thead>
             <tbody id="tbody-bitacora">
-                <tr><td colspan="5" class="text-center text-muted py-3">Sin registro de envíos en esta sesión.</td></tr>
+                <tr><td colspan="5" class="text-center text-muted py-3">Sin envíos registrados.</td></tr>
             </tbody>
         </table>
     </div>
@@ -140,36 +153,34 @@
     <script>
         let chartEdadesInst, chartVendedoresInst;
         let TODAS_LAS_FACTURAS = [];
+        let MAPA_CORREOS = {};
 
         document.addEventListener("DOMContentLoaded", () => {
             fetch('/api/cartera/init').catch(()=>{});
-            actualizarDashboard();
-            cargarBitacora();
+            actualizarTodo();
         });
 
-        async function actualizarDashboard() {
+        async function actualizarTodo() {
             try {
                 const res = await fetch('/api/cartera/dashboard-metrics');
                 if (res.ok) {
                     const data = await res.json();
-                    
-                    // KPIs
                     document.getElementById('kpi-total').innerText = `$${data.kpis.total_cartera.toLocaleString('es-CO')}`;
                     document.getElementById('kpi-vencido').innerText = `$${data.kpis.total_vencido.toLocaleString('es-CO')}`;
                     document.getElementById('kpi-porcentaje').innerText = `${data.kpis.porcentaje_morosidad}%`;
                     document.getElementById('kpi-facturas').innerText = data.kpis.cantidad_facturas;
-
-                    // Gráficos
                     renderizarGraficos(data.edades_mora, data.top_vendedores);
                 }
-                
-                // Recargar tabla completa
+
                 const resDatos = await fetch('/api/cartera/mis-datos');
                 if (resDatos.ok) {
                     TODAS_LAS_FACTURAS = await resDatos.json();
+                    poblarSelectVendedores(TODAS_LAS_FACTURAS);
                     renderizarTabla(TODAS_LAS_FACTURAS);
                 }
-            } catch(e) { console.error("Error cargando dashboard:", e); }
+
+                cargarBitacora();
+            } catch(e) { console.error(e); }
         }
 
         async function subirExcel() {
@@ -180,7 +191,7 @@
             const formData = new FormData();
             formData.append("file", file);
 
-            btn.innerHTML = "⏳ Procesando SIESA...";
+            btn.innerHTML = "⏳ Cargando y Validando SIESA...";
             btn.disabled = true;
 
             try {
@@ -188,25 +199,51 @@
                 const data = await res.json();
 
                 if(res.ok) {
-                    alert(`✅ Ingestión exitosa. ${data.total_facturas} facturas procesadas.`);
+                    alert(`✅ Ingesta completa. ${data.total_facturas} facturas cargadas.`);
                     TODAS_LAS_FACTURAS = data.registros;
+                    poblarSelectVendedores(TODAS_LAS_FACTURAS);
                     renderizarTabla(TODAS_LAS_FACTURAS);
-                    actualizarDashboard();
+                    actualizarTodo();
                 } else {
-                    alert(`❌ Error: ${data.detail || 'Fallo procesando Excel'}`);
+                    alert(`❌ Error: ${data.detail || 'Fallo al procesar Excel'}`);
                 }
             } catch(e) {
-                alert("❌ Error procesando el archivo en el servidor.");
+                alert("❌ Error de comunicación al subir el archivo.");
             } finally {
-                btn.innerHTML = "⚙️ Cargar Excel SIESA";
+                btn.innerHTML = "⚙️ Cargar SIESA";
                 btn.disabled = false;
+            }
+        }
+
+        function poblarSelectVendedores(facturas) {
+            const select = document.getElementById('select-vendedor');
+            const vendedores = [...new Set(facturas.map(f => f.vendedor))].sort();
+            
+            select.innerHTML = '<option value="TODOS">-- TODOS LOS VENDEDORES --</option>';
+            vendedores.forEach(v => {
+                select.innerHTML += `<option value="${v}">${v}</option>`;
+                if(!MAPA_CORREOS[v]) MAPA_CORREOS[v] = "sistemas@impleseg.com";
+            });
+        }
+
+        function seleccionarVendedor() {
+            const vendedor = document.getElementById('select-vendedor').value;
+            const inputCorreo = document.getElementById('correo-vendedor');
+
+            if(vendedor === "TODOS") {
+                inputCorreo.value = "";
+                renderizarTabla(TODAS_LAS_FACTURAS);
+            } else {
+                inputCorreo.value = MAPA_CORREOS[vendedor] || "sistemas@impleseg.com";
+                const filtradas = TODAS_LAS_FACTURAS.filter(f => f.vendedor === vendedor);
+                renderizarTabla(filtradas);
             }
         }
 
         function renderizarTabla(datos) {
             const tbody = document.getElementById('tbody-cartera');
             if(!datos || datos.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No hay facturas registradas.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No hay facturas para mostrar.</td></tr>`;
                 return;
             }
 
@@ -215,7 +252,7 @@
                     <td class="fw-bold text-white">${f.cliente}</td>
                     <td>${f.nit}</td>
                     <td class="text-info font-monospace">${f.factura}</td>
-                    <td class="text-warning">${f.vendedor}</td>
+                    <td class="text-warning fw-bold">${f.vendedor}</td>
                     <td class="text-danger fw-bold">${f.fecha_vencimiento}</td>
                     <td class="fw-bold ${f.dias_mora > 30 ? 'text-danger' : 'text-warning'}">${f.dias_mora} días</td>
                     <td class="text-success fw-bold">$${f.valor.toLocaleString('es-CO')}</td>
@@ -223,21 +260,10 @@
             `).join('');
         }
 
-        function filtrarTabla() {
-            const query = document.getElementById('busqueda-vendedor').value.toUpperCase();
-            const filtrados = TODAS_LAS_FACTURAS.filter(f => 
-                f.vendedor.toUpperCase().includes(query) || 
-                f.cliente.toUpperCase().includes(query) ||
-                f.nit.includes(query)
-            );
-            renderizarTabla(filtrados);
-        }
-
         function renderizarGraficos(edades, topVendedores) {
-            // 1. Gráfico Edades de Mora
-            const ctxEdades = document.getElementById('chartEdades').getContext('2d');
+            const ctxE = document.getElementById('chartEdades').getContext('2d');
             if(chartEdadesInst) chartEdadesInst.destroy();
-            chartEdadesInst = new Chart(ctxEdades, {
+            chartEdadesInst = new Chart(ctxE, {
                 type: 'doughnut',
                 data: {
                     labels: ['0-30 Días', '31-60 Días', '61-90 Días', '> 90 Días'],
@@ -249,10 +275,9 @@
                 options: { responsive: true, plugins: { legend: { labels: { color: '#fff' } } } }
             });
 
-            // 2. Gráfico Vendedores
-            const ctxVend = document.getElementById('chartVendedores').getContext('2d');
+            const ctxV = document.getElementById('chartVendedores').getContext('2d');
             if(chartVendedoresInst) chartVendedoresInst.destroy();
-            chartVendedoresInst = new Chart(ctxVend, {
+            chartVendedoresInst = new Chart(ctxV, {
                 type: 'bar',
                 data: {
                     labels: topVendedores.slice(0, 5).map(v => v.vendedor),
@@ -265,26 +290,41 @@
                 options: { 
                     responsive: true, 
                     plugins: { legend: { labels: { color: '#fff' } } },
-                    scales: { 
-                        x: { ticks: { color: '#fff' } },
-                        y: { ticks: { color: '#fff' } }
-                    }
+                    scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' } } }
                 }
             });
         }
 
+        async function enviarIndividual() {
+            const vendedor = document.getElementById('select-vendedor').value;
+            const correo = document.getElementById('correo-vendedor').value;
+
+            if(vendedor === "TODOS") return alert("⚠️ Selecciona un vendedor específico para el envío individual.");
+            if(!correo) return alert("⚠️ Ingresa un correo electrónico válido.");
+
+            MAPA_CORREOS[vendedor] = correo;
+
+            if(confirm(`¿Enviar informe de cartera a ${vendedor} (<${correo}>)?`)) {
+                try {
+                    const res = await fetch('/api/cartera/notificar', { method: 'POST' });
+                    if(res.ok) {
+                        alert("✅ Notificación enviada individualmente.");
+                        cargarBitacora();
+                    }
+                } catch(e) { alert("❌ Error en el envío."); }
+            }
+        }
+
         async function enviarCorreosMasivos() {
-            if(confirm("¿Proceder con la notificación automatizada de cartera por correo corporativo?")) {
+            if(confirm("¿Proceder con la notificación masiva a todos los vendedores?")) {
                 try {
                     const res = await fetch('/api/cartera/notificar', { method: 'POST' });
                     const data = await res.json();
                     if(res.ok) {
-                        alert(`✅ Proceso ejecutado. Correos enviados: ${data.correos_enviados}`);
+                        alert(`✅ Envíos masivos completados: ${data.correos_enviados} correos.`);
                         cargarBitacora();
-                    } else {
-                        alert(`❌ Error: ${data.detail}`);
                     }
-                } catch(e) { alert("❌ Error conectando al servidor para envíos"); }
+                } catch(e) { alert("❌ Error en el envío masivo."); }
             }
         }
 
