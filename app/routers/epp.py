@@ -4,11 +4,42 @@ from fastapi.responses import JSONResponse
 from sqlmodel import Session
 from app.database import get_session
 
+# Intentar importar Google Drive API (si las librerías están instaladas)
+try:
+    from google.oauth2.service_account import Credentials
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaFileUpload
+    HAS_GOOGLE_DRIVE = True
+except ImportError:
+    HAS_GOOGLE_DRIVE = False
+
 router = APIRouter(prefix="/epp", tags=["EPP"])
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PDF_OUTPUT_DIR = os.path.join(BASE_DIR, "static", "epp_pdfs")
 os.makedirs(PDF_OUTPUT_DIR, exist_ok=True)
+
+DRIVE_FOLDER_ID = "1VK0JzoDM0hSlbeQA-dGYBsgE4EUafzcY"
+SERVICE_ACCOUNT_FILE = '/home/rtecnico/IMPLESEG/credentials.json'
+
+def subir_a_google_drive(filepath, filename):
+    if not HAS_GOOGLE_DRIVE or not os.path.exists(SERVICE_ACCOUNT_FILE):
+        return None
+    try:
+        SCOPES = ['https://www.googleapis.com/auth/drive.file']
+        creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+        service = build('drive', 'v3', credentials=creds)
+        
+        file_metadata = {
+            'name': filename,
+            'parents': [DRIVE_FOLDER_ID]
+        }
+        media = MediaFileUpload(filepath, mimetype='text/html')
+        file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        return file.get('id')
+    except Exception as e:
+        print("Error subiendo a Google Drive:", e)
+        return None
 
 @router.post("/guardar")
 async def guardar_epp(
@@ -40,7 +71,6 @@ async def guardar_epp(
         filename = f"F-SGI-GS-03_{cedula}.html"
         filepath = os.path.join(PDF_OUTPUT_DIR, filename)
 
-        # Rellenar filas vacías para completar la matriz del formato físico oficial
         filas_html = f"""
         <tr>
             <td style="text-align:center;">{fecha_ingreso or ''}</td>
@@ -63,7 +93,6 @@ async def guardar_epp(
         </tr>
         """
         
-        # Añadir filas de cuadrícula en blanco
         for _ in range(12):
             filas_html += "<tr>" + "<td>&nbsp;</td>" * 17 + "</tr>"
 
@@ -89,8 +118,8 @@ async def guardar_epp(
     <!-- ENCABEZADO OFICIAL -->
     <table class="header-table">
         <tr>
-            <td style="width: 20%; padding: 4px;">
-                <img src="/static/img/logo.png" onerror="this.onerror=null; this.src='https://impleseg.com/wp-content/uploads/2021/04/logo-impleseg.png';" style="max-width: 130px; height: auto;">
+            <td style="width: 20%; padding: 4px; background: #ffffff;">
+                <img src="https://impleseg.com/wp-content/uploads/2021/04/logo-impleseg.png" style="max-width: 140px; height: auto; display: block; margin: 0 auto;">
             </td>
             <td style="width: 55%; font-size: 11px;">
                 IMPLESEG S.A.S<br>
@@ -196,6 +225,9 @@ async def guardar_epp(
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(html_content)
 
+        # Intentar subir a Google Drive si está configurado
+        subir_a_google_drive(filepath, filename)
+
         pdf_url = f"/static/epp_pdfs/{filename}"
 
         return JSONResponse({
@@ -205,25 +237,3 @@ async def guardar_epp(
         })
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
-
-    from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-
-# ID de la carpeta en Google Drive
-DRIVE_FOLDER_ID = "1VK0JzoDM0hSlbeQA-dGYBsgE4EUafzcY"
-
-def subir_a_google_drive(filepath, filename):
-    SCOPES = ['https://www.googleapis.com/auth/drive.file']
-    SERVICE_ACCOUNT_FILE = '/home/rtecnico/IMPLESEG/credentials.json'
-    
-    creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-    service = build('drive', 'v3', credentials=creds)
-    
-    file_metadata = {
-        'name': filename,
-        'parents': [DRIVE_FOLDER_ID]
-    }
-    media = MediaFileUpload(filepath, mimetype='text/html')
-    file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-    return file.get('id')
