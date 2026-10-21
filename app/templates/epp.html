@@ -1,38 +1,232 @@
-<!-- In fine archivi app/templates/epp.html -->
-<script>
-document.getElementById("btn-guardar-epp").addEventListener("click", async function(e) {
-    e.preventDefault();
-    let formData = new FormData();
-    formData.append("cedula", document.querySelector("input[placeholder='Digite cédula...']").value);
-    formData.append("nombre", document.querySelector("input[placeholder='Nombre completo']").value);
-    formData.append("cargo", document.querySelector("input[placeholder='Cargo']").value);
-    formData.append("area", document.querySelector("input[placeholder='Área']").value);
-    formData.append("fecha_ingreso", document.querySelector("input[type='date']").value);
-    
-    if (typeof canvasColaborador !== "undefined" && typeof canvasEntrega !== "undefined") {
-        formData.append("firma_colaborador", canvasColaborador.toDataURL());
-        formData.append("firma_entrega", canvasEntrega.toDataURL());
-    }
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registro de Entrega de EPP y Dotación · IMPLESEG</title>
+    <style>
+        body { background: #070b14; color: #fff; font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .back-link { color: #94a3b8; text-decoration: none; font-size: 14px; }
+        .title { color: #f97316; margin: 5px 0; display: flex; align-items: center; gap: 10px; }
+        .badge { background: #16a34a; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+        .section { background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .section-title { font-size: 15px; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .sec-1 { color: #eab308; } .sec-2 { color: #22c55e; } .sec-3 { color: #3b82f6; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        label { font-size: 12px; color: #94a3b8; margin-bottom: 5px; font-weight: bold; }
+        input, select { background: #070b14; border: 1px solid #334155; color: #fff; padding: 10px; border-radius: 6px; outline: none; }
+        input:focus, select:focus { border-color: #f97316; }
+        .canvas-container { background: #1e293b; border: 1px dashed #475569; border-radius: 6px; position: relative; text-align: center; }
+        canvas { width: 100%; height: 120px; background: #ffffff; border-radius: 4px; cursor: crosshair; }
+        .btn-clear { position: absolute; top: 5px; right: 5px; background: #475569; color: #fff; border: none; font-size: 10px; padding: 3px 8px; border-radius: 3px; cursor: pointer; }
+        .btn-submit { background: #f97316; color: white; border: none; padding: 15px 25px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; float: right; }
+        .btn-submit:hover { background: #ea580c; }
+    </style>
+</head>
+<body>
 
-    try {
-        let response = await fetch("/epp/guardar", {
-            method: "POST",
-            body: formData
+    <a href="/" class="back-link">← Volver al ERP</a>
+    <div class="header">
+        <div>
+            <h2 class="title">🛡️ Registro de Entrega de EPP y Dotación</h2>
+            <span class="badge">FORMATO OFICIAL F-SGI-GS-03 (REV. 03)</span>
+        </div>
+    </div>
+
+    <form id="form-epp">
+        <!-- 1. INFORMACIÓN DEL TRABAJADOR -->
+        <div class="section">
+            <div class="section-title sec-1">👤 1. Información del Trabajador</div>
+            <div class="grid">
+                <div class="form-group">
+                    <label>NÚMERO DE CÉDULA *</label>
+                    <input type="text" id="cedula" placeholder="Digite cédula..." required>
+                </div>
+                <div class="form-group">
+                    <label>NOMBRE COMPLETO *</label>
+                    <input type="text" id="nombre" placeholder="Nombre completo" required>
+                </div>
+                <div class="form-group">
+                    <label>CARGO</label>
+                    <input type="text" id="cargo" placeholder="Cargo">
+                </div>
+                <div class="form-group">
+                    <label>ÁREA</label>
+                    <input type="text" id="area" placeholder="Área">
+                </div>
+                <div class="form-group">
+                    <label>FECHA DE INGRESO</label>
+                    <input type="date" id="fecha_ingreso">
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. DETALLE DE PRENDAS -->
+        <div class="section">
+            <div class="section-title sec-2">🛡️ 2. Detalle de Prendas, Elementos y Tallas</div>
+            <div class="grid">
+                <div class="form-group">
+                    <label>CAMISA (CANT / TALLA)</label>
+                    <div style="display:flex; gap:5px;">
+                        <input type="number" id="camisa_cant" value="0" style="width:50px;">
+                        <input type="text" id="camisa_talla" placeholder="Talla">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>PANTALÓN (CANT / TALLA)</label>
+                    <div style="display:flex; gap:5px;">
+                        <input type="number" id="pantalon_cant" value="0" style="width:50px;">
+                        <input type="text" id="pantalon_talla" placeholder="Talla">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>BOTAS DE SEGURIDAD (CANT / TALLA)</label>
+                    <div style="display:flex; gap:5px;">
+                        <input type="number" id="botas_cant" value="0" style="width:50px;">
+                        <input type="text" id="botas_talla" placeholder="Talla">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>CHALECO (CANT / TALLA)</label>
+                    <div style="display:flex; gap:5px;">
+                        <input type="number" id="chaleco_cant" value="0" style="width:50px;">
+                        <input type="text" id="chaleco_talla" placeholder="Talla">
+                    </div>
+                </div>
+            </div>
+            <br>
+            <div class="grid">
+                <div class="form-group"><label>GORRA (CANT)</label><input type="number" id="gorra" value="0"></div>
+                <div class="form-group"><label>GAFAS DE SEG. (CANT)</label><input type="number" id="gafas" value="0"></div>
+                <div class="form-group"><label>PROT. INSERCIÓN (CANT)</label><input type="number" id="prot_insercion" value="0"></div>
+                <div class="form-group"><label>PROT. COPA / VULC (CANT)</label><input type="number" id="prot_copa" value="0"></div>
+                <div class="form-group"><label>OTRO ELEMENTO</label><input type="text" id="otro_elem" placeholder="Ej. Guantes"></div>
+                <div class="form-group"><label>CANTIDAD / DETALLE</label><input type="text" id="cantidad_detalle" placeholder="Ej. 2 Pares"></div>
+            </div>
+        </div>
+
+        <!-- 3. FIRMAS DIGITALES -->
+        <div class="section">
+            <div class="section-title sec-3">✍️ 3. Registro de Firmas Digitales</div>
+            <div class="grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="form-group">
+                    <label>FIRMA DEL COLABORADOR (QUIEN RECIBE) *</label>
+                    <div class="canvas-container">
+                        <button type="button" class="btn-clear" onclick="limpiarCanvas('canvas1')">Limpiar</button>
+                        <canvas id="canvas1"></canvas>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>FIRMA DE QUIEN ENTREGA *</label>
+                    <div class="canvas-container">
+                        <button type="button" class="btn-clear" onclick="limpiarCanvas('canvas2')">Limpiar</button>
+                        <canvas id="canvas2"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" id="btn-guardar-epp" class="btn-submit">VERIFICAR Y GENERAR REGISTRO F-SGI-GS-03</button>
+    </form>
+
+    <script>
+        function setupCanvas(id) {
+            const canvas = document.getElementById(id);
+            const ctx = canvas.getContext('2d');
+            let drawing = false;
+
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = 120;
+
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 2;
+
+            function getPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            }
+
+            function start(e) { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); }
+            function end() { drawing = false; }
+            function draw(e) {
+                if (!drawing) return;
+                e.preventDefault();
+                const p = getPos(e);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+            }
+
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mouseup', end);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('touchstart', start);
+            canvas.addEventListener('touchend', end);
+            canvas.addEventListener('touchmove', draw);
+        }
+
+        function limpiarCanvas(id) {
+            const canvas = document.getElementById(id);
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            setupCanvas("canvas1");
+            setupCanvas("canvas2");
+
+            document.getElementById("btn-guardar-epp").addEventListener("click", async function() {
+                const cedula = document.getElementById("cedula").value.trim();
+                const nombre = document.getElementById("nombre").value.trim();
+
+                if (!cedula || !nombre) {
+                    alert("⚠️ Cédula y Nombre Completo son obligatorios.");
+                    return;
+                }
+
+                let formData = new FormData();
+                formData.append("cedula", cedula);
+                formData.append("nombre", nombre);
+                formData.append("cargo", document.getElementById("cargo").value);
+                formData.append("area", document.getElementById("area").value);
+                formData.append("fecha_ingreso", document.getElementById("fecha_ingreso").value);
+
+                formData.append("camisa_cant", document.getElementById("camisa_cant").value);
+                formData.append("camisa_talla", document.getElementById("camisa_talla").value);
+                formData.append("pantalon_cant", document.getElementById("pantalon_cant").value);
+                formData.append("pantalon_talla", document.getElementById("pantalon_talla").value);
+                formData.append("botas_cant", document.getElementById("botas_cant").value);
+                formData.append("botas_talla", document.getElementById("botas_talla").value);
+                formData.append("chaleco_cant", document.getElementById("chaleco_cant").value);
+                formData.append("chaleco_talla", document.getElementById("chaleco_talla").value);
+
+                formData.append("gorra", document.getElementById("gorra").value);
+                formData.append("gafas", document.getElementById("gafas").value);
+                formData.append("prot_insercion", document.getElementById("prot_insercion").value);
+                formData.append("prot_copa", document.getElementById("prot_copa").value);
+                formData.append("otro_elem", document.getElementById("otro_elem").value);
+                formData.append("cantidad_detalle", document.getElementById("cantidad_detalle").value);
+
+                formData.append("firma_colaborador", document.getElementById("canvas1").toDataURL());
+                formData.append("firma_entrega", document.getElementById("canvas2").toDataURL());
+
+                try {
+                    let response = await fetch("/epp/guardar", { method: "POST", body: formData });
+                    let result = await response.json();
+
+                    if (result.status === "success") {
+                        alert("✅ " + result.message);
+                        if (result.pdf_url) window.open(result.pdf_url, "_blank");
+                    } else {
+                        alert("❌ Error: " + result.message);
+                    }
+                } catch (err) {
+                    alert("❌ Error de comunicación: " + err.message);
+                }
+            });
         });
-
-        if (!response.ok) {
-            throw new Error("Ruta no encontrada o error en servidor (" + response.status + ")");
-        }
-
-        let result = await response.json();
-        if (result.status === "success") {
-            alert("✅ Registro guardado con éxito.");
-            window.open(result.pdf_url, "_blank");
-        } else {
-            alert("❌ Error: " + result.message);
-        }
-    } catch (err) {
-        alert("❌ Error: " + err.message);
-    }
-});
-</script>
+    </script>
+</body>
+</html>

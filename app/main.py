@@ -218,5 +218,6 @@ def cartera_view(request: Request, session: Session = Depends(get_session)):
 @app.get("/epp", response_class=HTMLResponse)
 def epp_view(request: Request, session: Session = Depends(get_session)):
     fallo = verificar_acceso(request, session, "gestion_humana")
-    if fallo: return fallo
-    return FileResponse(os.path.join(BASE_DIR, "templates", "epp.html"), media_type="text/html")
+    if fallo: 
+        return fallo
+    return FileResponse(os.path.join(BASE_DIR, "templates", "epp.html"))
