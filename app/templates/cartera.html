@@ -3,58 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Módulo Dashboard de Cartera Vencida | IMPLESEG ERP</title>
+    <title>Dashboard de Cartera Vencida | IMPLESEG ERP</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background: #0b1121; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; padding: 25px; margin: 0; }
-        h1 { color: #f97316; font-weight: 800; }
-        .panel { background: #121e2d; padding: 20px; border-radius: 12px; border: 1px solid #1e293b; margin-bottom: 20px; }
-        .kpi-card { background: #0f172a; border-radius: 10px; border: 1px solid #1e293b; padding: 18px; text-align: center; }
-        .kpi-val { font-size: 24px; font-weight: bold; color: #10b981; font-family: monospace; }
+        body { background: #070c18; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; padding: 20px; margin: 0; }
+        
+        /* Contenedores con efecto 3D / Neomórfico */
+        .panel-3d { 
+            background: linear-gradient(145deg, #111a2e, #0c1322); 
+            padding: 18px 22px; 
+            border-radius: 14px; 
+            border: 1px solid #1e293b; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.08);
+            margin-bottom: 20px; 
+        }
+
+        .kpi-card { 
+            background: linear-gradient(145deg, #0f172a, #0b1120); 
+            border-radius: 12px; 
+            border: 1px solid #1e2d4a; 
+            padding: 14px; 
+            text-align: center;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+            transition: transform 0.2s;
+        }
+        .kpi-card:hover { transform: translateY(-3px); }
+        .kpi-val { font-size: 20px; font-weight: 800; color: #10b981; font-family: monospace; }
         .kpi-val.danger { color: #ef4444; }
-        .btn-custom { border-radius: 6px; font-weight: bold; padding: 10px 18px; }
+
+        /* Contenedor compacto para gráficos */
+        .chart-wrapper {
+            position: relative;
+            height: 220px;
+            max-height: 220px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-custom { border-radius: 8px; font-weight: bold; padding: 8px 16px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .btn-cargar { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; }
+        .btn-cargar:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); color: white; }
+        .btn-masivo { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; }
+        .btn-masivo:hover { background: linear-gradient(135deg, #b91c1c, #991b1b); color: white; }
+        .btn-guardar-sm { background: #10b981; color: white; padding: 5px 12px; font-size: 12px; border-radius: 6px; font-weight: bold; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px 12px; border-bottom: 1px solid #1e293b; text-align: left; font-size: 13px; }
-        th { color: #94a3b8; background: #0f172a; text-transform: uppercase; }
-        input, select { background: #070b14; color: white; border: 1px solid #334155; padding: 9px 12px; border-radius: 6px; }
+        th, td { padding: 8px 12px; border-bottom: 1px solid #1e293b; text-align: left; font-size: 12px; }
+        th { color: #94a3b8; background: #0a1120; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        input, select { 
+            background: #080f1e; 
+            color: #f1f5f9; 
+            border: 1px solid #1e293b; 
+            padding: 7px 12px; 
+            border-radius: 6px; 
+            font-size: 13px;
+        }
+        input:focus, select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 8px rgba(59, 130, 246, 0.4); }
     </style>
 </head>
 <body>
 
+    <!-- CABECERA PRINCIPAL -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <a href="/" class="text-decoration-none text-secondary fw-bold">← Volver al ERP</a>
-            <h1 class="m-0">💸 Módulo Dashboard de Cartera Vencida</h1>
+            <a href="/" class="text-decoration-none text-secondary fw-bold small">← Volver al ERP</a>
+            <h2 class="m-0 fw-bold" style="color: #f97316;">💸 Módulo Dashboard de Cartera Vencida</h2>
         </div>
-        <button class="btn btn-outline-warning btn-custom" onclick="actualizarTodo()">🔄 Actualizar Panel</button>
+        <button class="btn btn-outline-warning btn-custom btn-sm" onclick="actualizarTodo()">🔄 Actualizar Métricas</button>
     </div>
 
-    <!-- 1. SECCIÓN PRINCIPAL: INGESTIÓN DE ARCHIVO SIESA -->
-    <div class="panel border-primary">
-        <h5 class="text-primary fw-bold mb-3">📂 2. Carga e Ingesta de Datos (ERP SIESA)</h5>
-        <div class="row g-3 align-items-center">
+    <!-- 1. INGESTIÓN DE ARCHIVO SIESA -->
+    <div class="panel-3d" style="border-left: 4px solid #3b82f6;">
+        <h6 class="text-primary fw-bold mb-2"><i class="bi bi-file-earmark-excel me-1"></i> Carga e Ingesta de Datos (ERP SIESA)</h6>
+        <div class="row g-2 align-items-center">
             <div class="col-md-8">
-                <input type="file" id="file-excel" class="form-control" accept=".xlsx, .xls">
+                <input type="file" id="file-excel" class="form-control form-control-sm" accept=".xlsx, .xls">
             </div>
             <div class="col-md-4">
-                <button class="btn btn-primary btn-custom w-100" id="btn-cargar" onclick="subirExcel()">⚙️ Cargar SIESA</button>
+                <button class="btn btn-cargar btn-custom w-100 btn-sm" id="btn-cargar" onclick="subirExcel()">⚙️ Cargar SIESA</button>
             </div>
         </div>
     </div>
 
-    <!-- 2. PANEL DE CONTROL ANALÍTICO (KPIs + GRÁFICOS) -->
-    <div class="row g-3 mb-4">
+    <!-- 2. KPIs INDICADORES CLAVE -->
+    <div class="row g-2 mb-3">
         <div class="col-md-3">
             <div class="kpi-card">
-                <div class="text-secondary small fw-bold">TOTAL CARTERA GENERAL</div>
+                <div class="text-secondary small fw-bold">CARTERA GENERAL</div>
                 <div class="kpi-val" id="kpi-total">$0.00</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="kpi-card">
-                <div class="text-secondary small fw-bold">TOTAL CARTERA VENCIDA</div>
+                <div class="text-secondary small fw-bold">CARTERA VENCIDA</div>
                 <div class="kpi-val danger" id="kpi-vencido">$0.00</div>
             </div>
         </div>
@@ -72,82 +118,97 @@
         </div>
     </div>
 
-    <div class="row g-3 mb-4">
+    <!-- 3. GRÁFICOS COMPACTOS Y ELEGANTES -->
+    <div class="row g-3 mb-3">
         <div class="col-md-6">
-            <div class="panel">
-                <h5 class="text-info fw-bold mb-3">📊 Distribución por Edades de Mora</h5>
-                <canvas id="chartEdades" height="140"></canvas>
+            <div class="panel-3d h-100 mb-0">
+                <h6 class="text-info fw-bold mb-2"><i class="bi bi-pie-chart-fill me-1"></i> Distribución por Edades de Mora</h6>
+                <div class="chart-wrapper">
+                    <canvas id="chartEdades"></canvas>
+                </div>
             </div>
         </div>
         <div class="col-md-6">
-            <div class="panel">
-                <h5 class="text-warning fw-bold mb-3">🏆 Vendedores con Mayor Vencimiento</h5>
-                <canvas id="chartVendedores" height="140"></canvas>
+            <div class="panel-3d h-100 mb-0">
+                <h6 class="text-warning fw-bold mb-2"><i class="bi bi-bar-chart-line-fill me-1"></i> Top Vendedores con Mayor Vencimiento</h6>
+                <div class="chart-wrapper">
+                    <canvas id="chartVendedores"></canvas>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 3. CONSULTA INTERACTIVA Y GESTIÓN DE ENVÍOS POR VENDEDOR -->
-    <div class="panel border-warning">
-        <h5 class="text-warning fw-bold mb-3">👤 4. Consulta Interactiva y Envío de Correos</h5>
-        
-        <div class="row g-3 align-items-center mb-3">
-            <!-- Selector de Vendedor -->
-            <div class="col-md-4">
-                <label class="small text-secondary fw-bold mb-1">SELECCIONAR VENDEDOR:</label>
-                <select id="select-vendedor" class="w-100" onchange="seleccionarVendedor()">
-                    <option value="TODOS">-- TODOS LOS VENDEDORES --</option>
-                </select>
-            </div>
+    <!-- 4. MATRIZ DE CONFIGURACIÓN Y EDICIÓN RÁPIDA DE CORREOS -->
+    <div class="panel-3d" style="border-left: 4px solid #10b981;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="text-success fw-bold m-0"><i class="bi bi-envelope-at-fill me-1"></i> Matriz de Correos Corporativos por Vendedor</h6>
+            <input type="text" id="filtro-vendedor-matriz" placeholder="Buscar vendedor..." onkeyup="filtrarMatrizCorreos()" style="width: 220px;">
+        </div>
+        <div style="max-height: 180px; overflow-y: auto;">
+            <table class="table-dark table-hover m-0">
+                <thead>
+                    <tr>
+                        <th>Nombre Vendedor (SIESA)</th>
+                        <th>Correo Asignado</th>
+                        <th style="width: 120px;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-matriz-correos">
+                    <tr><td colspan="3" class="text-center text-muted">Carga el Excel de SIESA para autodetectar los vendedores.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-            <!-- Campo de Correo Editable -->
-            <div class="col-md-4">
-                <label class="small text-secondary fw-bold mb-1">CORREO DESTINATARIO (EDITABLE):</label>
-                <input type="email" id="correo-vendedor" class="w-100" placeholder="correo@impleseg.com">
-            </div>
-
-            <!-- Acciones de Envío -->
-            <div class="col-md-4 d-flex gap-2 pt-3">
-                <button class="btn btn-warning btn-custom flex-grow-1" onclick="enviarIndividual()">✉️ Enviar Seleccionado</button>
-                <button class="btn btn-danger btn-custom flex-grow-1" onclick="enviarCorreosMasivos()">📧 Envíos Masivos</button>
+    <!-- 5. CONSULTA Y ACCIONES DE ENVÍO -->
+    <div class="panel-3d" style="border-left: 4px solid #f59e0b;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="text-warning fw-bold m-0"><i class="bi bi-table me-1"></i> Consulta Detallada de Cartera</h6>
+            <div class="d-flex gap-2 align-items-center">
+                <input type="text" id="busqueda-tabla" placeholder="Filtrar por Cliente, NIT, Vendedor..." onkeyup="filtrarTablaFacturas()" style="width: 280px;">
+                <button class="btn btn-masivo btn-custom btn-sm" onclick="enviarMasivo()">📧 Ejecutar Envíos Masivos</button>
             </div>
         </div>
 
-        <table id="tabla-cartera">
-            <thead>
-                <tr>
-                    <th>Cliente / Razón Social</th>
-                    <th>NIT</th>
-                    <th>Factura</th>
-                    <th>Vendedor</th>
-                    <th>Vencimiento</th>
-                    <th>Días Mora</th>
-                    <th>Saldo Vencido (COP)</th>
-                </tr>
-            </thead>
-            <tbody id="tbody-cartera">
-                <tr><td colspan="7" class="text-center text-muted py-4">Carga el archivo de SIESA para desplegar la información.</td></tr>
-            </tbody>
-        </table>
+        <div style="max-height: 380px; overflow-y: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente / Razón Social</th>
+                        <th>NIT</th>
+                        <th>Factura</th>
+                        <th>Vendedor</th>
+                        <th>Vencimiento</th>
+                        <th>Días Mora</th>
+                        <th>Saldo Vencido (COP)</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-cartera">
+                    <tr><td colspan="7" class="text-center text-muted py-4">No hay datos cargados en el sistema.</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <!-- 4. TRAZABILIDAD Y CONFIRMACIÓN DE LECTURA -->
-    <div class="panel">
-        <h5 class="text-success fw-bold">📜 6. Bitácora de Trazabilidad y Confirmación de Lectura</h5>
-        <table id="tabla-bitacora">
-            <thead>
-                <tr>
-                    <th>Fecha / Hora</th>
-                    <th>Vendedor</th>
-                    <th>Correo Destino</th>
-                    <th>Estado Envío</th>
-                    <th>Confirmación Lectura</th>
-                </tr>
-            </thead>
-            <tbody id="tbody-bitacora">
-                <tr><td colspan="5" class="text-center text-muted py-3">Sin envíos registrados.</td></tr>
-            </tbody>
-        </table>
+    <!-- 6. BITÁCORA DE CONFIRMACIÓN DE LECTURA -->
+    <div class="panel-3d">
+        <h6 class="text-secondary fw-bold mb-2"><i class="bi bi-clock-history me-1"></i> Bitácora de Trazabilidad y Confirmación de Lectura</h6>
+        <div style="max-height: 150px; overflow-y: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha / Hora</th>
+                        <th>Vendedor</th>
+                        <th>Correo Destino</th>
+                        <th>Estado Envío</th>
+                        <th>Confirmación Lectura</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-bitacora">
+                    <tr><td colspan="5" class="text-center text-muted py-2">Sin registros de envíos recientes.</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>
@@ -169,13 +230,13 @@
                     document.getElementById('kpi-vencido').innerText = `$${data.kpis.total_vencido.toLocaleString('es-CO')}`;
                     document.getElementById('kpi-porcentaje').innerText = `${data.kpis.porcentaje_morosidad}%`;
                     document.getElementById('kpi-facturas').innerText = data.kpis.cantidad_facturas;
-                    renderizarGraficos(data.edades_mora, data.top_vendedores);
+                    renderizarGraficosCompactos(data.edades_mora, data.top_vendedores);
                 }
 
                 const resDatos = await fetch('/api/cartera/mis-datos');
                 if (resDatos.ok) {
                     TODAS_LAS_FACTURAS = await resDatos.json();
-                    poblarSelectVendedores(TODAS_LAS_FACTURAS);
+                    extraerVendedoresConstruirMatriz(TODAS_LAS_FACTURAS);
                     renderizarTabla(TODAS_LAS_FACTURAS);
                 }
 
@@ -186,12 +247,12 @@
         async function subirExcel() {
             const btn = document.getElementById('btn-cargar');
             const file = document.getElementById('file-excel').files[0];
-            if(!file) return alert("⚠️ Selecciona el archivo Excel de SIESA primero.");
+            if(!file) return alert("⚠️ Selecciona primero el archivo Excel de SIESA.");
 
             const formData = new FormData();
             formData.append("file", file);
 
-            btn.innerHTML = "⏳ Cargando y Validando SIESA...";
+            btn.innerHTML = "⏳ Procesando SIESA...";
             btn.disabled = true;
 
             try {
@@ -199,13 +260,13 @@
                 const data = await res.json();
 
                 if(res.ok) {
-                    alert(`✅ Ingesta completa. ${data.total_facturas} facturas cargadas.`);
+                    alert(`✅ Excel de SIESA cargado exitosamente (${data.total_facturas} facturas).`);
                     TODAS_LAS_FACTURAS = data.registros;
-                    poblarSelectVendedores(TODAS_LAS_FACTURAS);
+                    extraerVendedoresConstruirMatriz(TODAS_LAS_FACTURAS);
                     renderizarTabla(TODAS_LAS_FACTURAS);
                     actualizarTodo();
                 } else {
-                    alert(`❌ Error: ${data.detail || 'Fallo al procesar Excel'}`);
+                    alert(`❌ Error: ${data.detail || 'Fallo procesando Excel'}`);
                 }
             } catch(e) {
                 alert("❌ Error de comunicación al subir el archivo.");
@@ -215,29 +276,57 @@
             }
         }
 
-        function poblarSelectVendedores(facturas) {
-            const select = document.getElementById('select-vendedor');
+        function extraerVendedoresConstruirMatriz(facturas) {
             const vendedores = [...new Set(facturas.map(f => f.vendedor))].sort();
-            
-            select.innerHTML = '<option value="TODOS">-- TODOS LOS VENDEDORES --</option>';
             vendedores.forEach(v => {
-                select.innerHTML += `<option value="${v}">${v}</option>`;
                 if(!MAPA_CORREOS[v]) MAPA_CORREOS[v] = "sistemas@impleseg.com";
             });
+            renderizarMatrizCorreos(vendedores);
         }
 
-        function seleccionarVendedor() {
-            const vendedor = document.getElementById('select-vendedor').value;
-            const inputCorreo = document.getElementById('correo-vendedor');
-
-            if(vendedor === "TODOS") {
-                inputCorreo.value = "";
-                renderizarTabla(TODAS_LAS_FACTURAS);
-            } else {
-                inputCorreo.value = MAPA_CORREOS[vendedor] || "sistemas@impleseg.com";
-                const filtradas = TODAS_LAS_FACTURAS.filter(f => f.vendedor === vendedor);
-                renderizarTabla(filtradas);
+        function renderizarMatrizCorreos(vendedores) {
+            const tbody = document.getElementById('tbody-matriz-correos');
+            if(vendedores.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">No hay vendedores detectados.</td></tr>`;
+                return;
             }
+
+            tbody.innerHTML = vendedores.map(v => `
+                <tr>
+                    <td class="fw-bold text-warning">${v}</td>
+                    <td>
+                        <input type="email" id="input-correo-${v.replace(/[^a-zA-Z0-9]/g, '_')}" 
+                               value="${MAPA_CORREOS[v]}" class="w-100">
+                    </td>
+                    <td>
+                        <button class="btn btn-guardar-sm" onclick="guardarCorreoVendedor('${v}')">💾 Guardar</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function guardarCorreoVendedor(vendedor) {
+            const idInput = `input-correo-${vendedor.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const correo = document.getElementById(idInput).value.trim();
+
+            if(!correo) return alert("⚠️ Ingresa un correo válido.");
+
+            MAPA_CORREOS[vendedor] = correo;
+
+            try {
+                const res = await fetch('/api/cartera/vendedores', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ vendedor: vendedor, correo: correo })
+                });
+                if(res.ok) alert(`✅ Correo actualizado para ${vendedor}`);
+            } catch(e) { alert("❌ Error guardando el correo."); }
+        }
+
+        function filtrarMatrizCorreos() {
+            const query = document.getElementById('filtro-vendedor-matriz').value.toUpperCase();
+            const vendedores = [...new Set(TODAS_LAS_FACTURAS.map(f => f.vendedor))].filter(v => v.includes(query));
+            renderizarMatrizCorreos(vendedores);
         }
 
         function renderizarTabla(datos) {
@@ -260,7 +349,19 @@
             `).join('');
         }
 
-        function renderizarGraficos(edades, topVendedores) {
+        function filtrarTablaFacturas() {
+            const query = document.getElementById('busqueda-tabla').value.toUpperCase();
+            const filtrados = TODAS_LAS_FACTURAS.filter(f => 
+                f.vendedor.toUpperCase().includes(query) || 
+                f.cliente.toUpperCase().includes(query) ||
+                f.nit.includes(query) ||
+                f.factura.toUpperCase().includes(query)
+            );
+            renderizarTabla(filtrados);
+        }
+
+        function renderizarGraficosCompactos(edades, topVendedores) {
+            // 1. Dona Ajustada
             const ctxE = document.getElementById('chartEdades').getContext('2d');
             if(chartEdadesInst) chartEdadesInst.destroy();
             chartEdadesInst = new Chart(ctxE, {
@@ -269,62 +370,58 @@
                     labels: ['0-30 Días', '31-60 Días', '61-90 Días', '> 90 Días'],
                     datasets: [{
                         data: [edades.mora_0_30, edades.mora_31_60, edades.mora_61_90, edades.mora_mayor_90],
-                        backgroundColor: ['#10b981', '#f59e0b', '#f97316', '#ef4444']
+                        backgroundColor: ['#10b981', '#f59e0b', '#f97316', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: '#0b1120'
                     }]
                 },
-                options: { responsive: true, plugins: { legend: { labels: { color: '#fff' } } } }
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 10 } } } 
+                    } 
+                }
             });
 
+            // 2. Barras Ajustadas
             const ctxV = document.getElementById('chartVendedores').getContext('2d');
             if(chartVendedoresInst) chartVendedoresInst.destroy();
             chartVendedoresInst = new Chart(ctxV, {
                 type: 'bar',
                 data: {
-                    labels: topVendedores.slice(0, 5).map(v => v.vendedor),
+                    labels: topVendedores.slice(0, 5).map(v => v.vendedor.length > 15 ? v.vendedor.substring(0, 15) + '...' : v.vendedor),
                     datasets: [{
                         label: 'Monto Vencido ($)',
                         data: topVendedores.slice(0, 5).map(v => v.total),
-                        backgroundColor: '#3b82f6'
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
                     }]
                 },
                 options: { 
                     responsive: true, 
-                    plugins: { legend: { labels: { color: '#fff' } } },
-                    scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' } } }
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        x: { ticks: { color: '#94a3b8', font: { size: 10 } } },
+                        y: { ticks: { color: '#94a3b8', font: { size: 10 }, callback: v => '$' + (v/1e6).toFixed(0) + 'M' } }
+                    }
                 }
             });
         }
 
-        async function enviarIndividual() {
-            const vendedor = document.getElementById('select-vendedor').value;
-            const correo = document.getElementById('correo-vendedor').value;
-
-            if(vendedor === "TODOS") return alert("⚠️ Selecciona un vendedor específico para el envío individual.");
-            if(!correo) return alert("⚠️ Ingresa un correo electrónico válido.");
-
-            MAPA_CORREOS[vendedor] = correo;
-
-            if(confirm(`¿Enviar informe de cartera a ${vendedor} (<${correo}>)?`)) {
-                try {
-                    const res = await fetch('/api/cartera/notificar', { method: 'POST' });
-                    if(res.ok) {
-                        alert("✅ Notificación enviada individualmente.");
-                        cargarBitacora();
-                    }
-                } catch(e) { alert("❌ Error en el envío."); }
-            }
-        }
-
-        async function enviarCorreosMasivos() {
-            if(confirm("¿Proceder con la notificación masiva a todos los vendedores?")) {
+        async function enviarMasivo() {
+            if(confirm("¿Proceder con el despacho masivo de notificaciones de cartera a los vendedores?")) {
                 try {
                     const res = await fetch('/api/cartera/notificar', { method: 'POST' });
                     const data = await res.json();
                     if(res.ok) {
-                        alert(`✅ Envíos masivos completados: ${data.correos_enviados} correos.`);
+                        alert(`✅ Notificaciones despachadas: ${data.correos_enviados} correos.`);
                         cargarBitacora();
+                    } else {
+                        alert(`❌ Error: ${data.detail}`);
                     }
-                } catch(e) { alert("❌ Error en el envío masivo."); }
+                } catch(e) { alert("❌ Error conectando al servidor."); }
             }
         }
 
