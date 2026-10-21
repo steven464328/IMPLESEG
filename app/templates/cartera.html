@@ -2,219 +2,311 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Gestión de Cartera | IMPLESEG ERP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard de Cartera Vencida | IMPLESEG ERP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background: #0b1121; color: #e2e8f0; font-family: system-ui; padding: 40px; margin: 0; }
-        h1 { color: #f97316; border-bottom: 2px solid #1e293b; padding-bottom: 10px; margin-top: 5px; }
-        .panel { background: #121e2d; padding: 25px; border-radius: 12px; border: 1px solid #1e293b; margin-bottom: 20px; }
-        .admin-only { display: none; }
-        button { padding: 12px 20px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; color: white; transition: 0.2s;}
-        .btn-upload { background: #3b82f6; } .btn-upload:hover { background: #2563eb; }
-        .btn-notify { background: #ef4444; float: right; } .btn-notify:hover { background: #dc2626; }
-        .btn-save { background: #10b981; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; border-bottom: 1px solid #1e293b; text-align: left; font-size: 13px; }
+        body { background: #0b1121; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; padding: 25px; margin: 0; }
+        h1 { color: #f97316; font-weight: 800; }
+        .panel { background: #121e2d; padding: 20px; border-radius: 12px; border: 1px solid #1e293b; margin-bottom: 20px; }
+        .kpi-card { background: #0f172a; border-radius: 10px; border: 1px solid #1e293b; padding: 18px; text-align: center; }
+        .kpi-val { font-size: 24px; font-weight: bold; color: #10b981; font-family: monospace; }
+        .kpi-val.danger { color: #ef4444; }
+        .btn-custom { border-radius: 6px; font-weight: bold; padding: 10px 18px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px 12px; border-bottom: 1px solid #1e293b; text-align: left; font-size: 13px; }
         th { color: #94a3b8; background: #0f172a; text-transform: uppercase; }
-        input[type="text"], input[type="email"], input[type="file"] { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #070b14; color: white; }
-        .stat-box { display: inline-block; padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; margin-bottom: 15px; }
-        .stat-val { font-size: 24px; color: #ef4444; font-weight: bold; font-family: monospace;}
+        input, select { background: #070b14; color: white; border: 1px solid #334155; padding: 8px 12px; border-radius: 6px; }
     </style>
 </head>
 <body>
 
-    <a href="/" style="color: #94a3b8; text-decoration: none; font-weight:bold;">← Volver al ERP</a>
-    <h1>💸 Módulo de Cartera Vencida</h1>
-
-    <!-- SECCIÓN ADMINISTRADOR -->
-    <div id="panel-admin" class="admin-only">
-        <div class="panel">
-            <h3 style="color:#10b981; margin-top:0;">1. Matriz de Correos Corporativos</h3>
-            <form id="form-vendedor" style="display:flex; gap:10px; align-items:center;">
-                <input type="text" id="v-nombre" placeholder="Nombre en SIESA (Ej: GÓMEZ FERNEY)" required style="flex:1;">
-                <input type="email" id="v-correo" placeholder="Correo corporativo asignado" required style="flex:1;">
-                <button type="submit" class="btn-save">Guardar Relación</button>
-            </form>
-            <table id="tabla-correos"></table>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <a href="/" class="text-decoration-none text-secondary fw-bold">← Volver al ERP</a>
+            <h1 class="m-0">💸 Módulo Dashboard de Cartera Vencida</h1>
         </div>
+        <button class="btn btn-outline-warning btn-custom" onclick="actualizarDashboard()">🔄 Actualizar Métricas</button>
+    </div>
 
-        <div class="panel">
-            <h3 style="color:#3b82f6; margin-top:0;">2. Ingestión y Despacho de Reportes</h3>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <input type="file" id="file-excel" accept=".xlsx, .xls">
-                    <button class="btn-upload" id="btn-cargar" onclick="subirExcel()">⚙️ Cargar SIESA</button>
-                </div>
-                <button class="btn-notify" onclick="enviarCorreos()">📧 Ejecutar Envíos Masivos</button>
+    <!-- 1. DASHBOARD DE INDICADORES (KPIs) -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="text-secondary small fw-bold">TOTAL CARTERA GENERAL</div>
+                <div class="kpi-val" id="kpi-total">$0.00</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="text-secondary small fw-bold">TOTAL CARTERA VENCIDA</div>
+                <div class="kpi-val danger" id="kpi-vencido">$0.00</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="text-secondary small fw-bold">% MOROSIDAD GLOBAL</div>
+                <div class="kpi-val danger" id="kpi-porcentaje">0.00%</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="text-secondary small fw-bold">FACTURAS REGISTRADAS</div>
+                <div class="kpi-val" id="kpi-facturas" style="color:#3b82f6;">0</div>
             </div>
         </div>
     </div>
 
-    <!-- SECCIÓN DE TABLA RESULTANTE -->
-    <div class="panel" id="panel-vendedor">
-        <h3 style="color:#f97316; margin-top:0;" id="titulo-tabla">Consolidado de Cartera Vencida (Vista Administrador)</h3>
-        <div class="stat-box">Saldo Total Vencido: <br><span class="stat-val" id="total-saldo">$0.00</span></div>
-        <table id="tabla-mi-cartera">
+    <!-- 2. GRÁFICOS ANALÍTICOS -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="panel">
+                <h5 class="text-info fw-bold mb-3">📊 Edades de Mora (Días)</h5>
+                <canvas id="chartEdades" height="150"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="panel">
+                <h5 class="text-warning fw-bold mb-3">🏆 Top Vendedores con Mayor Vencimiento</h5>
+                <canvas id="chartVendedores" height="150"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. INGESTIÓN DE REPORTES SIESA Y CONFIGURACIÓN -->
+    <div class="panel">
+        <h5 class="text-success fw-bold">1. Ingestión de Reportes SIESA y Matriz de Correos</h5>
+        <div class="row g-3 align-items-center mt-1">
+            <div class="col-md-5">
+                <input type="file" id="file-excel" class="form-control" accept=".xlsx, .xls">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary btn-custom w-100" id="btn-cargar" onclick="subirExcel()">⚙️ Cargar Excel SIESA</button>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-danger btn-custom w-100" onclick="enviarCorreosMasivos()">📧 Ejecutar Envíos Masivos</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. CONSULTA INTERACTIVA POR VENDEDOR -->
+    <div class="panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-warning fw-bold m-0">2. Consulta de Cartera Detallada</h5>
+            <div class="d-flex gap-2">
+                <input type="text" id="busqueda-vendedor" placeholder="Filtrar por Vendedor o Cliente..." onkeyup="filtrarTabla()" style="width: 280px;">
+            </div>
+        </div>
+
+        <table id="tabla-cartera">
             <thead>
                 <tr>
                     <th>Cliente / Razón Social</th>
-                    <th>NIT / Cédula</th>
+                    <th>NIT</th>
                     <th>Factura</th>
+                    <th>Vendedor</th>
                     <th>Vencimiento</th>
-                    <th>Valor (COP)</th>
+                    <th>Días Mora</th>
+                    <th>Saldo Vencido (COP)</th>
                 </tr>
             </thead>
-            <tbody id="tb-datos-cartera">
-                <tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">No hay datos cargados en el sistema. Selecciona y carga el archivo SIESA.</td></tr>
+            <tbody id="tbody-cartera">
+                <tr><td colspan="7" class="text-center text-muted py-4">No hay información cargada. Sube el archivo Excel de SIESA.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 5. BITÁCORA DE CONFIRMACIÓN DE LECTURA -->
+    <div class="panel">
+        <h5 class="text-primary fw-bold">3. Bitácora de Trazabilidad y Confirmación de Lectura</h5>
+        <table id="tabla-bitacora">
+            <thead>
+                <tr>
+                    <th>Fecha / Hora</th>
+                    <th>Vendedor</th>
+                    <th>Correo Destino</th>
+                    <th>Estado Envío</th>
+                    <th>Confirmación Lectura</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-bitacora">
+                <tr><td colspan="5" class="text-center text-muted py-3">Sin registro de envíos en esta sesión.</td></tr>
             </tbody>
         </table>
     </div>
 
     <script>
-        fetch('/api/cartera/init').catch(()=>{});
-        const isAdmin = document.cookie.includes('rol_erp=administrador') || document.cookie.includes('sesion_erp=sistemas@impleseg.com');
+        let chartEdadesInst, chartVendedoresInst;
+        let TODAS_LAS_FACTURAS = [];
 
-        if(isAdmin) {
-            document.getElementById('panel-admin').style.display = 'block';
-            cargarMapeos();
-        }
-        
-        cargarMiCartera();
+        document.addEventListener("DOMContentLoaded", () => {
+            fetch('/api/cartera/init').catch(()=>{});
+            actualizarDashboard();
+            cargarBitacora();
+        });
 
-        async function cargarMapeos() {
+        async function actualizarDashboard() {
             try {
-                const res = await fetch('/api/cartera/vendedores');
+                const res = await fetch('/api/cartera/dashboard-metrics');
                 if (res.ok) {
                     const data = await res.json();
-                    document.getElementById('tabla-correos').innerHTML = `
-                        <tr><th>Nombre exacto SIESA</th><th>Correo Configurado</th></tr>
-                        ${data.map(v => `<tr><td><b>${v.vendedor}</b></td><td>${v.correo}</td></tr>`).join('')}
-                    `;
-                }
-            } catch (e) { console.error(e); }
-        }
+                    
+                    // KPIs
+                    document.getElementById('kpi-total').innerText = `$${data.kpis.total_cartera.toLocaleString('es-CO')}`;
+                    document.getElementById('kpi-vencido').innerText = `$${data.kpis.total_vencido.toLocaleString('es-CO')}`;
+                    document.getElementById('kpi-porcentaje').innerText = `${data.kpis.porcentaje_morosidad}%`;
+                    document.getElementById('kpi-facturas').innerText = data.kpis.cantidad_facturas;
 
-        document.getElementById('form-vendedor').onsubmit = async (e) => {
-            e.preventDefault();
-            await fetch('/api/cartera/vendedores', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ vendedor: document.getElementById('v-nombre').value, correo: document.getElementById('v-correo').value })
-            });
-            document.getElementById('form-vendedor').reset();
-            cargarMapeos();
-        };
+                    // Gráficos
+                    renderizarGraficos(data.edades_mora, data.top_vendedores);
+                }
+                
+                // Recargar tabla completa
+                const resDatos = await fetch('/api/cartera/mis-datos');
+                if (resDatos.ok) {
+                    TODAS_LAS_FACTURAS = await resDatos.json();
+                    renderizarTabla(TODAS_LAS_FACTURAS);
+                }
+            } catch(e) { console.error("Error cargando dashboard:", e); }
+        }
 
         async function subirExcel() {
             const btn = document.getElementById('btn-cargar');
-            const fileInput = document.getElementById('file-excel');
-            const file = fileInput.files[0];
-            
-            if(!file) {
-                alert("⚠️ Por favor selecciona el archivo .xlsx de SIESA");
-                return;
-            }
+            const file = document.getElementById('file-excel').files[0];
+            if(!file) return alert("⚠️ Selecciona el archivo Excel de SIESA primero.");
 
-            const formData = new FormData(); 
+            const formData = new FormData();
             formData.append("file", file);
-            
-            const txtOriginal = btn.innerHTML;
-            btn.innerHTML = "⏳ Procesando Excel SIESA...";
+
+            btn.innerHTML = "⏳ Procesando SIESA...";
             btn.disabled = true;
 
             try {
                 const res = await fetch('/api/cartera/upload', { method: 'POST', body: formData });
                 const data = await res.json();
-                
-                if(res.ok) {
-                    console.log("Respuesta recibida del backend /upload:", data);
-                    
-                    // Extraer los registros que devuelve la API de carga
-                    let registros = [];
-                    if (Array.isArray(data)) {
-                        registros = data;
-                    } else if (data.registros && Array.isArray(data.registros)) {
-                        registros = data.registros;
-                    } else if (data.data && Array.isArray(data.data)) {
-                        registros = data.data;
-                    } else if (data.cartera && Array.isArray(data.cartera)) {
-                        registros = data.cartera;
-                    }
 
-                    if (registros.length > 0) {
-                        alert(`✅ Archivo cargado. Se visualizaron ${registros.length} registros.`);
-                        renderizarTabla(registros);
-                    } else {
-                        // Si la respuesta no trajo lista directa, intentamos consultar los datos actualizados
-                        alert(`✅ Archivo cargado exitosamente en el servidor.`);
-                        await cargarMiCartera();
-                    }
+                if(res.ok) {
+                    alert(`✅ Ingestión exitosa. ${data.total_facturas} facturas procesadas.`);
+                    TODAS_LAS_FACTURAS = data.registros;
+                    renderizarTabla(TODAS_LAS_FACTURAS);
+                    actualizarDashboard();
                 } else {
-                    alert(`❌ Error al procesar: ${data.detail || 'Formato no soportado'}`);
+                    alert(`❌ Error: ${data.detail || 'Fallo procesando Excel'}`);
                 }
             } catch(e) {
-                console.error(e);
-                alert("❌ Error de comunicación con el servidor");
+                alert("❌ Error procesando el archivo en el servidor.");
             } finally {
-                btn.innerHTML = txtOriginal;
+                btn.innerHTML = "⚙️ Cargar Excel SIESA";
                 btn.disabled = false;
             }
         }
 
-        async function enviarCorreos() {
-            if(confirm("¿Proceder con el envío de notificaciones de cartera a los vendedores?")) {
-                try {
-                    const res = await fetch('/api/cartera/notificar', { method: 'POST' });
-                    const data = await res.json();
-                    if(res.ok) alert(`✅ Notificaciones enviadas correctamente.`);
-                    else alert(`❌ Error: ${data.detail}`);
-                } catch(e) {
-                    alert("❌ Error de conexión al notificar");
-                }
-            }
-        }
-
-        async function cargarMiCartera() {
-            try {
-                const res = await fetch('/api/cartera/mis-datos');
-                if (res.ok) {
-                    const data = await res.json();
-                    if (Array.isArray(data) && data.length > 0) {
-                        renderizarTabla(data);
-                    }
-                }
-            } catch (e) { console.error(e); }
-        }
-
         function renderizarTabla(datos) {
-            if (!Array.isArray(datos) || datos.length === 0) {
-                document.getElementById('tb-datos-cartera').innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">No hay registros cargados.</td></tr>`;
-                document.getElementById('total-saldo').innerText = "$0.00";
+            const tbody = document.getElementById('tbody-cartera');
+            if(!datos || datos.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No hay facturas registradas.</td></tr>`;
                 return;
             }
 
-            let total = 0;
-            document.getElementById('tb-datos-cartera').innerHTML = datos.map(f => {
-                const cliente = f.cliente || f.CLIENTE || f.razon_social || f['Tercero / Razón Social'] || f.nombre || f['TERCERO'] || 'N/A';
-                const nit = f.nit || f.NIT || f['Nit / Cédula'] || f.documento || f['DOCUMENTO'] || 'N/A';
-                const factura = f.factura || f.FACTURA || f['Docto. / Factura'] || f.docto || f['DOCTO'] || 'N/A';
-                const fecha = f.fecha_vencimiento || f.vencimiento || f['Fecha Vencimiento'] || f.fecha || f['VENCIMIENTO'] || 'N/A';
-                
-                const valRaw = f.valor || f.VALOR || f.saldo || f['Saldo Net. COP'] || f['Valor'] || f['SALDO'] || 0;
-                const val = typeof valRaw === 'string' ? parseFloat(valRaw.replace(/[^0-9.-]+/g,"")) : parseFloat(valRaw);
-                const valorFinal = isNaN(val) ? 0 : val;
-                
-                total += valorFinal;
+            tbody.innerHTML = datos.map(f => `
+                <tr>
+                    <td class="fw-bold text-white">${f.cliente}</td>
+                    <td>${f.nit}</td>
+                    <td class="text-info font-monospace">${f.factura}</td>
+                    <td class="text-warning">${f.vendedor}</td>
+                    <td class="text-danger fw-bold">${f.fecha_vencimiento}</td>
+                    <td class="fw-bold ${f.dias_mora > 30 ? 'text-danger' : 'text-warning'}">${f.dias_mora} días</td>
+                    <td class="text-success fw-bold">$${f.valor.toLocaleString('es-CO')}</td>
+                </tr>
+            `).join('');
+        }
 
-                return `<tr>
-                    <td style="font-weight:bold; color:#fff;">${cliente}</td>
-                    <td>${nit}</td>
-                    <td style="color:#3b82f6; font-weight:bold;">${factura}</td>
-                    <td style="color:#ef4444; font-weight:bold;">${fecha}</td>
-                    <td style="color:#10b981; font-weight:bold;">$${valorFinal.toLocaleString('es-CO')}</td>
-                </tr>`;
-            }).join('');
+        function filtrarTabla() {
+            const query = document.getElementById('busqueda-vendedor').value.toUpperCase();
+            const filtrados = TODAS_LAS_FACTURAS.filter(f => 
+                f.vendedor.toUpperCase().includes(query) || 
+                f.cliente.toUpperCase().includes(query) ||
+                f.nit.includes(query)
+            );
+            renderizarTabla(filtrados);
+        }
 
-            const lblTotal = document.getElementById('total-saldo');
-            lblTotal.innerText = `$${total.toLocaleString('es-CO')}`;
+        function renderizarGraficos(edades, topVendedores) {
+            // 1. Gráfico Edades de Mora
+            const ctxEdades = document.getElementById('chartEdades').getContext('2d');
+            if(chartEdadesInst) chartEdadesInst.destroy();
+            chartEdadesInst = new Chart(ctxEdades, {
+                type: 'doughnut',
+                data: {
+                    labels: ['0-30 Días', '31-60 Días', '61-90 Días', '> 90 Días'],
+                    datasets: [{
+                        data: [edades.mora_0_30, edades.mora_31_60, edades.mora_61_90, edades.mora_mayor_90],
+                        backgroundColor: ['#10b981', '#f59e0b', '#f97316', '#ef4444']
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { labels: { color: '#fff' } } } }
+            });
+
+            // 2. Gráfico Vendedores
+            const ctxVend = document.getElementById('chartVendedores').getContext('2d');
+            if(chartVendedoresInst) chartVendedoresInst.destroy();
+            chartVendedoresInst = new Chart(ctxVend, {
+                type: 'bar',
+                data: {
+                    labels: topVendedores.slice(0, 5).map(v => v.vendedor),
+                    datasets: [{
+                        label: 'Monto Vencido ($)',
+                        data: topVendedores.slice(0, 5).map(v => v.total),
+                        backgroundColor: '#3b82f6'
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    plugins: { legend: { labels: { color: '#fff' } } },
+                    scales: { 
+                        x: { ticks: { color: '#fff' } },
+                        y: { ticks: { color: '#fff' } }
+                    }
+                }
+            });
+        }
+
+        async function enviarCorreosMasivos() {
+            if(confirm("¿Proceder con la notificación automatizada de cartera por correo corporativo?")) {
+                try {
+                    const res = await fetch('/api/cartera/notificar', { method: 'POST' });
+                    const data = await res.json();
+                    if(res.ok) {
+                        alert(`✅ Proceso ejecutado. Correos enviados: ${data.correos_enviados}`);
+                        cargarBitacora();
+                    } else {
+                        alert(`❌ Error: ${data.detail}`);
+                    }
+                } catch(e) { alert("❌ Error conectando al servidor para envíos"); }
+            }
+        }
+
+        async function cargarBitacora() {
+            try {
+                const res = await fetch('/api/cartera/bitacora');
+                if(res.ok) {
+                    const data = await res.json();
+                    const tbody = document.getElementById('tbody-bitacora');
+                    if(data.length > 0) {
+                        tbody.innerHTML = data.map(b => `
+                            <tr>
+                                <td>${b.fecha}</td>
+                                <td class="fw-bold text-warning">${b.vendedor}</td>
+                                <td>${b.correo}</td>
+                                <td class="text-success">${b.estado}</td>
+                                <td class="fw-bold ${b.confirmacion.includes('✅') ? 'text-success' : 'text-info'}">${b.confirmacion}</td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+            } catch(e) {}
         }
     </script>
 </body>
