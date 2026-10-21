@@ -12,7 +12,7 @@
       --green-main: #10b981;
       --green-dark: #059669;
       --bg-dark: #0f1c23;
-      --card-bg: rgba(18, 30, 40, 0.75);
+      --card-bg: rgba(18, 30, 40, 0.85);
       --border-card: rgba(255, 255, 255, 0.08);
     }
 
@@ -43,7 +43,6 @@
       top: 0; left: 0; width: 100vw; height: 100vh;
       z-index: -1;
       pointer-events: none;
-      filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.6));
     }
 
     header {
@@ -64,7 +63,7 @@
     .brand-text span { font-size: 11px; letter-spacing: 3px; color: var(--green-main); font-weight: 700; text-transform: uppercase;}
     
     .clock-box {
-      background: rgba(18, 30, 40, 0.6);
+      background: rgba(18, 30, 40, 0.8);
       border: 1px solid var(--border-card);
       padding: 8px 22px; border-radius: 12px;
       text-align: right; backdrop-filter: blur(12px);
@@ -90,13 +89,14 @@
       background: var(--card-bg); backdrop-filter: blur(15px);
       border: 1px solid var(--border-card); border-radius: 20px;
       padding: 50px 35px; text-align: center; cursor: pointer;
-      transition: all 0.3s; position: relative; overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s; position: relative; overflow: hidden;
       box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+      will-change: transform;
     }
     .kiosk-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 5px; }
     .card-ingreso::before { background: var(--orange-main); }
     .card-salida::before { background: var(--green-main); }
-    .kiosk-card:hover { transform: translateY(-8px); border-color: rgba(255,255,255,0.3); }
+    .kiosk-card:hover { transform: translateY(-5px); border-color: rgba(255,255,255,0.3); }
     
     .icon-circle {
       width: 90px; height: 90px; border-radius: 50%; margin: 0 auto 25px;
@@ -114,12 +114,12 @@
       background: var(--card-bg); backdrop-filter: blur(25px);
       border: 1px solid var(--border-card); border-radius: 20px;
       padding: 35px; box-shadow: 0 25px 60px rgba(0,0,0,0.6);
-      animation: fadeIn 0.3s ease;
+      animation: fadeIn 0.2s ease;
     }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-    .btn-back { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-card); color: #cbd5e1; padding: 8px 20px; border-radius: 8px; font-size: 12px; cursor: pointer; margin-bottom: 20px; font-weight: bold; }
-    .btn-back:hover { background: rgba(255, 255, 255, 0.15); color: #fff; }
+    .btn-back { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border-card); color: #cbd5e1; padding: 8px 20px; border-radius: 8px; font-size: 12px; cursor: pointer; margin-bottom: 20px; font-weight: bold; }
+    .btn-back:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
     .form-header-title { font-family: 'Teko', sans-serif; font-size: 38px; letter-spacing: 1.5px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
     
     .grid-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
@@ -127,7 +127,7 @@
     .field-group.full { grid-column: span 2; }
     .field-group label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
     .field-group input, .field-group select {
-      background: rgba(10, 15, 22, 0.8); border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(10, 15, 22, 0.9); border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 8px; padding: 12px 14px; color: #fff; font-size: 14px; outline: none; transition: 0.2s;
     }
     .field-group input:focus, .field-group select:focus { border-color: var(--orange-main); box-shadow: 0 0 10px rgba(249,115,22,0.3); }
@@ -143,11 +143,10 @@
     .btn-salida { background: linear-gradient(135deg, var(--green-main), var(--green-dark)); }
     .btn-action-submit:hover { filter: brightness(1.15); transform: translateY(-2px); }
 
-    /* SEGURIDAD: BOTONES INVISIBLES HASTA DETECTAR ROL ADMIN */
     .admin-trigger {
       display: none; 
       position: fixed; bottom: 20px; right: 20px; font-size: 13px; font-weight: bold;
-      color: #f97316; cursor: pointer; z-index: 100; background: rgba(0,0,0,0.5); padding: 8px 15px; border-radius: 8px; border: 1px solid #ea580c;
+      color: #f97316; cursor: pointer; z-index: 100; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 8px; border: 1px solid #ea580c;
     }
     .admin-trigger:hover { background: #f97316; color: #fff; }
     
@@ -530,10 +529,10 @@
     }
 
     // =========================================================================
-    // ANIMACIÓN VIVA, EXTREMADAMENTE RÁPIDA Y OMNIDIRECCIONAL
+    // ANIMACIÓN OPTIMIZADA A 60 FPS ULTRA FLUIDA (RENDIMIENTO MÁXIMO)
     // =========================================================================
     const canvasObj = document.getElementById('canvas-real-3d');
-    const ctx = canvasObj.getContext('2d');
+    const ctx = canvasObj.getContext('2d', { alpha: true });
     let W, H;
 
     function resizeCanvas() { W = canvasObj.width = window.innerWidth; H = canvasObj.height = window.innerHeight; }
@@ -547,53 +546,51 @@
     const securityItems = ['🧯', svgCascoAmarillo, svgCascoNaranja, '🪓', '🚨', '🧤', '🔥'];
     const floaters = [];
 
-    // Velocidad extrema
-    for (let i = 0; i < 45; i++) {
+    // Cantidad equilibrada de partículas para máximo rendimiento visual
+    for (let i = 0; i < 18; i++) {
       const zDepth = Math.random(); 
       floaters.push({
         item: securityItems[Math.floor(Math.random() * securityItems.length)],
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
-        size: 35 + (zDepth * 80),
-        vx: (Math.random() - 0.5) * 30, 
-        vy: (Math.random() - 0.5) * 30, 
+        size: 30 + (zDepth * 50),
+        vx: (Math.random() - 0.5) * 1.5, 
+        vy: (Math.random() - 0.5) * 1.5, 
         rot: Math.random() * Math.PI * 2,
-        vRot: (Math.random() - 0.5) * 0.6, 
-        opacity: 0.2 + (zDepth * 0.4)
+        vRot: (Math.random() - 0.5) * 0.02, 
+        opacity: 0.25 + (zDepth * 0.35)
       });
     }
 
     function renderCanvas() {
       ctx.clearRect(0, 0, W, H);
       
-      floaters.forEach(f => {
+      for (let i = 0; i < floaters.length; i++) {
+        const f = floaters[i];
         f.x += f.vx; 
         f.y += f.vy; 
         f.rot += f.vRot;
 
-        if (f.y + f.size < -150) f.y = H + 150;
-        if (f.y - f.size > H + 150) f.y = -150;
-        if (f.x > W + 150) f.x = -150;
-        if (f.x < -150) f.x = W + 150;
+        if (f.y + f.size < -80) f.y = H + 80;
+        if (f.y - f.size > H + 80) f.y = -80;
+        if (f.x > W + 80) f.x = -80;
+        if (f.x < -80) f.x = W + 80;
 
         ctx.save();
         ctx.translate(f.x, f.y);
         ctx.rotate(f.rot);
         ctx.globalAlpha = f.opacity;
         
-        ctx.shadowBlur = 12;
-        
         if(typeof f.item === 'string') {
           ctx.font = `${f.size}px Arial`;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.shadowColor = f.item === '🧯' || f.item === '🚨' || f.item === '🔥' ? '#ea580c' : '#10b981';
+          ctx.textAlign = 'center'; 
+          ctx.textBaseline = 'middle';
           ctx.fillText(f.item, 0, 0);
         } else {
-          ctx.shadowColor = f.item === svgCascoNaranja ? '#ea580c' : '#eab308';
           ctx.drawImage(f.item, -f.size/2, -f.size/2, f.size, f.size);
         }
         ctx.restore();
-      });
+      }
       requestAnimationFrame(renderCanvas);
     }
     renderCanvas();
