@@ -22,6 +22,8 @@
         .btn-clear { position: absolute; top: 5px; right: 5px; background: #475569; color: #fff; border: none; font-size: 10px; padding: 3px 8px; border-radius: 3px; cursor: pointer; }
         .btn-submit { background: #f97316; color: white; border: none; padding: 15px 25px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; float: right; }
         .btn-submit:hover { background: #ea580c; }
+        .btn-excel { background: #22c55e; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-excel:hover { background: #16a34a; }
     </style>
 </head>
 <body>
@@ -32,6 +34,11 @@
             <h2 class="title">🛡️ Registro de Entrega de EPP y Dotación</h2>
             <span class="badge">FORMATO OFICIAL F-SGI-GS-03 (REV. 03)</span>
         </div>
+        <div>
+            <input type="file" id="excel-file" accept=".xlsx, .xls" style="display:none;">
+            <button type="button" class="btn-excel" onclick="document.getElementById('excel-file').click()">📊 Cargar Base de Datos (Excel)</button>
+            <span id="upload-status" style="font-size:12px; color:#94a3b8; margin-left:10px;"></span>
+        </div>
     </div>
 
     <form id="form-epp">
@@ -41,7 +48,7 @@
             <div class="grid">
                 <div class="form-group">
                     <label>NÚMERO DE CÉDULA *</label>
-                    <input type="text" id="cedula" placeholder="Digite cédula..." required>
+                    <input type="text" id="cedula" placeholder="Digite cédula y presione TAB..." required>
                 </div>
                 <div class="form-group">
                     <label>NOMBRE COMPLETO *</label>
@@ -72,11 +79,8 @@
                         <input type="number" id="camisa_cant" value="0" style="width:60px;">
                         <select id="camisa_talla">
                             <option value="">Talla</option>
-                            <option value="S">S</option>
-                            <option value="M">M</option>
-                            <option value="L">L</option>
-                            <option value="XL">XL</option>
-                            <option value="XXL">XXL</option>
+                            <option value="S">S</option><option value="M">M</option>
+                            <option value="L">L</option><option value="XL">XL</option>
                         </select>
                     </div>
                 </div>
@@ -86,12 +90,9 @@
                         <input type="number" id="pantalon_cant" value="0" style="width:60px;">
                         <select id="pantalon_talla">
                             <option value="">Talla</option>
-                            <option value="28">28</option>
-                            <option value="30">30</option>
-                            <option value="32">32</option>
-                            <option value="34">34</option>
-                            <option value="36">36</option>
-                            <option value="38">38</option>
+                            <option value="28">28</option><option value="30">30</option>
+                            <option value="32">32</option><option value="34">34</option>
+                            <option value="36">36</option><option value="38">38</option>
                         </select>
                     </div>
                 </div>
@@ -101,14 +102,10 @@
                         <input type="number" id="botas_cant" value="0" style="width:60px;">
                         <select id="botas_talla">
                             <option value="">Talla</option>
-                            <option value="36">36</option>
-                            <option value="37">37</option>
-                            <option value="38">38</option>
-                            <option value="39">39</option>
-                            <option value="40">40</option>
-                            <option value="41">41</option>
+                            <option value="36">36</option><option value="37">37</option>
+                            <option value="38">38</option><option value="39">39</option>
+                            <option value="40">40</option><option value="41">41</option>
                             <option value="42">42</option>
-                            <option value="43">43</option>
                         </select>
                     </div>
                 </div>
@@ -118,10 +115,8 @@
                         <input type="number" id="chaleco_cant" value="0" style="width:60px;">
                         <select id="chaleco_talla">
                             <option value="">Talla</option>
-                            <option value="S">S</option>
-                            <option value="M">M</option>
-                            <option value="L">L</option>
-                            <option value="XL">XL</option>
+                            <option value="S">S</option><option value="M">M</option>
+                            <option value="L">L</option><option value="XL">XL</option>
                         </select>
                     </div>
                 </div>
@@ -208,6 +203,53 @@
             setupCanvas("canvas1");
             setupCanvas("canvas2");
 
+            // BÚSQUEDA AUTOMÁTICA AL DIGITAR CÉDULA
+            document.getElementById("cedula").addEventListener("blur", async function() {
+                const cedula = this.value.trim();
+                if (!cedula) return;
+
+                try {
+                    const response = await fetch("/epp/buscar/" + cedula);
+                    const data = await response.json();
+
+                    if (data.encontrado) {
+                        document.getElementById("nombre").value = data.colaborador.nombre || "";
+                        document.getElementById("cargo").value = data.colaborador.cargo || "";
+                        document.getElementById("area").value = data.colaborador.area || "";
+                        if (data.colaborador.fecha_ingreso) {
+                            document.getElementById("fecha_ingreso").value = data.colaborador.fecha_ingreso;
+                        }
+                    }
+                } catch (e) {
+                    console.log("Colaborador no encontrado.");
+                }
+            });
+
+            // CARGAR EXCEL
+            document.getElementById("excel-file").addEventListener("change", async function() {
+                if (!this.files.length) return;
+                let statusSpan = document.getElementById("upload-status");
+                statusSpan.textContent = "Cargando archivo...";
+
+                let formData = new FormData();
+                formData.append("file", this.files[0]);
+
+                try {
+                    let response = await fetch("/epp/cargar-empleados", { method: "POST", body: formData });
+                    let res = await response.json();
+                    if (res.status === "success") {
+                        alert("✅ " + res.message);
+                        statusSpan.textContent = "Base de datos lista.";
+                    } else {
+                        alert("❌ Error: " + res.message);
+                        statusSpan.textContent = "Error al cargar.";
+                    }
+                } catch (e) {
+                    alert("❌ Error de comunicación al subir Excel.");
+                }
+            });
+
+            // ENVIAR Y GENERAR REGISTRO
             document.getElementById("btn-guardar-epp").addEventListener("click", async function() {
                 const cedula = document.getElementById("cedula").value.trim();
                 const nombre = document.getElementById("nombre").value.trim();
@@ -216,27 +258,7 @@
                     alert("⚠️ Cédula y Nombre Completo son obligatorios.");
                     return;
                 }
-                document.getElementById("cedula").addEventListener("blur", async function() {
-    const cedula = this.value.trim();
-    if (!cedula) return;
 
-    try {
-        const response = await fetch("/epp/buscar/" + cedula);
-        const data = await response.json();
-
-        if (data.encontrado) {
-            alert("📋 Colaborador encontrado. Se cargó el historial de entregas.");
-            document.getElementById("nombre").value = data.colaborador.nombre || "";
-            document.getElementById("cargo").value = data.colaborador.cargo || "";
-            document.getElementById("area").value = data.colaborador.area || "";
-            if (data.colaborador.fecha_ingreso) {
-                document.getElementById("fecha_ingreso").value = data.colaborador.fecha_ingreso;
-            }
-        }
-    } catch (e) {
-        console.log("Nuevo colaborador o sin historial previo.");
-    }
-});
                 let formData = new FormData();
                 formData.append("cedula", cedula);
                 formData.append("nombre", nombre);
