@@ -5,11 +5,16 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlmodel import Session
 
+from app.routers import (
+    dashboard, equipos, gh_inventario, gh_asignaciones,
+    gh_bajas, recepcion, etiquetas_usb, dashboard_equipos,
+    impresoras, hv_equipos, visitantes, usuarios, cartera, epp # <--- AGREGA ', cartera' AQUÍ
+)
 import app.database
 from app.routers import (
     dashboard, equipos, gh_inventario, gh_asignaciones,
     gh_bajas, recepcion, etiquetas_usb, dashboard_equipos,
-    impresoras, hv_equipos, visitantes, usuarios, cartera, epp
+    impresoras, hv_equipos, visitantes, usuarios
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -35,8 +40,10 @@ app.include_router(impresoras.router)
 app.include_router(hv_equipos.router)
 app.include_router(visitantes.router)
 app.include_router(usuarios.router)
-app.include_router(cartera.router)
+app.include_router(visitantes.router)
+app.include_router(usuarios.router)
 app.include_router(epp.router)
+app.include_router(cartera.router) # <-- AGREGADO
 
 # ==============================================================================
 # MOTOR DE SEGURIDAD (RBAC - INTERCEPTOR DE RUTAS)
@@ -213,7 +220,7 @@ def cartera_view(request: Request, session: Session = Depends(app.database.get_s
     return FileResponse(os.path.join(BASE_DIR, "templates", "cartera.html"))
 
 @app.get("/epp")
-def epp_view(request: Request, session: Session = Depends(app.database.get_session)):
-    fallo = verificar_acceso(request, session, "gestion_humana")
+def epp_view(request: Request, session: Session = Depends(get_session)):
+    fallo = verificar_acceso(request, session, "gestion-humana")
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "epp.html"))
