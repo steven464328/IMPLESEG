@@ -17,7 +17,7 @@
         th { color: #94a3b8; background: #0f172a; text-transform: uppercase; }
         input[type="text"], input[type="email"], input[type="file"] { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #070b14; color: white; }
         .stat-box { display: inline-block; padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; margin-bottom: 15px; }
-        .stat-val { font-size: 24px; color: #10b981; font-weight: bold; font-family: monospace;}
+        .stat-val { font-size: 24px; color: #ef4444; font-weight: bold; font-family: monospace;}
     </style>
 </head>
 <body>
@@ -42,33 +42,43 @@
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <input type="file" id="file-excel" accept=".xlsx, .xls">
-                    <button class="btn-upload" onclick="subirExcel()">⚙️ Cargar SIESA</button>
+                    <button class="btn-upload" id="btn-cargar" onclick="subirExcel()">⚙️ Cargar SIESA</button>
                 </div>
                 <button class="btn-notify" onclick="enviarCorreos()">📧 Ejecutar Envíos Masivos</button>
             </div>
         </div>
     </div>
 
-    <!-- SECCIÓN VENDEDORES (FUERZA DE VENTAS) -->
+    <!-- SECCIÓN VENDEDORES Y VISTA GENERAL -->
     <div class="panel" id="panel-vendedor">
-        <h3 style="color:#f97316; margin-top:0;">Mi Cartera Asignada (Mora Activa)</h3>
+        <h3 style="color:#f97316; margin-top:0;" id="titulo-tabla">Mi Cartera Asignada (Mora Activa)</h3>
         <div class="stat-box">Saldo Total Vencido: <br><span class="stat-val" id="total-saldo">$0.00</span></div>
         <table id="tabla-mi-cartera">
             <thead>
-                <tr><th>Cliente</th><th>NIT</th><th>Factura</th><th>Vencimiento</th><th>Valor (COP)</th></tr>
+                <tr>
+                    <th>Cliente / Razón Social</th>
+                    <th>NIT / Cédula</th>
+                    <th>Factura</th>
+                    <th>Vencimiento</th>
+                    <th>Valor (COP)</th>
+                </tr>
             </thead>
-            <tbody id="tb-datos-cartera"></tbody>
+            <tbody id="tb-datos-cartera">
+                <tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">No hay datos cargados en el sistema. Selecciona y carga el archivo SIESA.</td></tr>
+            </tbody>
         </table>
     </div>
 
     <script>
         fetch('/api/cartera/init').catch(()=>{});
-        const isAdmin = document.cookie.includes('rol_erp=administrador');
+        const isAdmin = document.cookie.includes('rol_erp=administrador') || document.cookie.includes('sesion_erp=sistemas@impleseg.com');
 
         if(isAdmin) {
             document.getElementById('panel-admin').style.display = 'block';
+            document.getElementById('titulo-tabla').innerText = "Consolidado de Cartera Vencida (Vista Administrador)";
             cargarMapeos();
         }
+        
         cargarMiCartera();
 
         async function cargarMapeos() {
@@ -95,48 +105,106 @@
         };
 
         async function subirExcel() {
-            const file = document.getElementById('file-excel').files[0];
-            if(!file) return alert("Seleccione el archivo .xlsx");
-            const formData = new FormData(); formData.append("file", file);
+            const btn = document.getElementById('btn-cargar');
+            const fileInput = document.getElementById('file-excel');
+            const file = fileInput.files[0];
             
-            alert("Procesando datos...");
+            if(!file) {
+                alert("⚠️ Por favor selecciona el archivo .xlsx de SIESA");
+                return;
+            }
+
+            const formData = new FormData(); 
+            formData.append("file", file);
+            
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = "⏳ Procesando Excel SIESA...";
+            btn.disabled = true;
+
             try {
                 const res = await fetch('/api/cartera/upload', { method: 'POST', body: formData });
                 const data = await res.json();
+                
                 if(res.ok) {
-                    alert(`✅ Completado.`);
-                    cargarMiCartera();
+                    alert(`✅ Excel de SIESA procesado con éxito.`);
+                    
+                    // Si el backend devuelve los registros procesados en la respuesta directa:
+                    if (data.registros || data.data || Array.isArray(data)) {
+                        const lista = data.registros || data.data || data;
+                        renderizarTabla(lista);
+                    } else {
+                        await cargarMiCartera();
+                    }
                 } else {
-                    alert(`❌ Error: ${data.detail || 'Fallo procesando archivo'}`);
+                    alert(`❌ Error al procesar: ${data.detail || 'Formato de Excel no reconocido'}`);
                 }
             } catch(e) {
+                console.error(e);
                 alert("❌ Error de comunicación con el servidor");
+            } finally {
+                btn.innerHTML = txtOriginal;
+                btn.disabled = false;
             }
         }
 
         async function enviarCorreos() {
-            if(confirm("¿Proceder con el envío de notificaciones a toda la fuerza de ventas?")) {
-                const res = await fetch('/api/cartera/notificar', { method: 'POST' });
-                const data = await res.json();
-                if(res.ok) alert(`✅ Operación exitosa. Correos despachados: ${data.correos_enviados || 0}`);
-                else alert(`❌ Error: ${data.detail}`);
+            if(confirm("¿Proceder con el envío de notificaciones de cartera a los vendedores?")) {
+                try {
+                    const res = await fetch('/api/cartera/notificar', { method: 'POST' });
+                    const data = await res.json();
+                    if(res.ok) alert(`✅ Notificaciones enviadas correctamente.`);
+                    else alert(`❌ Error: ${data.detail}`);
+                } catch(e) {
+                    alert("❌ Error de conexión al notificar");
+                }
             }
         }
 
         async function cargarMiCartera() {
             try {
+                // Si es admin se consulta 'mis-datos' o el endpoint general
                 const res = await fetch('/api/cartera/mis-datos');
                 if (res.ok) {
                     const data = await res.json();
-                    let total = 0;
-                    document.getElementById('tb-datos-cartera').innerHTML = data.map(f => {
-                        const val = parseFloat(f.valor || f.saldo || 0);
-                        total += val;
-                        return `<tr><td>${f.cliente || ''}</td><td>${f.nit || ''}</td><td>${f.factura || ''}</td><td style="color:#ef4444;">${f.fecha_vencimiento || f.vencimiento || ''}</td><td>$${val.toLocaleString('es-CO')}</td></tr>`;
-                    }).join('');
-                    document.getElementById('total-saldo').innerText = `$${total.toLocaleString('es-CO')}`;
+                    if (Array.isArray(data) && data.length > 0) {
+                        renderizarTabla(data);
+                    }
                 }
             } catch (e) { console.error(e); }
+        }
+
+        function renderizarTabla(datos) {
+            if (!Array.isArray(datos) || datos.length === 0) {
+                document.getElementById('tb-datos-cartera').innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">No hay registros cargados.</td></tr>`;
+                document.getElementById('total-saldo').innerText = "$0.00";
+                return;
+            }
+
+            let total = 0;
+            document.getElementById('tb-datos-cartera').innerHTML = datos.map(f => {
+                // Mapeo flexible de llaves para evitar fallos por nombres de columnas de SIESA
+                const cliente = f.cliente || f.CLIENTE || f.razon_social || f['Tercero / Razón Social'] || f.nombre || 'N/A';
+                const nit = f.nit || f.NIT || f['Nit / Cédula'] || f.documento || 'N/A';
+                const factura = f.factura || f.FACTURA || f['Docto. / Factura'] || f.docto || 'N/A';
+                const fecha = f.fecha_vencimiento || f.vencimiento || f['Fecha Vencimiento'] || f.fecha || 'N/A';
+                
+                const valRaw = f.valor || f.VALOR || f.saldo || f['Saldo Net. COP'] || f['Valor'] || 0;
+                const val = typeof valRaw === 'string' ? parseFloat(valRaw.replace(/[^0-9.-]+/g,"")) : parseFloat(valRaw);
+                const valorFinal = isNaN(val) ? 0 : val;
+                
+                total += valorFinal;
+
+                return `<tr>
+                    <td style="font-weight:bold; color:#fff;">${cliente}</td>
+                    <td>${nit}</td>
+                    <td style="color:#3b82f6; font-weight:bold;">${factura}</td>
+                    <td style="color:#ef4444; font-weight:bold;">${fecha}</td>
+                    <td style="color:#10b981; font-weight:bold;">$${valorFinal.toLocaleString('es-CO')}</td>
+                </tr>`;
+            }).join('');
+
+            const lblTotal = document.getElementById('total-saldo');
+            lblTotal.innerText = `$${total.toLocaleString('es-CO')}`;
         }
     </script>
 </body>
