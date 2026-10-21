@@ -60,6 +60,10 @@
         .module-card h4 { color: white; font-weight: 700; margin-bottom: 10px; }
         .module-card p { color: #94a3b8; font-size: 14px; margin: 0; }
         
+        /* Estilo especial para módulo EPP */
+        .module-card.epp:hover { border-color: #3b82f6; }
+        .module-card.epp i { color: #3b82f6; }
+
         /* Color especial para tarjeta Cartera */
         .module-card.cartera:hover { border-color: #f97316; }
         .module-card.cartera i { color: #f97316; }
@@ -79,6 +83,7 @@
         <div class="menu">
             <div class="menu-title">MÓDULOS ERP</div>
             <a href="/" class="active"><i class="bi bi-house-door me-2"></i> Inicio</a>
+            <a href="/epp"><i class="bi bi-shield-check me-2"></i> Entrega EPP y Dotación</a>
             <a href="/hojas_vida"><i class="bi bi-pc-display-horizontal me-2"></i> Hojas de Vida</a>
             <a href="/gestion-humana"><i class="bi bi-person-vcard me-2"></i> Gestión Humana</a>
             <a href="/visitantes"><i class="bi bi-people-fill me-2"></i> Ingreso Visitantes</a>
@@ -96,6 +101,13 @@
         <div class="page-subtitle">Selecciona el módulo al que deseas acceder</div>
 
         <div class="row g-4">
+            <div class="col-md-3">
+                <div class="module-card epp" onclick="window.location.href='/epp'">
+                    <i class="bi bi-shield-check"></i>
+                    <h4>Entrega EPP y Dotación</h4>
+                    <p>Registro, firmas digitales, matriz histórica y generación oficial del formato F-SGI-GS-03.</p>
+                </div>
+            </div>
             <div class="col-md-3">
                 <div class="module-card" onclick="window.location.href='/hojas_vida'">
                     <i class="bi bi-pc-display-horizontal"></i>
