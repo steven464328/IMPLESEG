@@ -3,10 +3,8 @@ import io
 import pandas as pd
 from datetime import datetime
 from typing import Optional, List
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Request, Form
-from fastapi.responses import JSONResponse, HTMLResponse, Response
-from sqlmodel import Session
-from app.database import get_session
+from fastapi import APIRouter, UploadFile, File, HTTPException, Request
+from fastapi.responses import JSONResponse, Response
 
 router = APIRouter(prefix="/api/cartera", tags=["Cartera"])
 
@@ -16,7 +14,7 @@ SMTP_PORT = 587
 SENDER_EMAIL = "sistemas@impleseg.com"
 APP_PASSWORD = "uovb dzqb ewkl lvgj"
 
-# Estado Global en Memoria para Consulta Inmediata sin Bloqueos de DB
+# Estado Global en Memoria
 DB_CARTERA_GLOBAL = []
 MAPEO_VENDEDORES = {}
 BITACORA_ENVIOS = []
@@ -27,13 +25,12 @@ def init_cartera():
 
 @router.get("/vendedores")
 def obtener_mapeo_vendedores():
-    resultado = [{"vendedor": k, "correo": v} for k, v in MAPEO_VENDEDORES.items()]
-    return resultado
+    return [{"vendedor": k, "correo": v} for k, v in MAPEO_VENDEDORES.items()]
 
 @router.post("/vendedores")
 def guardar_mapeo_vendedor(payload: dict):
-    vendedor = payload.get("vendedor", "").strip().upper()
-    correo = payload.get("correo", "").strip().lower()
+    vendedor = str(payload.get("vendedor", "")).strip().upper()
+    correo = str(payload.get("correo", "")).strip().lower()
     if vendedor and correo:
         MAPEO_VENDEDORES[vendedor] = correo
         return {"status": "success", "vendedor": vendedor, "correo": correo}
@@ -43,64 +40,102 @@ def guardar_mapeo_vendedor(payload: dict):
 async def cargar_excel_siesa(file: UploadFile = File(...)):
     global DB_CARTERA_GLOBAL
     if not file.filename.endswith(('.xlsx', '.xls')):
-        raise HTTPException(status_code=400, detail="Formato no soportado. Debe ser un archivo Excel (.xlsx, .xls)")
+        raise HTTPException(status_code=400, detail="Formato no soportado. Debe ser .xlsx o .xls")
 
     try:
         contents = await file.read()
-        df = pd.read_excel(io.BytesIO(contents))
+        # Leer el Excel convirtiendo todo a string para evitar pérdidas de ceros o formatos
+        raw_df = pd.read_excel(io.BytesIO(contents))
         
-        # Limpieza de nombres de columnas (Quitar espacios extra)
-        df.columns = [str(c).strip() for c in df.columns]
-        
+        if raw_df.empty:
+            raise HTTPException(status_code=400, detail="El archivo Excel está completamente vacío.")
+
         registros_procesados = []
         fecha_actual = datetime.now()
 
-        for idx, row in df.iterrows():
-            # Mapeo flexible de columnas SIESA
-            cliente = str(row.get('Tercero / Razón Social', row.get('Razon Social', row.get('Cliente', row.get('TERCERO', 'CLIENTE VARIOS'))))).strip()
-            nit = str(row.get('Nit / Cédula', row.get('Nit', row.get('NIT', row.get('Documento', 'N/A'))))).strip()
-            factura = str(row.get('Docto. / Factura', row.get('Factura', row.get('DOCTO', row.get('Documento', f'FACT-{idx+1}'))))).strip()
-            vendedor = str(row.get('Vendedor', row.get('VENDEDOR', row.get('Nombre Vendedor', 'SIN VENDEDOR')))).strip().upper()
+        # Iterar dinámicamente por todas las filas de la hoja
+        for idx, row in raw_df.iterrows():
+            row_dict = {str(k).strip().upper(): v for k, v in row.to_dict().items() if pd.notna(v)}
             
-            # Procesamiento de Fechas y Días de Mora
-            fecha_venc_raw = row.get('Fecha Vencimiento', row.get('Vencimiento', row.get('FECHA_VENC', 'N/A')))
+            # Buscar Cliente
+            cliente = "CLIENTE VARIOS"
+            for col_name in ['TERCERO / RAZÓN SOCIAL', 'RAZON SOCIAL', 'TERCERO', 'CLIENTE', 'NOMBRE']:
+                if col_name in row_dict:
+                    cliente = str(row_dict[col_name]).strip()
+                    break
+            
+            # Si la fila es un título o encabezado, saltarla
+            if "TERCERO" in cliente.upper() and "RAZÓN SOCIAL" in cliente.upper():
+                continue
+
+            # Buscar NIT
+            nit = "N/A"
+            for col_name in ['NIT / CÉDULA', 'NIT', 'DOCUMENTO', 'CEDULA', 'IDENTIFICACION']:
+                if col_name in row_dict:
+                    nit = str(row_dict[col_name]).strip()
+                    break
+
+            # Buscar Factura
+            factura = f"FACT-{idx+1}"
+            for col_name in ['DOCTO. / FACTURA', 'FACTURA', 'DOCTO', 'DOCUMENTO', 'NUMERO']:
+                if col_name in row_dict:
+                    factura = str(row_dict[col_name]).strip()
+                    break
+
+            # Buscar Vendedor
+            vendedor = "SIN VENDEDOR"
+            for col_name in ['VENDEDOR', 'NOMBRE VENDEDOR', 'ASESOR', 'ZONA']:
+                if col_name in row_dict:
+                    vendedor = str(row_dict[col_name]).strip().upper()
+                    break
+
+            # Buscar y procesar Valor / Saldo
+            val_clean = 0.0
+            for col_name in ['SALDO NET. COP', 'SALDO', 'VALOR', 'SALDO NETO', 'TOTAL']:
+                if col_name in row_dict:
+                    val_raw = row_dict[col_name]
+                    try:
+                        if isinstance(val_raw, (int, float)):
+                            val_clean = float(val_raw)
+                        else:
+                            val_str = str(val_raw).replace('$', '').replace(' ', '').replace(',', '')
+                            val_clean = float(val_str)
+                        break
+                    except Exception:
+                        val_clean = 0.0
+
+            # Buscar Fecha y calcular días de mora
+            fecha_venc_str = "N/A"
             dias_mora = 0
-            fecha_venc_str = str(fecha_venc_raw).split('T')[0] if 'T' in str(fecha_venc_raw) else str(fecha_venc_raw)
+            for col_name in ['FECHA VENCIMIENTO', 'VENCIMIENTO', 'FECHA_VENC', 'FECHA']:
+                if col_name in row_dict:
+                    f_raw = row_dict[col_name]
+                    try:
+                        dt = pd.to_datetime(f_raw, errors='coerce')
+                        if not pd.isna(dt):
+                            dias_mora = (fecha_actual - dt).days
+                            fecha_venc_str = dt.strftime('%Y-%m-%d')
+                        else:
+                            fecha_venc_str = str(f_raw).split('T')[0]
+                    except Exception:
+                        fecha_venc_str = str(f_raw)
+                    break
 
-            try:
-                if isinstance(fecha_venc_raw, datetime):
-                    dias_mora = (fecha_actual - fecha_venc_raw).days
-                else:
-                    dt = pd.to_datetime(fecha_venc_raw, errors='coerce')
-                    if not pd.isna(dt):
-                        dias_mora = (fecha_actual - dt).days
-                        fecha_venc_str = dt.strftime('%Y-%m-%d')
-            except Exception:
-                dias_mora = 0
-
-            # Procesamiento de Valores
-            val_raw = row.get('Saldo Net. COP', row.get('Valor', row.get('Saldo', row.get('VALOR', 0))))
-            try:
-                if isinstance(val_raw, str):
-                    val_clean = float(''.join(c for c in val_raw if c.isdigit() or c in ['.', '-']))
-                else:
-                    val_clean = float(val_raw)
-            except Exception:
-                val_clean = 0.0
-
-            if val_clean > 0:
+            # Guardamos la fila si tiene al menos un cliente o un valor válido
+            if cliente != "CLIENTE VARIOS" or val_clean != 0.0:
                 registros_procesados.append({
-                    "id": idx + 1,
+                    "id": len(registros_procesados) + 1,
                     "cliente": cliente,
                     "nit": nit,
                     "factura": factura,
                     "vendedor": vendedor,
                     "fecha_vencimiento": fecha_venc_str,
                     "dias_mora": max(0, dias_mora),
-                    "valor": val_clean
+                    "valor": abs(val_clean)
                 })
 
         DB_CARTERA_GLOBAL = registros_procesados
+        
         return {
             "status": "success",
             "total_facturas": len(DB_CARTERA_GLOBAL),
@@ -109,7 +144,7 @@ async def cargar_excel_siesa(file: UploadFile = File(...)):
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error parseando archivo Excel SIESA: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error leyendo SIESA: {str(e)}")
 
 @router.get("/dashboard-metrics")
 def obtener_metricas_dashboard():
@@ -118,13 +153,11 @@ def obtener_metricas_dashboard():
     total_vencido = sum(r["valor"] for r in vencidos)
     porcentaje_morosidad = (total_vencido / total_cartera * 100) if total_cartera > 0 else 0.0
 
-    # Clasificación por edades de mora
     mora_0_30 = sum(r["valor"] for r in DB_CARTERA_GLOBAL if 0 <= r["dias_mora"] <= 30)
     mora_31_60 = sum(r["valor"] for r in DB_CARTERA_GLOBAL if 31 <= r["dias_mora"] <= 60)
     mora_61_90 = sum(r["valor"] for r in DB_CARTERA_GLOBAL if 61 <= r["dias_mora"] <= 90)
     mora_mayor_90 = sum(r["valor"] for r in DB_CARTERA_GLOBAL if r["dias_mora"] > 90)
 
-    # Agrupación por Vendedores
     vendedores_dict = {}
     for r in DB_CARTERA_GLOBAL:
         v = r["vendedor"]
@@ -149,8 +182,7 @@ def obtener_metricas_dashboard():
     }
 
 @router.get("/mis-datos")
-def obtener_mis_datos(request: Request):
-    # Retorna la lista global completa si es administración o si no se ha filtrado
+def obtener_mis_datos():
     return DB_CARTERA_GLOBAL
 
 @router.post("/notificar")
@@ -160,9 +192,8 @@ def ejecutar_envio_masivo():
     from email.mime.multipart import MIMEMultipart
 
     if not DB_CARTERA_GLOBAL:
-        raise HTTPException(status_code=400, detail="No hay cartera cargada para notificar")
+        raise HTTPException(status_code=400, detail="No hay datos de cartera cargados para notificar")
 
-    # Agrupar cartera por vendedor
     vendedores_cartera = {}
     for r in DB_CARTERA_GLOBAL:
         v = r["vendedor"]
@@ -188,7 +219,6 @@ def ejecutar_envio_masivo():
 
             filas_html = "".join([f"<tr><td>{f['cliente']}</td><td>{f['nit']}</td><td>{f['factura']}</td><td>{f['fecha_vencimiento']}</td><td>{f['dias_mora']} días</td><td>${f['valor']:,.2f}</td></tr>" for f in facturas])
             
-            # Píxel de seguimiento de lectura
             pixel_id = f"{vendedor}_{int(datetime.now().timestamp())}"
             pixel_url = f"http://192.168.1.76:8000/api/cartera/tracking/pixel.png?id={pixel_id}"
 
@@ -226,16 +256,14 @@ def ejecutar_envio_masivo():
         return {"status": "success", "correos_enviados": correos_despachados}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error despachando correos SMTP: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error despachando correos: {str(e)}")
 
 @router.get("/tracking/pixel.png")
 def tracking_pixel(id: str):
-    # Confirmación de lectura corporativa recibida
     for envio in BITACORA_ENVIOS:
         if envio["vendedor"] in id:
             envio["confirmacion"] = "Leído ✅"
     
-    # Imagen transparente de 1x1 píxel en formato PNG
     pixel_bytes = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\`\x00\x00\x00\x02\x00\x01H\xaf\xa4q\x00\x00\x00\x00IEND\xaeB`\x82'
     return Response(content=pixel_bytes, media_type="image/png")
 
