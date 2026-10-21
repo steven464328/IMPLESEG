@@ -5,17 +5,13 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlmodel import Session
 
+# Importación unificada de todos los routers de la aplicación
 from app.routers import (
     dashboard, equipos, gh_inventario, gh_asignaciones,
     gh_bajas, recepcion, etiquetas_usb, dashboard_equipos,
-    impresoras, hv_equipos, visitantes, usuarios, cartera, epp # <--- AGREGA ', cartera' AQUÍ
+    impresoras, hv_equipos, visitantes, usuarios, cartera, epp
 )
 import app.database
-from app.routers import (
-    dashboard, equipos, gh_inventario, gh_asignaciones,
-    gh_bajas, recepcion, etiquetas_usb, dashboard_equipos,
-    impresoras, hv_equipos, visitantes, usuarios
-)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -27,7 +23,7 @@ def startup():
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
-# Incluir todos los routers
+# Incluir todos los routers de la aplicación
 app.include_router(dashboard.router)
 app.include_router(equipos.router)
 app.include_router(gh_inventario.router)
@@ -40,10 +36,8 @@ app.include_router(impresoras.router)
 app.include_router(hv_equipos.router)
 app.include_router(visitantes.router)
 app.include_router(usuarios.router)
-app.include_router(visitantes.router)
-app.include_router(usuarios.router)
+app.include_router(cartera.router)
 app.include_router(epp.router)
-app.include_router(cartera.router) # <-- AGREGADO
 
 # ==============================================================================
 # MOTOR DE SEGURIDAD (RBAC - INTERCEPTOR DE RUTAS)
@@ -123,7 +117,6 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
     # 1. MODO DIOS: INGRESO ABSOLUTO GARANTIZADO (Evita cualquier bloqueo de PostgreSQL)
     if correo == "sistemas@impleseg.com" and password == "Ejs0luciones$":
         try:
-            # Intentamos inyectarlo en la base de datos para que quede registrado
             session.execute(text("""
                 CREATE TABLE IF NOT EXISTS usuarios (
                     id SERIAL PRIMARY KEY,
@@ -144,11 +137,9 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
                 """), {"c": correo, "p": password})
                 session.commit()
         except Exception as e:
-            # SI LA BASE DE DATOS FALLA, IGNORAMOS EL ERROR (Rollback limpia el bloqueo)
             session.rollback()
             print("Error forzando DB (Ignorado por Bypass Maestro):", e)
         
-        # SIN IMPORTAR SI LA BD FALLÓ, TE DEJA ENTRAR
         response = RedirectResponse(url="/", status_code=302)
         response.set_cookie(key="sesion_erp", value=correo, max_age=86400)
         response.set_cookie(key="rol_erp", value="administrador", max_age=86400)
@@ -220,7 +211,7 @@ def cartera_view(request: Request, session: Session = Depends(app.database.get_s
     return FileResponse(os.path.join(BASE_DIR, "templates", "cartera.html"))
 
 @app.get("/epp")
-def epp_view(request: Request, session: Session = Depends(get_session)):
-    fallo = verificar_acceso(request, session, "gestion-humana")
+def epp_view(request: Request, session: Session = Depends(app.database.get_session)):
+    fallo = verificar_acceso(request, session, "gestion_humana")
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "epp.html"))
