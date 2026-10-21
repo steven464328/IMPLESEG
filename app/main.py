@@ -5,16 +5,14 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlmodel import Session
 
+# Importación correcta de la función get_session e init_db
+from app.database import get_session, init_db
+
+# Importación unificada de los routers
 from app.routers import (
     dashboard, equipos, gh_inventario, gh_asignaciones,
     gh_bajas, recepcion, etiquetas_usb, dashboard_equipos,
-    impresoras, hv_equipos, visitantes, usuarios, cartera, epp # <--- AGREGA ', cartera' AQUÍ
-)
-import app.database
-from app.routers import (
-    dashboard, equipos, gh_inventario, gh_asignaciones,
-    gh_bajas, recepcion, etiquetas_usb, dashboard_equipos,
-    impresoras, hv_equipos, visitantes, usuarios
+    impresoras, hv_equipos, visitantes, usuarios, cartera, epp
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -23,7 +21,7 @@ app = FastAPI(title="ERP IMPLESEG SEGURO", version="3.0")
 
 @app.on_event("startup")
 def startup():
-    app.database.init_db()
+    init_db()
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
@@ -40,10 +38,8 @@ app.include_router(impresoras.router)
 app.include_router(hv_equipos.router)
 app.include_router(visitantes.router)
 app.include_router(usuarios.router)
-app.include_router(visitantes.router)
-app.include_router(usuarios.router)
+app.include_router(cartera.router)
 app.include_router(epp.router)
-app.include_router(cartera.router) # <-- AGREGADO
 
 # ==============================================================================
 # MOTOR DE SEGURIDAD (RBAC - INTERCEPTOR DE RUTAS)
@@ -116,7 +112,7 @@ def login_page():
     return HTMLResponse(content=html)
 
 @app.post("/login")
-def procesar_login(correo: str = Form(...), password: str = Form(...), session: Session = Depends(app.database.get_session)):
+def procesar_login(correo: str = Form(...), password: str = Form(...), session: Session = Depends(get_session)):
     if not correo.endswith("@impleseg.com"):
         return HTMLResponse("<script>alert('ALERTA: Solo se admiten correos corporativos autorizados (@impleseg.com)'); window.location.href='/login';</script>")
     
@@ -186,13 +182,13 @@ def logout():
 # PROTECCIÓN DE RUTAS DEL ERP
 # ==============================================================================
 @app.get("/")
-def index(request: Request, session: Session = Depends(app.database.get_session)):
+def index(request: Request, session: Session = Depends(get_session)):
     fallo = verificar_acceso(request, session)
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "index.html"))
 
 @app.get("/configuracion/seguridad")
-def admin_usuarios_view(request: Request, session: Session = Depends(app.database.get_session)):
+def admin_usuarios_view(request: Request, session: Session = Depends(get_session)):
     fallo = verificar_acceso(request, session, "ACCESO_RESTRINGIDO_SISTEMA_ROOT")
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "seguridad.html"))
@@ -202,25 +198,25 @@ def visitantes_view(request: Request):
     return FileResponse(os.path.join(BASE_DIR, "templates", "visitantes.html"))
 
 @app.get("/gestion-humana")
-def gestion_humana(request: Request, session: Session = Depends(app.database.get_session)):
+def gestion_humana(request: Request, session: Session = Depends(get_session)):
     fallo = verificar_acceso(request, session, "gestion_humana")
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "gestion_humana.html"))
 
 @app.get("/hojas_vida")
-def hojas_vida(request: Request, session: Session = Depends(app.database.get_session)):
+def hojas_vida(request: Request, session: Session = Depends(get_session)):
     fallo = verificar_acceso(request, session, "hojas_vida")
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "hojas_vida.html"))
 
 @app.get("/cartera")
-def cartera_view(request: Request, session: Session = Depends(app.database.get_session)):
+def cartera_view(request: Request, session: Session = Depends(get_session)):
     fallo = verificar_acceso(request, session, "cartera")
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "cartera.html"))
 
 @app.get("/epp")
-def epp_view(request: Request, session: Session = Depends(app.database.get_session)):
+def epp_view(request: Request, session: Session = Depends(get_session)):
     fallo = verificar_acceso(request, session, "gestion_humana")
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "epp.html"))
