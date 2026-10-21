@@ -44,7 +44,6 @@ async def cargar_excel_siesa(file: UploadFile = File(...)):
 
     try:
         contents = await file.read()
-        # Leer el Excel convirtiendo todo a string para evitar pérdidas de ceros o formatos
         raw_df = pd.read_excel(io.BytesIO(contents))
         
         if raw_df.empty:
@@ -53,86 +52,57 @@ async def cargar_excel_siesa(file: UploadFile = File(...)):
         registros_procesados = []
         fecha_actual = datetime.now()
 
-        # Iterar dinámicamente por todas las filas de la hoja
         for idx, row in raw_df.iterrows():
-            row_dict = {str(k).strip().upper(): v for k, v in row.to_dict().items() if pd.notna(v)}
+            row_dict = {str(k).strip().lower(): v for k, v in row.to_dict().items() if pd.notna(v)}
             
-            # Buscar Cliente
-            cliente = "CLIENTE VARIOS"
-            for col_name in ['TERCERO / RAZÓN SOCIAL', 'RAZON SOCIAL', 'TERCERO', 'CLIENTE', 'NOMBRE']:
-                if col_name in row_dict:
-                    cliente = str(row_dict[col_name]).strip()
-                    break
+            # 1. Cliente
+            cliente = str(row_dict.get('razón social sucursal', row_dict.get('cliente', 'CLIENTE VARIOS'))).strip()
             
-            # Si la fila es un título o encabezado, saltarla
-            if "TERCERO" in cliente.upper() and "RAZÓN SOCIAL" in cliente.upper():
-                continue
-
-            # Buscar NIT
-            nit = "N/A"
-            for col_name in ['NIT / CÉDULA', 'NIT', 'DOCUMENTO', 'CEDULA', 'IDENTIFICACION']:
-                if col_name in row_dict:
-                    nit = str(row_dict[col_name]).strip()
-                    break
-
-            # Buscar Factura
-            factura = f"FACT-{idx+1}"
-            for col_name in ['DOCTO. / FACTURA', 'FACTURA', 'DOCTO', 'DOCUMENTO', 'NUMERO']:
-                if col_name in row_dict:
-                    factura = str(row_dict[col_name]).strip()
-                    break
-
-            # Buscar Vendedor
-            vendedor = "SIN VENDEDOR"
-            for col_name in ['VENDEDOR', 'NOMBRE VENDEDOR', 'ASESOR', 'ZONA']:
-                if col_name in row_dict:
-                    vendedor = str(row_dict[col_name]).strip().upper()
-                    break
-
-            # Buscar y procesar Valor / Saldo
+            # 2. NIT (En SIESA la columna 'cliente' trae el NIT)
+            nit = str(row_dict.get('cliente', row_dict.get('auxiliar', 'N/A'))).strip()
+            
+            # 3. Factura
+            factura = str(row_dict.get('nro. docto. cruce', f'FACT-{idx+1}')).strip()
+            
+            # 4. Vendedor
+            vendedor = str(row_dict.get('razón social vend. cliente', 'SIN VENDEDOR')).strip().upper()
+            
+            # 5. Valor COP (Limpieza de puntos de miles y comas decimales)
+            val_raw = row_dict.get('total cop', 0)
             val_clean = 0.0
-            for col_name in ['SALDO NET. COP', 'SALDO', 'VALOR', 'SALDO NETO', 'TOTAL']:
-                if col_name in row_dict:
-                    val_raw = row_dict[col_name]
-                    try:
-                        if isinstance(val_raw, (int, float)):
-                            val_clean = float(val_raw)
-                        else:
-                            val_str = str(val_raw).replace('$', '').replace(' ', '').replace(',', '')
-                            val_clean = float(val_str)
-                        break
-                    except Exception:
-                        val_clean = 0.0
+            try:
+                if isinstance(val_raw, (int, float)):
+                    val_clean = float(val_raw)
+                else:
+                    # Formato COP: 2.244.697,00 -> 2244697.00
+                    val_str = str(val_raw).replace('$', '').replace(' ', '').replace('.', '').replace(',', '.')
+                    val_clean = float(val_str)
+            except Exception:
+                val_clean = 0.0
 
-            # Buscar Fecha y calcular días de mora
-            fecha_venc_str = "N/A"
+            # 6. Fecha Vencimiento y Cálculo de Días de Mora
+            fecha_venc_raw = row_dict.get('fecha vcto.', row_dict.get('fecha docto cruce', 'N/A'))
             dias_mora = 0
-            for col_name in ['FECHA VENCIMIENTO', 'VENCIMIENTO', 'FECHA_VENC', 'FECHA']:
-                if col_name in row_dict:
-                    f_raw = row_dict[col_name]
-                    try:
-                        dt = pd.to_datetime(f_raw, errors='coerce')
-                        if not pd.isna(dt):
-                            dias_mora = (fecha_actual - dt).days
-                            fecha_venc_str = dt.strftime('%Y-%m-%d')
-                        else:
-                            fecha_venc_str = str(f_raw).split('T')[0]
-                    except Exception:
-                        fecha_venc_str = str(f_raw)
-                    break
+            fecha_venc_str = str(fecha_venc_raw)
 
-            # Guardamos la fila si tiene al menos un cliente o un valor válido
-            if cliente != "CLIENTE VARIOS" or val_clean != 0.0:
-                registros_procesados.append({
-                    "id": len(registros_procesados) + 1,
-                    "cliente": cliente,
-                    "nit": nit,
-                    "factura": factura,
-                    "vendedor": vendedor,
-                    "fecha_vencimiento": fecha_venc_str,
-                    "dias_mora": max(0, dias_mora),
-                    "valor": abs(val_clean)
-                })
+            try:
+                dt = pd.to_datetime(fecha_venc_raw, dayfirst=True, errors='coerce')
+                if not pd.isna(dt):
+                    dias_mora = (fecha_actual - dt).days
+                    fecha_venc_str = dt.strftime('%Y-%m-%d')
+            except Exception:
+                dias_mora = 0
+
+            registros_procesados.append({
+                "id": idx + 1,
+                "cliente": cliente,
+                "nit": nit,
+                "factura": factura,
+                "vendedor": vendedor,
+                "fecha_vencimiento": fecha_venc_str,
+                "dias_mora": max(0, dias_mora),
+                "valor": abs(val_clean)
+            })
 
         DB_CARTERA_GLOBAL = registros_procesados
         
