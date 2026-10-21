@@ -1,6 +1,7 @@
+<!-- In fine archivi app/templates/epp.html -->
+<script>
 document.getElementById("btn-guardar-epp").addEventListener("click", async function(e) {
     e.preventDefault();
-    
     let formData = new FormData();
     formData.append("cedula", document.querySelector("input[placeholder='Digite cédula...']").value);
     formData.append("nombre", document.querySelector("input[placeholder='Nombre completo']").value);
@@ -8,9 +9,10 @@ document.getElementById("btn-guardar-epp").addEventListener("click", async funct
     formData.append("area", document.querySelector("input[placeholder='Área']").value);
     formData.append("fecha_ingreso", document.querySelector("input[type='date']").value);
     
-    // Adjungere firmas e canvas
-    formData.append("firma_colaborador", canvasColaborador.toDataURL());
-    formData.append("firma_entrega", canvasEntrega.toDataURL());
+    if (typeof canvasColaborador !== "undefined" && typeof canvasEntrega !== "undefined") {
+        formData.append("firma_colaborador", canvasColaborador.toDataURL());
+        formData.append("firma_entrega", canvasEntrega.toDataURL());
+    }
 
     try {
         let response = await fetch("/epp/guardar", {
@@ -25,11 +27,12 @@ document.getElementById("btn-guardar-epp").addEventListener("click", async funct
         let result = await response.json();
         if (result.status === "success") {
             alert("✅ Registro guardado con éxito.");
-            window.open(result.pdf_url, "_blank"); // Aperit PDF in nova tabula
+            window.open(result.pdf_url, "_blank");
         } else {
             alert("❌ Error: " + result.message);
         }
     } catch (err) {
         alert("❌ Error: " + err.message);
     }
-})
+});
+</script>
