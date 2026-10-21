@@ -1,17 +1,19 @@
 import os
-from fastapi import APIRouter, Request, Form, Depends
+import re
+from fastapi import APIRouter, Request, Form, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlmodel import Session
+from sqlalchemy import text
 from app.database import get_session
 
-# Intentar importar Google Drive API (si las librerías están instaladas)
+# Importaciones de Google Drive API
 try:
     from google.oauth2.service_account import Credentials
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaFileUpload
-    HAS_GOOGLE_DRIVE = True
+    HAS_DRIVE = True
 except ImportError:
-    HAS_GOOGLE_DRIVE = False
+    HAS_DRIVE = False
 
 router = APIRouter(prefix="/epp", tags=["EPP"])
 
@@ -23,7 +25,8 @@ DRIVE_FOLDER_ID = "1VK0JzoDM0hSlbeQA-dGYBsgE4EUafzcY"
 SERVICE_ACCOUNT_FILE = '/home/rtecnico/IMPLESEG/credentials.json'
 
 def subir_a_google_drive(filepath, filename):
-    if not HAS_GOOGLE_DRIVE or not os.path.exists(SERVICE_ACCOUNT_FILE):
+    if not HAS_DRIVE or not os.path.exists(SERVICE_ACCOUNT_FILE):
+        print("⚠️ No se encontró credentials.json o librería googleapiclient.")
         return None
     try:
         SCOPES = ['https://www.googleapis.com/auth/drive.file']
@@ -36,11 +39,67 @@ def subir_a_google_drive(filepath, filename):
         }
         media = MediaFileUpload(filepath, mimetype='text/html')
         file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        print(f"✅ Archivo {filename} subido con éxito a Google Drive. ID: {file.get('id')}")
         return file.get('id')
     except Exception as e:
-        print("Error subiendo a Google Drive:", e)
+        print("❌ Error al subir a Google Drive:", str(e))
         return None
 
+# ==============================================================================
+# ENDPOINT 1: BUSCAR HISTORIAL POR CÉDULA
+# ==============================================================================
+@router.get("/buscar/{cedula}")
+def buscar_usuario_epp(cedula: str, session: Session = Depends(get_session)):
+    try:
+        query = text("""
+            SELECT * FROM epp_entregas 
+            WHERE cedula = :c 
+            ORDER BY id ASC
+        """)
+        registros = session.execute(query, {"c": cedula}).mappings().all()
+        
+        if not registros:
+            return JSONResponse({"encontrado": False})
+            
+        ultimo = registros[-1]
+        historial = []
+        for r in registros:
+            historial.append({
+                "fecha": str(r.get("fecha_ingreso", "")),
+                "camisa_cant": r.get("camisa_cant", ""),
+                "camisa_talla": r.get("camisa_talla", ""),
+                "pantalon_cant": r.get("pantalon_cant", ""),
+                "pantalon_talla": r.get("pantalon_talla", ""),
+                "botas_cant": r.get("botas_cant", ""),
+                "botas_talla": r.get("botas_talla", ""),
+                "chaleco_cant": r.get("chaleco_cant", ""),
+                "chaleco_talla": r.get("chaleco_talla", ""),
+                "gorra": r.get("gorra", ""),
+                "gafas": r.get("gafas", ""),
+                "prot_insercion": r.get("prot_insercion", ""),
+                "prot_copa": r.get("prot_copa", ""),
+                "otro_elem": r.get("otro_elem", ""),
+                "cantidad_detalle": r.get("cantidad_detalle", ""),
+                "firma_colaborador": r.get("firma_colaborador", ""),
+                "firma_entrega": r.get("firma_entrega", "")
+            })
+
+        return JSONResponse({
+            "encontrado": True,
+            "colaborador": {
+                "nombre": ultimo.get("nombre", ""),
+                "cargo": ultimo.get("cargo", ""),
+                "area": ultimo.get("area", ""),
+                "fecha_ingreso": str(ultimo.get("fecha_ingreso", ""))
+            },
+            "historial": historial
+        })
+    except Exception as e:
+        return JSONResponse({"encontrado": False, "error": str(e)})
+
+# ==============================================================================
+# ENDPOINT 2: GUARDAR NUEVA ENTREGA Y GENERAR ARCHIVO EPP
+# ==============================================================================
 @router.post("/guardar")
 async def guardar_epp(
     request: Request,
@@ -68,39 +127,101 @@ async def guardar_epp(
     session: Session = Depends(get_session)
 ):
     try:
-        filename = f"F-SGI-GS-03_{cedula}.html"
-        filepath = os.path.join(PDF_OUTPUT_DIR, filename)
+        # 1. Asegurar tabla en base de datos
+        session.execute(text("""
+            CREATE TABLE IF NOT EXISTS epp_entregas (
+                id SERIAL PRIMARY KEY,
+                cedula VARCHAR NOT NULL,
+                nombre VARCHAR NOT NULL,
+                cargo VARCHAR,
+                area VARCHAR,
+                fecha_ingreso VARCHAR,
+                camisa_cant VARCHAR, camisa_talla VARCHAR,
+                pantalon_cant VARCHAR, pantalon_talla VARCHAR,
+                botas_cant VARCHAR, botas_talla VARCHAR,
+                chaleco_cant VARCHAR, chaleco_talla VARCHAR,
+                gorra VARCHAR, gafas VARCHAR,
+                prot_insercion VARCHAR, prot_copa VARCHAR,
+                otro_elem VARCHAR, cantidad_detalle VARCHAR,
+                firma_colaborador TEXT, firma_entrega TEXT
+            );
+        """))
+        session.commit()
 
-        filas_html = f"""
-        <tr>
-            <td style="text-align:center;">{fecha_ingreso or ''}</td>
-            <td style="text-align:center;">{camisa_cant if camisa_cant != '0' else ''}</td>
-            <td style="text-align:center;">{camisa_talla}</td>
-            <td style="text-align:center;">{pantalon_cant if pantalon_cant != '0' else ''}</td>
-            <td style="text-align:center;">{pantalon_talla}</td>
-            <td style="text-align:center;">{botas_cant if botas_cant != '0' else ''}</td>
-            <td style="text-align:center;">{botas_talla}</td>
-            <td style="text-align:center;">{chaleco_cant if chaleco_cant != '0' else ''}</td>
-            <td style="text-align:center;">{chaleco_talla}</td>
-            <td style="text-align:center;">{gorra if gorra != '0' else ''}</td>
-            <td style="text-align:center;">{gafas if gafas != '0' else ''}</td>
-            <td style="text-align:center;">{prot_insercion if prot_insercion != '0' else ''}</td>
-            <td style="text-align:center;">{prot_copa if prot_copa != '0' else ''}</td>
-            <td style="text-align:center;">{'Sí' if otro_elem else ''}</td>
-            <td style="text-align:center;">{otro_elem} {cantidad_detalle}</td>
-            <td style="text-align:center; padding:2px;"><img src="{firma_entrega}" style="max-height:28px;"></td>
-            <td style="text-align:center; padding:2px;"><img src="{firma_colaborador}" style="max-height:28px;"></td>
-        </tr>
-        """
-        
-        for _ in range(12):
+        # 2. Registrar la nueva entrega
+        session.execute(text("""
+            INSERT INTO epp_entregas (
+                cedula, nombre, cargo, area, fecha_ingreso,
+                camisa_cant, camisa_talla, pantalon_cant, pantalon_talla,
+                botas_cant, botas_talla, chaleco_cant, chaleco_talla,
+                gorra, gafas, prot_insercion, prot_copa,
+                otro_elem, cantidad_detalle, firma_colaborador, firma_entrega
+            ) VALUES (
+                :cedula, :nombre, :cargo, :area, :fecha_ingreso,
+                :camisa_cant, :camisa_talla, :pantalon_cant, :pantalon_talla,
+                :botas_cant, :botas_talla, :chaleco_cant, :chaleco_talla,
+                :gorra, :gafas, :prot_insercion, :prot_copa,
+                :otro_elem, :cantidad_detalle, :firma_colaborador, :firma_entrega
+            )
+        """), {
+            "cedula": cedula, "nombre": nombre, "cargo": cargo, "area": area, "fecha_ingreso": fecha_ingreso,
+            "camisa_cant": camisa_cant, "camisa_talla": camisa_talla,
+            "pantalon_cant": pantalon_cant, "pantalon_talla": pantalon_talla,
+            "botas_cant": botas_cant, "botas_talla": botas_talla,
+            "chaleco_cant": chaleco_cant, "chaleco_talla": chaleco_talla,
+            "gorra": gorra, "gafas": gafas, "prot_insercion": prot_insercion, "prot_copa": prot_copa,
+            "otro_elem": otro_elem, "cantidad_detalle": cantidad_detalle,
+            "firma_colaborador": firma_colaborador, "firma_entrega": firma_entrega
+        })
+        session.commit()
+
+        # 3. Consultar todo el historial acumulado de entregas para este trabajador
+        registros = session.execute(
+            text("SELECT * FROM epp_entregas WHERE cedula = :c ORDER BY id ASC"),
+            {"c": cedula}
+        ).mappings().all()
+
+        # Build HTML table rows for full history
+        filas_html = ""
+        for r in registros:
+            filas_html += f"""
+            <tr>
+                <td style="text-align:center;">{r.get('fecha_ingreso') or ''}</td>
+                <td style="text-align:center;">{r.get('camisa_cant') if r.get('camisa_cant') != '0' else ''}</td>
+                <td style="text-align:center;">{r.get('camisa_talla') or ''}</td>
+                <td style="text-align:center;">{r.get('pantalon_cant') if r.get('pantalon_cant') != '0' else ''}</td>
+                <td style="text-align:center;">{r.get('pantalon_talla') or ''}</td>
+                <td style="text-align:center;">{r.get('botas_cant') if r.get('botas_cant') != '0' else ''}</td>
+                <td style="text-align:center;">{r.get('botas_talla') or ''}</td>
+                <td style="text-align:center;">{r.get('chaleco_cant') if r.get('chaleco_cant') != '0' else ''}</td>
+                <td style="text-align:center;">{r.get('chaleco_talla') or ''}</td>
+                <td style="text-align:center;">{r.get('gorra') if r.get('gorra') != '0' else ''}</td>
+                <td style="text-align:center;">{r.get('gafas') if r.get('gafas') != '0' else ''}</td>
+                <td style="text-align:center;">{r.get('prot_insercion') if r.get('prot_insercion') != '0' else ''}</td>
+                <td style="text-align:center;">{r.get('prot_copa') if r.get('prot_copa') != '0' else ''}</td>
+                <td style="text-align:center;">{'Sí' if r.get('otro_elem') else ''}</td>
+                <td style="text-align:center;">{r.get('otro_elem') or ''} {r.get('cantidad_detalle') or ''}</td>
+                <td style="text-align:center; padding:2px;"><img src="{r.get('firma_entrega')}" style="max-height:25px;"></td>
+                <td style="text-align:center; padding:2px;"><img src="{r.get('firma_colaborador')}" style="max-height:25px;"></td>
+            </tr>
+            """
+
+        # Fill up grid empty lines
+        filas_restantes = max(0, 12 - len(registros))
+        for _ in range(filas_restantes):
             filas_html += "<tr>" + "<td>&nbsp;</td>" * 17 + "</tr>"
+
+        # 4. Formatear el nombre exacto de la nomenclatura empresarial: EPP_CEDULA_NOMBRE.pdf
+        nombre_limpio = re.sub(r'[^A-Za-z0-9_ ]+', '', nombre.upper()).strip()
+        filename = f"EPP_{cedula}_{nombre_limpio}.html"
+        filename_pdf = f"EPP_{cedula}_{nombre_limpio}.pdf"
+        filepath = os.path.join(PDF_OUTPUT_DIR, filename)
 
         html_content = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>F-SGI-GS-03 - {cedula}</title>
+    <title>{filename_pdf}</title>
     <style>
         @page {{ size: letter portrait; margin: 8mm; }}
         body {{ font-family: Arial, sans-serif; font-size: 10px; color: #000; margin: 0; padding: 0; }}
@@ -115,11 +236,11 @@ async def guardar_epp(
 </head>
 <body>
 
-    <!-- ENCABEZADO OFICIAL -->
+    <!-- ENCABEZADO OFICIAL IMPLESEG -->
     <table class="header-table">
         <tr>
             <td style="width: 20%; padding: 4px; background: #ffffff;">
-                <img src="https://impleseg.com/wp-content/uploads/2021/04/logo-impleseg.png" style="max-width: 140px; height: auto; display: block; margin: 0 auto;">
+                <img src="https://impleseg.com/wp-content/uploads/2021/04/logo-impleseg.png" style="max-width: 130px; height: auto; display: block; margin: 0 auto;">
             </td>
             <td style="width: 55%; font-size: 11px;">
                 IMPLESEG S.A.S<br>
@@ -136,7 +257,7 @@ async def guardar_epp(
         </tr>
     </table>
 
-    <!-- INFORMACIÓN DEL TRABAJADOR -->
+    <!-- DATOS DEL TRABAJADOR -->
     <table>
         <tr>
             <td style="width: 10%;"><b>Nombre:</b></td>
@@ -154,7 +275,7 @@ async def guardar_epp(
         </tr>
     </table>
 
-    <!-- MATRIZ DE EPP Y DOTACIÓN -->
+    <!-- MATRIZ HISTÓRICA COMPLETA DE EPP -->
     <table>
         <thead>
             <tr class="bg-green">
@@ -189,7 +310,7 @@ async def guardar_epp(
         </tbody>
     </table>
 
-    <!-- PIE DE PÁGINA Y MARCO LEGAL -->
+    <!-- MARCO LEGAL Y CONFIDENCIALIDAD -->
     <table>
         <tr>
             <td class="footer-legal">
@@ -212,7 +333,7 @@ async def guardar_epp(
         </tr>
         <tr>
             <td colspan="3" style="font-size: 6.5px; text-align: justify; font-weight: normal; padding: 2px 4px;">
-                <b>CLAUSULA DE CONFIDENCIALIDAD:</b> Esta información es propiedad intelectual de IMPLESEG S.A.S, Cualquier cambio, copia o reproducción, debe ser autorizada por el Líder de área y posteriormente aprobado por el representante del sistema de gestión integral. La información que se suministró en la presente planilla es veraz y me comprometo a cumplir con la información de notificación de riesgos y políticas de IMPLESEG S.A.S.
+                <b>CLAUSULA DE CONFIDENCIALIDAD:</b> Esta información es propiedad intelectual de IMPLESEG S.A.S, Cualquier cambio, copia o reproducción, debe ser autorizada por el Líder de área y posteriormente approved por el representante del sistema de gestión integral.
             </td>
         </tr>
     </table>
@@ -225,15 +346,16 @@ async def guardar_epp(
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(html_content)
 
-        # Intentar subir a Google Drive si está configurado
-        subir_a_google_drive(filepath, filename)
+        # Subir a Google Drive con el nombre normalizado
+        subir_a_google_drive(filepath, filename_pdf)
 
         pdf_url = f"/static/epp_pdfs/{filename}"
 
         return JSONResponse({
             "status": "success",
-            "message": f"Registro F-SGI-GS-03 generado para {nombre}",
+            "message": f"Registro actualizado e historial generado para {nombre}",
             "pdf_url": pdf_url
         })
     except Exception as e:
+        session.rollback()
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)

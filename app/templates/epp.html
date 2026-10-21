@@ -216,7 +216,27 @@
                     alert("⚠️ Cédula y Nombre Completo son obligatorios.");
                     return;
                 }
+                document.getElementById("cedula").addEventListener("blur", async function() {
+    const cedula = this.value.trim();
+    if (!cedula) return;
 
+    try {
+        const response = await fetch("/epp/buscar/" + cedula);
+        const data = await response.json();
+
+        if (data.encontrado) {
+            alert("📋 Colaborador encontrado. Se cargó el historial de entregas.");
+            document.getElementById("nombre").value = data.colaborador.nombre || "";
+            document.getElementById("cargo").value = data.colaborador.cargo || "";
+            document.getElementById("area").value = data.colaborador.area || "";
+            if (data.colaborador.fecha_ingreso) {
+                document.getElementById("fecha_ingreso").value = data.colaborador.fecha_ingreso;
+            }
+        }
+    } catch (e) {
+        console.log("Nuevo colaborador o sin historial previo.");
+    }
+});
                 let formData = new FormData();
                 formData.append("cedula", cedula);
                 formData.append("nombre", nombre);
