@@ -220,7 +220,7 @@ def cartera_view(request: Request, session: Session = Depends(app.database.get_s
     return FileResponse(os.path.join(BASE_DIR, "templates", "cartera.html"))
 
 @app.get("/epp")
-def epp_view(request: Request, session: Session = Depends(get_session)):
-    fallo = verificar_acceso(request, session, "gestion-humana")
+def epp_view(request: Request, session: Session = Depends(app.database.get_session)):
+    fallo = verificar_acceso(request, session, "gestion_humana")
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "epp.html"))
