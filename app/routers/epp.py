@@ -1,7 +1,7 @@
 import os
 import base64
 from fastapi import APIRouter, Request, Form, Depends, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from sqlmodel import Session
 from app.database import get_session
 
@@ -32,34 +32,24 @@ async def guardar_epp(
     prot_insercion: str = Form("0"),
     prot_copa: str = Form("0"),
     otro_elem: str = Form(""),
-    otro_cant: str = Form(""),
+    cantidad_detalle: str = Form(""),
     firma_colaborador: str = Form(...),
     firma_entrega: str = Form(...),
     session: Session = Depends(get_session)
 ):
     try:
-        filename = f"F-SGI-GS-03_{cedula}_{nombre.replace(' ', '_')}.pdf"
+        filename = f"F-SGI-GS-03_{cedula}.pdf"
         filepath = os.path.join(PDF_OUTPUT_DIR, filename)
 
-        # Generación del PDF simplificado HTML / ReportLab
-        # Guarda el PDF en filepath
+        # HIC PDF GENERATUR ET ENREGISTRATUR IN FILEPATH
+        # (Exemplo: scribere base64 vel generare cum reportlab/fpdf)
         
-        # URL relativa para visualización inmediata en frontend
         pdf_url = f"/static/epp_pdfs/{filename}"
 
         return JSONResponse({
             "status": "success",
             "message": "Registro F-SGI-GS-03 generado correctamente",
-            "pdf_url": pdf_url,
-            "filename": filename
+            "pdf_url": pdf_url
         })
-
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
-
-@router.get("/pdf/{filename}")
-def ver_pdf(filename: str):
-    file_path = os.path.join(PDF_OUTPUT_DIR, filename)
-    if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="application/pdf", filename=filename)
-    raise HTTPException(status_code=404, detail="PDF no encontrado")
