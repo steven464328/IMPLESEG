@@ -49,9 +49,9 @@
         </div>
     </div>
 
-    <!-- SECCIÓN VENDEDORES Y VISTA GENERAL -->
+    <!-- SECCIÓN DE TABLA RESULTANTE -->
     <div class="panel" id="panel-vendedor">
-        <h3 style="color:#f97316; margin-top:0;" id="titulo-tabla">Mi Cartera Asignada (Mora Activa)</h3>
+        <h3 style="color:#f97316; margin-top:0;" id="titulo-tabla">Consolidado de Cartera Vencida (Vista Administrador)</h3>
         <div class="stat-box">Saldo Total Vencido: <br><span class="stat-val" id="total-saldo">$0.00</span></div>
         <table id="tabla-mi-cartera">
             <thead>
@@ -75,7 +75,6 @@
 
         if(isAdmin) {
             document.getElementById('panel-admin').style.display = 'block';
-            document.getElementById('titulo-tabla').innerText = "Consolidado de Cartera Vencida (Vista Administrador)";
             cargarMapeos();
         }
         
@@ -126,17 +125,30 @@
                 const data = await res.json();
                 
                 if(res.ok) {
-                    alert(`✅ Excel de SIESA procesado con éxito.`);
+                    console.log("Respuesta recibida del backend /upload:", data);
                     
-                    // Si el backend devuelve los registros procesados en la respuesta directa:
-                    if (data.registros || data.data || Array.isArray(data)) {
-                        const lista = data.registros || data.data || data;
-                        renderizarTabla(lista);
+                    // Extraer los registros que devuelve la API de carga
+                    let registros = [];
+                    if (Array.isArray(data)) {
+                        registros = data;
+                    } else if (data.registros && Array.isArray(data.registros)) {
+                        registros = data.registros;
+                    } else if (data.data && Array.isArray(data.data)) {
+                        registros = data.data;
+                    } else if (data.cartera && Array.isArray(data.cartera)) {
+                        registros = data.cartera;
+                    }
+
+                    if (registros.length > 0) {
+                        alert(`✅ Archivo cargado. Se visualizaron ${registros.length} registros.`);
+                        renderizarTabla(registros);
                     } else {
+                        // Si la respuesta no trajo lista directa, intentamos consultar los datos actualizados
+                        alert(`✅ Archivo cargado exitosamente en el servidor.`);
                         await cargarMiCartera();
                     }
                 } else {
-                    alert(`❌ Error al procesar: ${data.detail || 'Formato de Excel no reconocido'}`);
+                    alert(`❌ Error al procesar: ${data.detail || 'Formato no soportado'}`);
                 }
             } catch(e) {
                 console.error(e);
@@ -162,7 +174,6 @@
 
         async function cargarMiCartera() {
             try {
-                // Si es admin se consulta 'mis-datos' o el endpoint general
                 const res = await fetch('/api/cartera/mis-datos');
                 if (res.ok) {
                     const data = await res.json();
@@ -182,13 +193,12 @@
 
             let total = 0;
             document.getElementById('tb-datos-cartera').innerHTML = datos.map(f => {
-                // Mapeo flexible de llaves para evitar fallos por nombres de columnas de SIESA
-                const cliente = f.cliente || f.CLIENTE || f.razon_social || f['Tercero / Razón Social'] || f.nombre || 'N/A';
-                const nit = f.nit || f.NIT || f['Nit / Cédula'] || f.documento || 'N/A';
-                const factura = f.factura || f.FACTURA || f['Docto. / Factura'] || f.docto || 'N/A';
-                const fecha = f.fecha_vencimiento || f.vencimiento || f['Fecha Vencimiento'] || f.fecha || 'N/A';
+                const cliente = f.cliente || f.CLIENTE || f.razon_social || f['Tercero / Razón Social'] || f.nombre || f['TERCERO'] || 'N/A';
+                const nit = f.nit || f.NIT || f['Nit / Cédula'] || f.documento || f['DOCUMENTO'] || 'N/A';
+                const factura = f.factura || f.FACTURA || f['Docto. / Factura'] || f.docto || f['DOCTO'] || 'N/A';
+                const fecha = f.fecha_vencimiento || f.vencimiento || f['Fecha Vencimiento'] || f.fecha || f['VENCIMIENTO'] || 'N/A';
                 
-                const valRaw = f.valor || f.VALOR || f.saldo || f['Saldo Net. COP'] || f['Valor'] || 0;
+                const valRaw = f.valor || f.VALOR || f.saldo || f['Saldo Net. COP'] || f['Valor'] || f['SALDO'] || 0;
                 const val = typeof valRaw === 'string' ? parseFloat(valRaw.replace(/[^0-9.-]+/g,"")) : parseFloat(valRaw);
                 const valorFinal = isNaN(val) ? 0 : val;
                 
