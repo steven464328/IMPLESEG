@@ -59,6 +59,10 @@
         .module-card i { font-size: 40px; color: #10b981; margin-bottom: 15px; display: block; }
         .module-card h4 { color: white; font-weight: 700; margin-bottom: 10px; }
         .module-card p { color: #94a3b8; font-size: 14px; margin: 0; }
+        
+        /* Color especial para tarjeta Cartera */
+        .module-card.cartera:hover { border-color: #f97316; }
+        .module-card.cartera i { color: #f97316; }
     </style>
 </head>
 
@@ -79,6 +83,7 @@
             <a href="/gestion-humana"><i class="bi bi-person-vcard me-2"></i> Gestión Humana</a>
             <a href="/visitantes"><i class="bi bi-people-fill me-2"></i> Ingreso Visitantes</a>
             <a href="/etiquetas/"><i class="bi bi-upc-scan me-2"></i> Etiquetas USB</a>
+            <a href="/cartera"><i class="bi bi-wallet2 me-2"></i> Cartera Vencida</a>
             <a class="disabled-link"><i class="bi bi-box-seam me-2"></i> Inventarios</a>
             <a class="disabled-link"><i class="bi bi-receipt me-2"></i> Compras</a>
             <a class="disabled-link"><i class="bi bi-cash-stack me-2"></i> Contabilidad</a>
@@ -117,6 +122,13 @@
                     <i class="bi bi-upc-scan"></i>
                     <h4>Etiquetas USB</h4>
                     <p>Módulo de escaneo y etiquetado para dispositivos y memorias USB.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="module-card cartera" onclick="window.location.href='/cartera'">
+                    <i class="bi bi-wallet2"></i>
+                    <h4>Cartera Vencida</h4>
+                    <p>Gestión de cobros, despachos de reportes SIESA y notificaciones a vendedores.</p>
                 </div>
             </div>
         </div>

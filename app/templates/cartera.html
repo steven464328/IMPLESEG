@@ -42,14 +42,14 @@
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <input type="file" id="file-excel" accept=".xlsx, .xls">
-                    <button class="btn-upload" onclick="subirExcel()">⚙️ Cargar SIESA</button>
+                    <button class="btn-upload" id="btn-cargar" onclick="subirExcel()">⚙️ Cargar SIESA</button>
                 </div>
                 <button class="btn-notify" onclick="enviarCorreos()">📧 Ejecutar Envíos Masivos</button>
             </div>
         </div>
     </div>
 
-    <!-- SECCIÓN VENDEDORES (FUERZA DE VENTAS) -->
+    <!-- SECCIÓN VENDEDORES (FUERZA DE VENTAS Y MATRIZ RESULTANTE) -->
     <div class="panel" id="panel-vendedor">
         <h3 style="color:#f97316; margin-top:0;">Mi Cartera Asignada (Mora Activa)</h3>
         <div class="stat-box">Saldo Total Vencido: <br><span class="stat-val" id="total-saldo">$0.00</span></div>
@@ -62,23 +62,28 @@
     </div>
 
     <script>
-        fetch('/api/cartera/init');
+        fetch('/api/cartera/init').catch(()=>{}); // Opcional por si tienes endpoint de inicialización
         const isAdmin = document.cookie.includes('rol_erp=administrador');
 
         if(isAdmin) {
             document.getElementById('panel-admin').style.display = 'block';
             cargarMapeos();
+            cargarMiCartera(); // El administrador también debe ver la tabla apenas entra
         } else {
             cargarMiCartera();
         }
 
         async function cargarMapeos() {
-            const res = await fetch('/api/cartera/vendedores');
-            const data = await res.json();
-            document.getElementById('tabla-correos').innerHTML = `
-                <tr><th>Nombre exacto SIESA</th><th>Correo Configurado</th></tr>
-                ${data.map(v => `<tr><td><b>${v.vendedor}</b></td><td>${v.correo}</td></tr>`).join('')}
-            `;
+            try {
+                const res = await fetch('/api/cartera/vendedores');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('tabla-correos').innerHTML = `
+                        <tr><th>Nombre exacto SIESA</th><th>Correo Configurado</th></tr>
+                        ${data.map(v => `<tr><td><b>${v.vendedor}</b></td><td>${v.correo}</td></tr>`).join('')}
+                    `;
+                }
+            } catch (e) { console.error("Error cargando mapeos", e); }
         }
 
         document.getElementById('form-vendedor').onsubmit = async (e) => {
@@ -91,36 +96,84 @@
             cargarMapeos();
         };
 
+        // FUNCIÓN MEJORADA: Carga SIESA y actualiza la tabla en tiempo real
         async function subirExcel() {
+            const btn = document.getElementById('btn-cargar');
             const file = document.getElementById('file-excel').files[0];
-            if(!file) return alert("Seleccione el archivo .xlsx");
-            const formData = new FormData(); formData.append("file", file);
+            if(!file) return alert("Seleccione el archivo .xlsx de SIESA primero");
             
-            alert("Procesando datos...");
-            const res = await fetch('/api/cartera/upload', { method: 'POST', body: formData });
-            const data = await res.json();
-            if(res.ok) alert(`✅ Completado. Facturas vencidas filtradas: ${data.registros_vencidos}`);
-            else alert(`❌ Error: ${data.detail}`);
+            const formData = new FormData(); 
+            formData.append("file", file);
+            
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = "⏳ Procesando SIESA...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/cartera/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                if(res.ok) {
+                    alert(`✅ Archivo cargado correctamente.`);
+                    
+                    // Si el backend devuelve los registros procesados en la respuesta:
+                    if (data.registros && data.registros.length > 0) {
+                        renderizarTabla(data.registros);
+                    } else {
+                        // Si no los devuelve, forzamos a recargar la tabla desde la base de datos
+                        await cargarMiCartera();
+                    }
+                } else {
+                    alert(`❌ Error: ${data.detail || 'Fallo procesando el archivo'}`);
+                }
+            } catch (error) {
+                alert("❌ Error de conexión con el servidor.");
+            } finally {
+                btn.innerHTML = txtOriginal;
+                btn.disabled = false;
+                document.getElementById('file-excel').value = ""; // Limpiar el input
+            }
         }
 
         async function enviarCorreos() {
             if(confirm("¿Proceder con el envío de notificaciones a toda la fuerza de ventas?")) {
-                const res = await fetch('/api/cartera/notificar', { method: 'POST' });
-                const data = await res.json();
-                if(res.ok) alert(`✅ Operación exitosa. Correos despachados: ${data.correos_enviados}`);
-                else alert(`❌ Error: ${data.detail}`);
+                try {
+                    const res = await fetch('/api/cartera/notificar', { method: 'POST' });
+                    const data = await res.json();
+                    if(res.ok) alert(`✅ Operación exitosa. Correos despachados: ${data.correos_enviados || 'Varios'}`);
+                    else alert(`❌ Error: ${data.detail}`);
+                } catch(e) { alert("❌ Error conectando con el servidor"); }
             }
         }
 
         async function cargarMiCartera() {
-            const res = await fetch('/api/cartera/mis-datos');
-            const data = await res.json();
+            try {
+                const res = await fetch('/api/cartera/mis-datos');
+                if (res.ok) {
+                    const data = await res.json();
+                    renderizarTabla(data);
+                }
+            } catch (e) { console.error("Error cargando cartera", e); }
+        }
+
+        function renderizarTabla(datos) {
             let total = 0;
-            document.getElementById('tb-datos-cartera').innerHTML = data.map(f => {
-                total += parseFloat(f.valor);
-                return `<tr><td>${f.cliente}</td><td>${f.nit}</td><td>${f.factura}</td><td style="color:#ef4444;">${f.fecha_vencimiento}</td><td>$${parseFloat(f.valor).toLocaleString('es-CO')}</td></tr>`;
+            document.getElementById('tb-datos-cartera').innerHTML = datos.map(f => {
+                const val = parseFloat(f.valor) || 0;
+                total += val;
+                return `<tr>
+                    <td>${f.cliente || ''}</td>
+                    <td>${f.nit || ''}</td>
+                    <td>${f.factura || ''}</td>
+                    <td style="color:#ef4444; font-weight:bold;">${f.fecha_vencimiento || f.vencimiento || ''}</td>
+                    <td style="color:#10b981; font-weight:bold;">$${val.toLocaleString('es-CO')}</td>
+                </tr>`;
             }).join('');
-            document.getElementById('total-saldo').innerText = `$${total.toLocaleString('es-CO')}`;
+            
+            // Actualizar Saldo Total (Asegurando el color rojo para la mora)
+            const lblTotal = document.getElementById('total-saldo');
+            lblTotal.innerText = `$${total.toLocaleString('es-CO')}`;
+            if (total > 0) lblTotal.style.color = "#ef4444";
         }
     </script>
 </body>
