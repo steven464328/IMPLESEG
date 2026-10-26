@@ -2,33 +2,44 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Entrega de EPP y Dotación · IMPLESEG</title>
     <style>
-        body { background: #070b14; color: #fff; font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
-        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-        .back-link { color: #94a3b8; text-decoration: none; font-size: 14px; }
-        .title { color: #f97316; margin: 5px 0; display: flex; align-items: center; gap: 10px; }
-        .badge { background: #16a34a; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+        body { background: #070b14; color: #fff; font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; }
+        .top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .back-link { color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: bold; }
+        .logout-link { color: #ef4444; text-decoration: none; font-size: 13px; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 6px 12px; border-radius: 6px; }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .title { color: #f97316; margin: 5px 0; display: flex; align-items: center; gap: 10px; font-size: 24px; }
+        .badge { background: #16a34a; color: #fff; font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+        .btn-excel { background: #22c55e; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .btn-excel:hover { background: #16a34a; }
         .section { background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
         .section-title { font-size: 15px; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
         .sec-1 { color: #eab308; } .sec-2 { color: #22c55e; } .sec-3 { color: #3b82f6; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
         .form-group { display: flex; flex-direction: column; }
         label { font-size: 12px; color: #94a3b8; margin-bottom: 5px; font-weight: bold; }
-        input, select { background: #070b14; border: 1px solid #334155; color: #fff; padding: 10px; border-radius: 6px; outline: none; }
+        input, select { background: #070b14; border: 1px solid #334155; color: #fff; padding: 10px; border-radius: 6px; outline: none; font-size: 14px; }
         input:focus, select:focus { border-color: #f97316; }
         .canvas-container { background: #1e293b; border: 1px dashed #475569; border-radius: 6px; position: relative; text-align: center; }
         canvas { width: 100%; height: 120px; background: #ffffff; border-radius: 4px; cursor: crosshair; }
-        .btn-clear { position: absolute; top: 5px; right: 5px; background: #475569; color: #fff; border: none; font-size: 10px; padding: 3px 8px; border-radius: 3px; cursor: pointer; }
-        .btn-submit { background: #f97316; color: white; border: none; padding: 15px 25px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; float: right; }
+        .btn-clear { position: absolute; top: 5px; right: 5px; background: #475569; color: #fff; border: none; font-size: 11px; padding: 4px 8px; border-radius: 3px; cursor: pointer; }
+        .btn-submit { background: #f97316; color: white; border: none; padding: 15px 25px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; width: 100%; margin-top: 10px; }
         .btn-submit:hover { background: #ea580c; }
-        .btn-excel { background: #22c55e; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .btn-excel:hover { background: #16a34a; }
+        @media (max-width: 768px) {
+            .grid-firmas { grid-template-columns: 1fr !important; }
+        }
     </style>
 </head>
 <body>
 
-    <a href="/" class="back-link">← Volver al ERP</a>
+    <!-- NAVEGACIÓN SUPERIOR CONTROLADA POR ROL -->
+    <div class="top-nav">
+        <a href="/" id="btn-volver-erp" class="back-link">← Menú ERP</a>
+        <a href="/logout" class="logout-link">🚪 Cerrar Sesión</a>
+    </div>
+
     <div class="header">
         <div>
             <h2 class="title">🛡️ Registro de Entrega de EPP y Dotación</h2>
@@ -36,8 +47,10 @@
         </div>
         <div>
             <input type="file" id="excel-file" accept=".xlsx, .xls" style="display:none;">
-            <button type="button" class="btn-excel" onclick="document.getElementById('excel-file').click()">📊 Cargar Base de Datos (Excel)</button>
-            <span id="upload-status" style="font-size:12px; color:#94a3b8; margin-left:10px;"></span>
+            <button type="button" class="btn-excel" onclick="document.getElementById('excel-file').click()">
+                📊 Cargar Base de Datos (Excel)
+            </button>
+            <span id="upload-status" style="font-size:12px; color:#94a3b8; display:block; margin-top:4px;"></span>
         </div>
     </div>
 
@@ -69,64 +82,76 @@
             </div>
         </div>
 
-        <!-- 2. DETALLE DE PRENDAS -->
+        <!-- 2. DETALLE DE PRENDAS, ELEMENTOS Y TALLAS -->
         <div class="section">
             <div class="section-title sec-2">🛡️ 2. Detalle de Prendas, Elementos y Tallas</div>
             <div class="grid">
                 <div class="form-group">
                     <label>CAMISA (CANT / TALLA)</label>
                     <div style="display:flex; gap:5px;">
-                        <input type="number" id="camisa_cant" value="0" style="width:60px;">
-                        <select id="camisa_talla">
+                        <input type="number" id="camisa_cant" value="0" min="0" style="width:60px;">
+                        <select id="camisa_talla" style="flex:1;">
                             <option value="">Talla</option>
-                            <option value="S">S</option><option value="M">M</option>
-                            <option value="L">L</option><option value="XL">XL</option>
+                            <option value="S">S</option>
+                            <option value="M">M</option>
+                            <option value="L">L</option>
+                            <option value="XL">XL</option>
+                            <option value="XXL">XXL</option>
                         </select>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>PANTALÓN (CANT / TALLA)</label>
                     <div style="display:flex; gap:5px;">
-                        <input type="number" id="pantalon_cant" value="0" style="width:60px;">
-                        <select id="pantalon_talla">
+                        <input type="number" id="pantalon_cant" value="0" min="0" style="width:60px;">
+                        <select id="pantalon_talla" style="flex:1;">
                             <option value="">Talla</option>
-                            <option value="28">28</option><option value="30">30</option>
-                            <option value="32">32</option><option value="34">34</option>
-                            <option value="36">36</option><option value="38">38</option>
+                            <option value="28">28</option>
+                            <option value="30">30</option>
+                            <option value="32">32</option>
+                            <option value="34">34</option>
+                            <option value="36">36</option>
+                            <option value="38">38</option>
                         </select>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>BOTAS DE SEGURIDAD (CANT / TALLA)</label>
                     <div style="display:flex; gap:5px;">
-                        <input type="number" id="botas_cant" value="0" style="width:60px;">
-                        <select id="botas_talla">
+                        <input type="number" id="botas_cant" value="0" min="0" style="width:60px;">
+                        <select id="botas_talla" style="flex:1;">
                             <option value="">Talla</option>
-                            <option value="36">36</option><option value="37">37</option>
-                            <option value="38">38</option><option value="39">39</option>
-                            <option value="40">40</option><option value="41">41</option>
+                            <option value="36">36</option>
+                            <option value="37">37</option>
+                            <option value="38">38</option>
+                            <option value="39">39</option>
+                            <option value="40">40</option>
+                            <option value="41">41</option>
                             <option value="42">42</option>
+                            <option value="43">43</option>
                         </select>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>CHALECO (CANT / TALLA)</label>
                     <div style="display:flex; gap:5px;">
-                        <input type="number" id="chaleco_cant" value="0" style="width:60px;">
-                        <select id="chaleco_talla">
+                        <input type="number" id="chaleco_cant" value="0" min="0" style="width:60px;">
+                        <select id="chaleco_talla" style="flex:1;">
                             <option value="">Talla</option>
-                            <option value="S">S</option><option value="M">M</option>
-                            <option value="L">L</option><option value="XL">XL</option>
+                            <option value="S">S</option>
+                            <option value="M">M</option>
+                            <option value="L">L</option>
+                            <option value="XL">XL</option>
                         </select>
                     </div>
                 </div>
             </div>
             <br>
             <div class="grid">
-                <div class="form-group"><label>GORRA (CANT)</label><input type="number" id="gorra" value="0"></div>
-                <div class="form-group"><label>GAFAS DE SEG. (CANT)</label><input type="number" id="gafas" value="0"></div>
-                <div class="form-group"><label>PROT. INSERCIÓN (CANT)</label><input type="number" id="prot_insercion" value="0"></div>
-                <div class="form-group"><label>PROT. COPA / VULC (CANT)</label><input type="number" id="prot_copa" value="0"></div>
+                <div class="form-group"><label>GORRA (CANT)</label><input type="number" id="gorra" value="0" min="0"></div>
+                <div class="form-group"><label>GAFAS DE SEG. (CANT)</label><input type="number" id="gafas" value="0" min="0"></div>
+                <div class="form-group"><label>PROT. INSERCIÓN (CANT)</label><input type="number" id="prot_insercion" value="0" min="0"></div>
+                <div class="form-group"><label>PROT. COPA / VULC (CANT)</label><input type="number" id="prot_copa" value="0" min="0"></div>
                 <div class="form-group"><label>OTRO ELEMENTO</label><input type="text" id="otro_elem" placeholder="Ej. Guantes"></div>
                 <div class="form-group"><label>CANTIDAD / DETALLE</label><input type="text" id="cantidad_detalle" placeholder="Ej. 2 Pares"></div>
             </div>
@@ -135,7 +160,7 @@
         <!-- 3. FIRMAS DIGITALES -->
         <div class="section">
             <div class="section-title sec-3">✍️ 3. Registro de Firmas Digitales</div>
-            <div class="grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="grid grid-firmas" style="grid-template-columns: 1fr 1fr;">
                 <div class="form-group">
                     <label>FIRMA DEL COLABORADOR (QUIEN RECIBE) *</label>
                     <div class="canvas-container">
@@ -157,6 +182,7 @@
     </form>
 
     <script>
+        // Configuración y eventos táctiles para firmas digitales
         function setupCanvas(id) {
             const canvas = document.getElementById(id);
             const ctx = canvas.getContext('2d');
@@ -167,6 +193,7 @@
 
             ctx.strokeStyle = "#000000";
             ctx.lineWidth = 2;
+            ctx.lineCap = "round";
 
             function getPos(e) {
                 const rect = canvas.getBoundingClientRect();
@@ -188,9 +215,9 @@
             canvas.addEventListener('mousedown', start);
             canvas.addEventListener('mouseup', end);
             canvas.addEventListener('mousemove', draw);
-            canvas.addEventListener('touchstart', start);
+            canvas.addEventListener('touchstart', start, { passive: false });
             canvas.addEventListener('touchend', end);
-            canvas.addEventListener('touchmove', draw);
+            canvas.addEventListener('touchmove', draw, { passive: false });
         }
 
         function limpiarCanvas(id) {
@@ -203,7 +230,19 @@
             setupCanvas("canvas1");
             setupCanvas("canvas2");
 
-            // BÚSQUEDA AUTOMÁTICA AL DIGITAR CÉDULA
+            // 1. Control de Visibilidad del botón "Volver al ERP"
+            fetch('/api/mis-permisos')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.rol !== 'administrador' && !data.modulos.includes('todos')) {
+                        if (data.modulos.length === 1 && data.modulos.includes('epp')) {
+                            const btnVolver = document.getElementById('btn-volver-erp');
+                            if (btnVolver) btnVolver.style.display = 'none';
+                        }
+                    }
+                }).catch(() => {});
+
+            // 2. Búsqueda automática de datos por Cédula (en historial EPP o base de empleados)
             document.getElementById("cedula").addEventListener("blur", async function() {
                 const cedula = this.value.trim();
                 if (!cedula) return;
@@ -212,7 +251,7 @@
                     const response = await fetch("/epp/buscar/" + cedula);
                     const data = await response.json();
 
-                    if (data.encontrado) {
+                    if (data.encontrado && data.colaborador) {
                         document.getElementById("nombre").value = data.colaborador.nombre || "";
                         document.getElementById("cargo").value = data.colaborador.cargo || "";
                         document.getElementById("area").value = data.colaborador.area || "";
@@ -221,15 +260,15 @@
                         }
                     }
                 } catch (e) {
-                    console.log("Colaborador no encontrado.");
+                    console.log("Colaborador no encontrado previamente.");
                 }
             });
 
-            // CARGAR EXCEL
+            // 3. Subida masiva de base de datos desde Excel
             document.getElementById("excel-file").addEventListener("change", async function() {
                 if (!this.files.length) return;
                 let statusSpan = document.getElementById("upload-status");
-                statusSpan.textContent = "Cargando archivo...";
+                statusSpan.textContent = "Procesando archivo...";
 
                 let formData = new FormData();
                 formData.append("file", this.files[0]);
@@ -239,17 +278,18 @@
                     let res = await response.json();
                     if (res.status === "success") {
                         alert("✅ " + res.message);
-                        statusSpan.textContent = "Base de datos lista.";
+                        statusSpan.textContent = "Base de datos actualizada.";
                     } else {
                         alert("❌ Error: " + res.message);
                         statusSpan.textContent = "Error al cargar.";
                     }
                 } catch (e) {
-                    alert("❌ Error de comunicación al subir Excel.");
+                    alert("❌ Error de comunicación al procesar el archivo Excel.");
+                    statusSpan.textContent = "Error de red.";
                 }
             });
 
-            // ENVIAR Y GENERAR REGISTRO
+            // 4. Guardar entrega, actualizar historial y visualizar F-SGI-GS-03
             document.getElementById("btn-guardar-epp").addEventListener("click", async function() {
                 const cedula = document.getElementById("cedula").value.trim();
                 const nombre = document.getElementById("nombre").value.trim();
