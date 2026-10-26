@@ -1,14 +1,14 @@
 ﻿import os
 from fastapi import FastAPI, Request, Form, Depends
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlmodel import Session
 
-# Importación correcta de la función get_session e init_db
+# Importación correcta de la base de datos
 from app.database import get_session, init_db
 
-# Importación unificada de los routers
+# Importación de los routers
 from app.routers import (
     dashboard, equipos, gh_inventario, gh_asignaciones,
     gh_bajas, recepcion, etiquetas_usb, dashboard_equipos,
@@ -25,7 +25,7 @@ def startup():
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
-# Incluir todos los routers
+# Inclusión de routers
 app.include_router(dashboard.router)
 app.include_router(equipos.router)
 app.include_router(gh_inventario.router)
@@ -49,7 +49,7 @@ def verificar_acceso(request: Request, session: Session, modulo_requerido: str =
     if not correo:
         return RedirectResponse(url="/login")
     
-    # Bypass Maestro: Acceso total garantizado
+    # Bypass Maestro garantizado
     if correo == "sistemas@impleseg.com":
         return None
 
@@ -67,7 +67,6 @@ def verificar_acceso(request: Request, session: Session, modulo_requerido: str =
             
         if modulo_requerido:
             modulos = [m.strip() for m in user["modulos"].split(",")]
-            # Permite el acceso si tiene asignado 'todos' o el módulo específico
             if "todos" not in modulos and modulo_requerido not in modulos:
                 return HTMLResponse(content=f"""
                     <div style="font-family:sans-serif; text-align:center; padding:100px 20px; background:#0f172a; color:#fff; height:100vh;">
@@ -82,7 +81,33 @@ def verificar_acceso(request: Request, session: Session, modulo_requerido: str =
         return RedirectResponse(url="/login")
 
 # ==============================================================================
-# LOGIN SEGURO CON BYPASS MAESTRO INFALIBLE
+# ENDPOINT PARA CONSULTAR PERMISOS DEL USUARIO EN SESIÓN
+# ==============================================================================
+@app.get("/api/mis-permisos")
+def obtener_mis_permisos(request: Request, session: Session = Depends(get_session)):
+    correo = request.cookies.get("sesion_erp")
+    if not correo:
+        return JSONResponse({"rol": "anonimo", "modulos": []})
+    
+    if correo == "sistemas@impleseg.com":
+        return JSONResponse({"rol": "administrador", "modulos": ["todos"]})
+        
+    try:
+        user = session.execute(
+            text("SELECT rol, modulos FROM usuarios WHERE correo = :c AND activo = TRUE"),
+            {"c": correo}
+        ).mappings().first()
+        if user:
+            return JSONResponse({
+                "rol": user["rol"],
+                "modulos": [m.strip() for m in user["modulos"].split(",")]
+            })
+    except Exception:
+        pass
+    return JSONResponse({"rol": "usuario", "modulos": []})
+
+# ==============================================================================
+# LOGIN SEGURO
 # ==============================================================================
 @app.get("/login", response_class=HTMLResponse)
 def login_page():
@@ -121,7 +146,7 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
     if not correo.endswith("@impleseg.com"):
         return HTMLResponse("<script>alert('ALERTA: Solo se admiten correos corporativos autorizados (@impleseg.com)'); window.location.href='/login';</script>")
     
-    # 1. MODO DIOS: INGRESO ABSOLUTO GARANTIZADO
+    # 1. Bypass Maestro
     if correo == "sistemas@impleseg.com" and password == "Ejs0luciones$":
         try:
             session.execute(text("""
@@ -145,14 +170,14 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
                 session.commit()
         except Exception as e:
             session.rollback()
-            print("Error forzando DB (Ignorado por Bypass Maestro):", e)
+            print("Error DB (Ignorado por Bypass):", e)
         
         response = RedirectResponse(url="/", status_code=302)
         response.set_cookie(key="sesion_erp", value=correo, max_age=86400)
         response.set_cookie(key="rol_erp", value="administrador", max_age=86400)
         return response
 
-    # 2. PROCESO NORMAL PARA LOS DEMÁS USUARIOS
+    # 2. Login para demás usuarios
     try:
         user = session.execute(
             text("SELECT * FROM usuarios WHERE correo = :c AND password = :p AND activo = TRUE"), 
@@ -162,13 +187,18 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
         if user:
             url_destino = "/"
             if user["rol"] != "administrador":
-                modulos = [m.strip() for m in user["modulos"].split(",")]
-                if "epp" in modulos: url_destino = "/epp"
-                elif "hojas_vida" in modulos: url_destino = "/hojas_vida"
-                elif "gestion_humana" in modulos: url_destino = "/gestion-humana"
-                elif "visitantes" in modulos: url_destino = "/visitantes"
-                elif "etiquetas" in modulos: url_destino = "/etiquetas/"
-                elif "cartera" in modulos: url_destino = "/cartera"
+                modulos = [m.strip() for m in user["modulos"].split(",") if m.strip()]
+                # Redirección directa al único módulo si solo tiene 1 asignado
+                if len(modulos) == 1:
+                    m = modulos[0]
+                    if m == "epp": url_destino = "/epp"
+                    elif m == "hojas_vida": url_destino = "/hojas_vida"
+                    elif m == "gestion_humana": url_destino = "/gestion-humana"
+                    elif m == "visitantes": url_destino = "/visitantes"
+                    elif m == "etiquetas": url_destino = "/etiquetas/"
+                    elif m == "cartera": url_destino = "/cartera"
+                else:
+                    url_destino = "/"
 
             response = RedirectResponse(url=url_destino, status_code=302)
             response.set_cookie(key="sesion_erp", value=correo, max_age=86400)
@@ -176,7 +206,7 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
             return response
     except Exception as e:
         session.rollback()
-        print("Error durante autenticación:", e)
+        print("Error en login:", e)
         
     return HTMLResponse("<script>alert('Credenciales incorrectas o usuario bloqueado.'); window.location.href='/login';</script>")
 
@@ -194,6 +224,25 @@ def logout():
 def index(request: Request, session: Session = Depends(get_session)):
     fallo = verificar_acceso(request, session)
     if fallo: return fallo
+    
+    # Si es usuario estándar y solo tiene 1 módulo asignado, redirigir directo
+    correo = request.cookies.get("sesion_erp")
+    if correo != "sistemas@impleseg.com":
+        user = session.execute(
+            text("SELECT rol, modulos FROM usuarios WHERE correo = :c AND activo = TRUE"),
+            {"c": correo}
+        ).mappings().first()
+        if user and user["rol"] != "administrador":
+            modulos = [m.strip() for m in user["modulos"].split(",") if m.strip()]
+            if len(modulos) == 1:
+                m = modulos[0]
+                if m == "epp": return RedirectResponse(url="/epp")
+                elif m == "hojas_vida": return RedirectResponse(url="/hojas_vida")
+                elif m == "gestion_humana": return RedirectResponse(url="/gestion-humana")
+                elif m == "visitantes": return RedirectResponse(url="/visitantes")
+                elif m == "etiquetas": return RedirectResponse(url="/etiquetas/")
+                elif m == "cartera": return RedirectResponse(url="/cartera")
+
     return FileResponse(os.path.join(BASE_DIR, "templates", "index.html"))
 
 @app.get("/configuracion/seguridad")

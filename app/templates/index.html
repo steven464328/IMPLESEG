@@ -60,11 +60,9 @@
         .module-card h4 { color: white; font-weight: 700; margin-bottom: 10px; }
         .module-card p { color: #94a3b8; font-size: 14px; margin: 0; }
         
-        /* Estilo especial para módulo EPP */
         .module-card.epp:hover { border-color: #3b82f6; }
         .module-card.epp i { color: #3b82f6; }
 
-        /* Color especial para tarjeta Cartera */
         .module-card.cartera:hover { border-color: #f97316; }
         .module-card.cartera i { color: #f97316; }
     </style>
@@ -73,7 +71,6 @@
 <body>
 
     <div class="sidebar">
-        <!-- Volver al Inicio ERP -->
         <div class="brand-banner" onclick="window.location.href='/'" title="Volver al Menú Principal">
             <div class="logo-text">impleseg</div>
             <div class="logo-icons">👥 🛡️ 👷</div>
@@ -83,12 +80,12 @@
         <div class="menu">
             <div class="menu-title">MÓDULOS ERP</div>
             <a href="/" class="active"><i class="bi bi-house-door me-2"></i> Inicio</a>
-            <a href="/epp"><i class="bi bi-shield-check me-2"></i> Entrega EPP y Dotación</a>
-            <a href="/hojas_vida"><i class="bi bi-pc-display-horizontal me-2"></i> Hojas de Vida</a>
-            <a href="/gestion-humana"><i class="bi bi-person-vcard me-2"></i> Gestión Humana</a>
-            <a href="/visitantes"><i class="bi bi-people-fill me-2"></i> Ingreso Visitantes</a>
-            <a href="/etiquetas/"><i class="bi bi-upc-scan me-2"></i> Etiquetas USB</a>
-            <a href="/cartera"><i class="bi bi-wallet2 me-2"></i> Cartera Vencida</a>
+            <a href="/epp" data-mod="epp"><i class="bi bi-shield-check me-2"></i> Entrega EPP y Dotación</a>
+            <a href="/hojas_vida" data-mod="hojas_vida"><i class="bi bi-pc-display-horizontal me-2"></i> Hojas de Vida</a>
+            <a href="/gestion-humana" data-mod="gestion_humana"><i class="bi bi-person-vcard me-2"></i> Gestión Humana</a>
+            <a href="/visitantes" data-mod="visitantes"><i class="bi bi-people-fill me-2"></i> Ingreso Visitantes</a>
+            <a href="/etiquetas/" data-mod="etiquetas"><i class="bi bi-upc-scan me-2"></i> Etiquetas USB</a>
+            <a href="/cartera" data-mod="cartera"><i class="bi bi-wallet2 me-2"></i> Cartera Vencida</a>
             <a class="disabled-link"><i class="bi bi-box-seam me-2"></i> Inventarios</a>
             <a class="disabled-link"><i class="bi bi-receipt me-2"></i> Compras</a>
             <a class="disabled-link"><i class="bi bi-cash-stack me-2"></i> Contabilidad</a>
@@ -100,43 +97,43 @@
         <div class="page-title">Sistema Integrado Empresarial IMPLESEG</div>
         <div class="page-subtitle">Selecciona el módulo al que deseas acceder</div>
 
-        <div class="row g-4">
-            <div class="col-md-3">
+        <div class="row g-4" id="contenedor-tarjetas">
+            <div class="col-md-3" data-card="epp">
                 <div class="module-card epp" onclick="window.location.href='/epp'">
                     <i class="bi bi-shield-check"></i>
                     <h4>Entrega EPP y Dotación</h4>
                     <p>Registro, firmas digitales, matriz histórica y generación oficial del formato F-SGI-GS-03.</p>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3" data-card="hojas_vida">
                 <div class="module-card" onclick="window.location.href='/hojas_vida'">
                     <i class="bi bi-pc-display-horizontal"></i>
                     <h4>Hojas de Vida</h4>
                     <p>Gestión técnica de equipos de cómputo, líneas corporativas y celulares.</p>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3" data-card="gestion_humana">
                 <div class="module-card" onclick="window.location.href='/gestion-humana'">
                     <i class="bi bi-person-vcard"></i>
                     <h4>Gestión Humana</h4>
                     <p>Asignación de activos, actas, inventario general y entregas a personal.</p>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3" data-card="visitantes">
                 <div class="module-card" onclick="window.location.href='/visitantes'">
                     <i class="bi bi-people-fill"></i>
                     <h4>Ingreso Visitantes</h4>
                     <p>Control de acceso, historial, ARL y registro de entradas y salidas.</p>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3" data-card="etiquetas">
                 <div class="module-card" onclick="window.location.href='/etiquetas/'">
                     <i class="bi bi-upc-scan"></i>
                     <h4>Etiquetas USB</h4>
                     <p>Módulo de escaneo y etiquetado para dispositivos y memorias USB.</p>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3" data-card="cartera">
                 <div class="module-card cartera" onclick="window.location.href='/cartera'">
                     <i class="bi bi-wallet2"></i>
                     <h4>Cartera Vencida</h4>
@@ -145,6 +142,40 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Filtrar elementos visibles según los permisos del usuario activo
+        async function aplicarPermisosVisuales() {
+            try {
+                const res = await fetch('/api/mis-permisos');
+                const data = await res.json();
+                
+                // Si es administrador o tiene acceso 'todos', ve todo
+                if (data.rol === 'administrador' || data.modulos.includes('todos')) {
+                    return;
+                }
+
+                // Ocultar enlaces del menú lateral no autorizados
+                document.querySelectorAll('.menu a[data-mod]').forEach(a => {
+                    const mod = a.getAttribute('data-mod');
+                    if (!data.modulos.includes(mod)) {
+                        a.style.display = 'none';
+                    }
+                });
+
+                // Ocultar tarjetas de la cuadrícula no autorizadas
+                document.querySelectorAll('#contenedor-tarjetas [data-card]').forEach(card => {
+                    const mod = card.getAttribute('data-card');
+                    if (!data.modulos.includes(mod)) {
+                        card.style.display = 'none';
+                    }
+                });
+            } catch (err) {
+                console.error("Error al cargar permisos:", err);
+            }
+        }
+        aplicarPermisosVisuales();
+    </script>
 
 </body>
 
