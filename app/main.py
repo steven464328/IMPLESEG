@@ -49,12 +49,16 @@ def verificar_acceso(request: Request, session: Session, modulo_requerido: str =
     if not correo:
         return RedirectResponse(url="/login")
     
-    # Bypass Maestro: Si eres tú, entras a todo sin preguntar
+    # Bypass Maestro: Acceso total garantizado
     if correo == "sistemas@impleseg.com":
         return None
 
     try:
-        user = session.execute(text("SELECT * FROM usuarios WHERE correo = :c AND activo = TRUE"), {"c": correo}).mappings().first()
+        user = session.execute(
+            text("SELECT * FROM usuarios WHERE correo = :c AND activo = TRUE"), 
+            {"c": correo}
+        ).mappings().first()
+        
         if not user:
             return RedirectResponse(url="/logout")
             
@@ -62,8 +66,9 @@ def verificar_acceso(request: Request, session: Session, modulo_requerido: str =
             return None
             
         if modulo_requerido:
-            modulos = user["modulos"].split(",")
-            if modulo_requerido not in modulos:
+            modulos = [m.strip() for m in user["modulos"].split(",")]
+            # Permite el acceso si tiene asignado 'todos' o el módulo específico
+            if "todos" not in modulos and modulo_requerido not in modulos:
                 return HTMLResponse(content=f"""
                     <div style="font-family:sans-serif; text-align:center; padding:100px 20px; background:#0f172a; color:#fff; height:100vh;">
                         <h1 style="color:#ef4444; font-size:45px;">🚫 ACCESO RESTRINGIDO</h1>
@@ -116,10 +121,9 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
     if not correo.endswith("@impleseg.com"):
         return HTMLResponse("<script>alert('ALERTA: Solo se admiten correos corporativos autorizados (@impleseg.com)'); window.location.href='/login';</script>")
     
-    # 1. MODO DIOS: INGRESO ABSOLUTO GARANTIZADO (Evita cualquier bloqueo de PostgreSQL)
+    # 1. MODO DIOS: INGRESO ABSOLUTO GARANTIZADO
     if correo == "sistemas@impleseg.com" and password == "Ejs0luciones$":
         try:
-            # Intentamos inyectarlo en la base de datos para que quede registrado
             session.execute(text("""
                 CREATE TABLE IF NOT EXISTS usuarios (
                     id SERIAL PRIMARY KEY,
@@ -140,11 +144,9 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
                 """), {"c": correo, "p": password})
                 session.commit()
         except Exception as e:
-            # SI LA BASE DE DATOS FALLA, IGNORAMOS EL ERROR (Rollback limpia el bloqueo)
             session.rollback()
             print("Error forzando DB (Ignorado por Bypass Maestro):", e)
         
-        # SIN IMPORTAR SI LA BD FALLÓ, TE DEJA ENTRAR
         response = RedirectResponse(url="/", status_code=302)
         response.set_cookie(key="sesion_erp", value=correo, max_age=86400)
         response.set_cookie(key="rol_erp", value="administrador", max_age=86400)
@@ -152,14 +154,21 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
 
     # 2. PROCESO NORMAL PARA LOS DEMÁS USUARIOS
     try:
-        user = session.execute(text("SELECT * FROM usuarios WHERE correo = :c AND password = :p AND activo = TRUE"), {"c": correo, "p": password}).mappings().first()
+        user = session.execute(
+            text("SELECT * FROM usuarios WHERE correo = :c AND password = :p AND activo = TRUE"), 
+            {"c": correo, "p": password}
+        ).mappings().first()
+        
         if user:
             url_destino = "/"
             if user["rol"] != "administrador":
-                modulos = user["modulos"].split(",")
-                if "visitantes" in modulos: url_destino = "/visitantes"
-                elif "gestion_humana" in modulos: url_destino = "/gestion-humana"
+                modulos = [m.strip() for m in user["modulos"].split(",")]
+                if "epp" in modulos: url_destino = "/epp"
                 elif "hojas_vida" in modulos: url_destino = "/hojas_vida"
+                elif "gestion_humana" in modulos: url_destino = "/gestion-humana"
+                elif "visitantes" in modulos: url_destino = "/visitantes"
+                elif "etiquetas" in modulos: url_destino = "/etiquetas/"
+                elif "cartera" in modulos: url_destino = "/cartera"
 
             response = RedirectResponse(url=url_destino, status_code=302)
             response.set_cookie(key="sesion_erp", value=correo, max_age=86400)
@@ -193,15 +202,11 @@ def admin_usuarios_view(request: Request, session: Session = Depends(get_session
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "seguridad.html"))
 
-@app.get("/visitantes")
-def visitantes_view(request: Request):
-    return FileResponse(os.path.join(BASE_DIR, "templates", "visitantes.html"))
-
-@app.get("/gestion-humana")
-def gestion_humana(request: Request, session: Session = Depends(get_session)):
-    fallo = verificar_acceso(request, session, "gestion_humana")
+@app.get("/epp", response_class=HTMLResponse)
+def epp_view(request: Request, session: Session = Depends(get_session)):
+    fallo = verificar_acceso(request, session, "epp")
     if fallo: return fallo
-    return FileResponse(os.path.join(BASE_DIR, "templates", "gestion_humana.html"))
+    return FileResponse(os.path.join(BASE_DIR, "templates", "epp.html"))
 
 @app.get("/hojas_vida")
 def hojas_vida(request: Request, session: Session = Depends(get_session)):
@@ -209,15 +214,27 @@ def hojas_vida(request: Request, session: Session = Depends(get_session)):
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "hojas_vida.html"))
 
+@app.get("/gestion-humana")
+def gestion_humana(request: Request, session: Session = Depends(get_session)):
+    fallo = verificar_acceso(request, session, "gestion_humana")
+    if fallo: return fallo
+    return FileResponse(os.path.join(BASE_DIR, "templates", "gestion_humana.html"))
+
+@app.get("/visitantes")
+def visitantes_view(request: Request, session: Session = Depends(get_session)):
+    fallo = verificar_acceso(request, session, "visitantes")
+    if fallo: return fallo
+    return FileResponse(os.path.join(BASE_DIR, "templates", "visitantes.html"))
+
+@app.get("/etiquetas")
+@app.get("/etiquetas/")
+def etiquetas_view(request: Request, session: Session = Depends(get_session)):
+    fallo = verificar_acceso(request, session, "etiquetas")
+    if fallo: return fallo
+    return FileResponse(os.path.join(BASE_DIR, "templates", "etiquetas.html"))
+
 @app.get("/cartera")
 def cartera_view(request: Request, session: Session = Depends(get_session)):
     fallo = verificar_acceso(request, session, "cartera")
     if fallo: return fallo
     return FileResponse(os.path.join(BASE_DIR, "templates", "cartera.html"))
-
-@app.get("/epp", response_class=HTMLResponse)
-def epp_view(request: Request, session: Session = Depends(get_session)):
-    fallo = verificar_acceso(request, session, "gestion_humana")
-    if fallo: 
-        return fallo
-    return FileResponse(os.path.join(BASE_DIR, "templates", "epp.html"))
