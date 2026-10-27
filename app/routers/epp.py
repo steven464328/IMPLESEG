@@ -1,5 +1,6 @@
 import os
 import re
+import base64
 import pandas as pd
 from fastapi import APIRouter, Request, Form, Depends, UploadFile, File
 from fastapi.responses import JSONResponse
@@ -20,27 +21,22 @@ router = APIRouter(prefix="/epp", tags=["EPP"])
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PDF_OUTPUT_DIR = os.path.join(BASE_DIR, "static", "epp_pdfs")
+LOGO_LOCAL_PATH = os.path.join(BASE_DIR, "static", "img", "logo_impleseg.png")
 os.makedirs(PDF_OUTPUT_DIR, exist_ok=True)
 
 DRIVE_FOLDER_ID = "1VK0JzoDM0hSlbeQA-dGYBsgE4EUafzcY"
 SERVICE_ACCOUNT_FILE = '/home/rtecnico/IMPLESEG/credentials.json'
 
-# LOGO OFICIAL IMPLESEG EN BASE64 (Asegura carga inmediata y a full color)
-LOGO_IMPLESEG_BASE64 = (
-    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJ8AAABWCAYAAADgGg7OAAAABmJLR0QA/wD/AP+gvaeTAAA"
-    "ACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH6AoXEBExSj5m6wAAH4lJREFUeNrtnXeUFNX3xz/V3TPdM8twBZZl6U1Q"
-    "UVEBAQsWjFhR0VhQLFG/xhhji3kn1hhjjL2xYIkaEwtYwYYVRRREFGlSlmWhLNt3pvtU9f7YYXZmZ3aWfT9zzvdc13k4"
-    "yN351u/Wvffcu15F6z5iGIbB/4Kq1s+Gf/3r/z+o8v/9Af4frF27lscff5zHH3+czZs3Y5qm3X+Zf4f89d+/gX379vHk"
-    "k0/y/PPPs2bNGgzD/M+Vv2r978H+/fvp168fjz76KB9++CF79+79z5X/qvb/H3D55ZfzzjvvsGnTJs4///z/WPkvG/rfg"
-    "BkzZvDWW28xadIkZsyY8R8rv4x9/jG4++67GTp0KGeeeSbHH388//73v//9/kH61157jbfffpuxY8cyffr0f4f9f4Sff/"
-    "6Z5557jpNPPplBgwaxbt26f79/gP6TTz7h/fff56abbmLAgAH/Kfv/CPv27eO5557jnnvu4cknn2TFihX/fv8A/csvv8w"
-    "LL7zAnXfeyaxZs/5T9v9R9r/++uv8+OOP3HTTTSxevJjvfvz9A/Ctt95ixowZXHTRRZxxxhmsWbPmP2P/n2D79u08++yz"
-    "PPjgg8yePZu33377P17/b3/7Gx999BEvv/wy8+fPZ8WKFf8R+f8027dv58svv+Tmm2/m4osvZvv27f/R+n/729/46KOP"
-    "uPnmm1m0aBHPPfdc2fb/U/Sff/55VqxYwTXXXLPCf7T+k08+yfe//81tt93GK6+8wtNPP11W/f8U7du3j/Xr1/PPf/6T"
-    "xx57bIX/aP3LLruMBx54gDvvvJM//vGPZdP/T7Nnzx5WrVrFJZdcwhNPPLHCf7T+ZZddxoABA3jiiSdYvnx5WfT/02zZ"
-    "soU33niDXr168dhjj63wH63/4IMPMmDAAG655Zb/rP1/lu+///5/x78f2P9/g/9X9q9a//+T/RvX1f/Xv/71r//r/3/r"
-    "3/jxR/v/f6P8/zX6/53/B61a+P+p/r/z/6BV/7//fwFfEa0Uq1Xq1QAAAABJRU5ErkJggg=="
-)
+def obtener_logo_base64():
+    """Lee el archivo real de 15KB en el servidor y lo convierte a Base64 completo sin fallas."""
+    if os.path.exists(LOGO_LOCAL_PATH) and os.path.getsize(LOGO_LOCAL_PATH) > 1000:
+        try:
+            with open(LOGO_LOCAL_PATH, "rb") as img_file:
+                b64 = base64.b64encode(img_file.read()).decode("utf-8")
+                return f"data:image/png;base64,{b64}"
+        except Exception as e:
+            print("Error leyendo logo local:", e)
+    return "/static/img/logo_impleseg.png"
 
 def subir_a_google_drive(filepath, filename):
     if not HAS_DRIVE or not os.path.exists(SERVICE_ACCOUNT_FILE):
@@ -61,6 +57,9 @@ def subir_a_google_drive(filepath, filename):
         print("Error subiendo a Google Drive:", str(e))
         return None
 
+# ==============================================================================
+# CARGAR EMPLEADOS DESDE EXCEL
+# ==============================================================================
 @router.post("/cargar-empleados")
 async def cargar_empleados_excel(
     file: UploadFile = File(...),
@@ -125,6 +124,9 @@ async def cargar_empleados_excel(
         session.rollback()
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
+# ==============================================================================
+# BUSCAR COLABORADOR POR CÉDULA
+# ==============================================================================
 @router.get("/buscar/{cedula}")
 def buscar_usuario_epp(cedula: str, session: Session = Depends(get_session)):
     try:
@@ -163,6 +165,9 @@ def buscar_usuario_epp(cedula: str, session: Session = Depends(get_session)):
     except Exception as e:
         return JSONResponse({"encontrado": False, "error": str(e)})
 
+# ==============================================================================
+# GUARDAR ENTREGA Y GENERAR FORMULARIO F-SGI-GS-03
+# ==============================================================================
 @router.post("/guardar")
 async def guardar_epp(
     request: Request,
@@ -236,7 +241,7 @@ async def guardar_epp(
         })
         session.commit()
 
-        # Obtener historial completo acumulado
+        # Historial acumulado completo
         registros = session.execute(
             text("SELECT * FROM epp_entregas WHERE cedula = :c ORDER BY id ASC"),
             {"c": cedula}
@@ -275,6 +280,8 @@ async def guardar_epp(
         filename_pdf = f"EPP_{cedula}_{nombre_limpio}.pdf"
         filepath = os.path.join(PDF_OUTPUT_DIR, filename_html)
 
+        logo_src = obtener_logo_base64()
+
         html_content = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -282,24 +289,24 @@ async def guardar_epp(
     <title>{filename_pdf}</title>
     <style>
         @page {{ size: letter portrait; margin: 8mm; }}
-        body {{ font-family: Arial, sans-serif; font-size: 10px; color: #000; margin: 0; padding: 0; }}
+        body {{ font-family: Arial, sans-serif; font-size: 10px; color: #000; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
         table {{ width: 100%; border-collapse: collapse; margin-bottom: -1px; }}
         td, th {{ border: 1px solid #000; padding: 3px 5px; box-sizing: border-box; }}
         .header-table td {{ text-align: center; font-weight: bold; }}
-        .bg-green {{ background-color: #c5d99b; font-weight: bold; text-align: center; }}
+        .bg-green {{ background-color: #c5d99b !important; font-weight: bold; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
         .vertical-text {{ writing-mode: vertical-lr; transform: rotate(180deg); text-align: center; white-space: nowrap; font-size: 8px; padding: 2px; height: 75px; width: 18px; }}
         .footer-legal {{ font-size: 7.5px; text-align: justify; line-height: 1.1; padding: 4px; }}
         .footer-signatures {{ text-align: center; font-weight: bold; font-size: 8.5px; }}
-        .logo-img {{ max-width: 135px; height: auto; display: block; margin: 0 auto; }}
+        .logo-img {{ width: 135px; height: auto; display: block; margin: 0 auto; object-fit: contain; }}
     </style>
 </head>
 <body>
 
-    <!-- ENCABEZADO CON LOGO INTEGRADO EN BASE64 -->
+    <!-- ENCABEZADO CON LOGO DE IMPLESEG -->
     <table class="header-table">
         <tr>
-            <td style="width: 22%; padding: 4px; background: #ffffff;">
-                <img src="{LOGO_IMPLESEG_BASE64}" class="logo-img" alt="IMPLESEG">
+            <td style="width: 22%; padding: 4px; background: #ffffff; text-align: center;">
+                <img src="{logo_src}" class="logo-img" alt="IMPLESEG">
             </td>
             <td style="width: 53%; font-size: 11px;">
                 IMPLESEG S.A.S<br>
