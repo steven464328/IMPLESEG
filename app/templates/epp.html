@@ -178,6 +178,91 @@
             </div>
         </div>
 
+    <!-- PANEL DE AUDITORÍA Y CONSULTA DE FORMATOS EPP -->
+<div class="card shadow-sm mt-4 mb-4">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Historial y Consulta de Formatos F-SGI-GS-03</h5>
+        <button class="btn btn-sm btn-outline-light" onclick="cargarHistorialGeneral()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Actualizar Lista
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <input type="text" id="filtroHistorial" class="form-control" placeholder="Buscar por cédula o nombre..." onkeyup="filtrarTablaHistorial()">
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered align-middle text-center" id="tablaHistorialEPP">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>Cédula</th>
+                        <th>Colaborador</th>
+                        <th>Cargo</th>
+                        <th>Área</th>
+                        <th>Total Entregas</th>
+                        <th>Última Entrega</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="bodyHistorialEPP">
+                    <tr>
+                        <td colspan="7" class="text-muted">Cargando registros...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+async function cargarHistorialGeneral() {
+    try {
+        const resp = await fetch('/epp/historial-general');
+        const res = await resp.json();
+        const tbody = document.getElementById('bodyHistorialEPP');
+        tbody.innerHTML = '';
+
+        if (!res.data || res.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-muted">No hay formatos registrados aún.</td></tr>';
+            return;
+        }
+
+        res.data.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><b>${item.cedula}</b></td>
+                <td class="text-start">${item.nombre}</td>
+                <td>${item.cargo || '-'}</td>
+                <td>${item.area || '-'}</td>
+                <td><span class="badge bg-primary fs-6">${item.total_entregas}</span></td>
+                <td>${item.ultima_entrega || '-'}</td>
+                <td>
+                    <a href="/epp/reimprimir/${item.cedula}" target="_blank" class="btn btn-sm btn-success">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Ver / Imprimir
+                    </a>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (err) {
+        console.error("Error al cargar historial:", err);
+    }
+}
+
+function filtrarTablaHistorial() {
+    const term = document.getElementById('filtroHistorial').value.toLowerCase();
+    const rows = document.querySelectorAll('#bodyHistorialEPP tr');
+    rows.forEach(r => {
+        const text = r.innerText.toLowerCase();
+        r.style.display = text.includes(term) ? '' : 'none';
+    });
+}
+
+// Cargar automáticamente al entrar a la página
+document.addEventListener('DOMContentLoaded', cargarHistorialGeneral);
+</script>
+
         <button type="button" id="btn-guardar-epp" class="btn-submit">VERIFICAR Y GENERAR REGISTRO F-SGI-GS-03</button>
     </form>
 
