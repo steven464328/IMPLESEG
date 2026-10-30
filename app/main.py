@@ -5,10 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlmodel import Session
 
-# Importación correcta de la base de datos
 from app.database import get_session, init_db
-
-# Importación de los routers
 from app.routers import (
     dashboard, equipos, gh_inventario, gh_asignaciones,
     gh_bajas, recepcion, etiquetas_usb, dashboard_equipos,
@@ -49,7 +46,6 @@ def verificar_acceso(request: Request, session: Session, modulo_requerido: str =
     if not correo:
         return RedirectResponse(url="/login")
     
-    # Bypass Maestro garantizado
     if correo == "sistemas@impleseg.com":
         return None
 
@@ -66,7 +62,7 @@ def verificar_acceso(request: Request, session: Session, modulo_requerido: str =
             return None
             
         if modulo_requerido:
-            modulos = [m.strip() for m in user["modulos"].split(",")]
+            modulos = [m.strip() for m in user["modulos"].split(",") if m.strip()]
             if "todos" not in modulos and modulo_requerido not in modulos:
                 return HTMLResponse(content=f"""
                     <div style="font-family:sans-serif; text-align:center; padding:100px 20px; background:#0f172a; color:#fff; height:100vh;">
@@ -81,33 +77,33 @@ def verificar_acceso(request: Request, session: Session, modulo_requerido: str =
         return RedirectResponse(url="/login")
 
 # ==============================================================================
-# ENDPOINT PARA CONSULTAR PERMISOS DEL USUARIO EN SESIÓN
+# ENDPOINT DE PERMISOS PARA EL FRONTEND
 # ==============================================================================
 @app.get("/api/mis-permisos")
-def obtener_mis_permisos(request: Request, session: Session = Depends(get_session)):
+def mis_permisos(request: Request, session: Session = Depends(get_session)):
     correo = request.cookies.get("sesion_erp")
     if not correo:
         return JSONResponse({"rol": "anonimo", "modulos": []})
-    
+        
     if correo == "sistemas@impleseg.com":
         return JSONResponse({"rol": "administrador", "modulos": ["todos"]})
         
     try:
         user = session.execute(
-            text("SELECT rol, modulos FROM usuarios WHERE correo = :c AND activo = TRUE"),
+            text("SELECT rol, modulos FROM usuarios WHERE correo = :c AND activo = TRUE"), 
             {"c": correo}
         ).mappings().first()
         if user:
             return JSONResponse({
                 "rol": user["rol"],
-                "modulos": [m.strip() for m in user["modulos"].split(",")]
+                "modulos": [m.strip() for m in user["modulos"].split(",") if m.strip()]
             })
     except Exception:
         pass
     return JSONResponse({"rol": "usuario", "modulos": []})
 
 # ==============================================================================
-# LOGIN SEGURO
+# LOGIN Y SESIÓN
 # ==============================================================================
 @app.get("/login", response_class=HTMLResponse)
 def login_page():
@@ -117,12 +113,13 @@ def login_page():
     <head>
         <meta charset="UTF-8">
         <title>Acceso Corporativo · IMPLESEG ERP</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             body { background: #070b14; color: #fff; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-            .login-box { background: #121e2d; padding: 40px; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); text-align: center; width: 340px; border-top: 4px solid #f97316; }
-            input { width: 100%; padding: 14px; margin: 10px 0; border-radius: 6px; border: 1px solid #334155; background: #0b131e; color: white; box-sizing: border-box; outline:none; }
+            .login-box { background: #121e2d; padding: 35px 25px; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); text-align: center; width: 90%; max-width: 340px; border-top: 4px solid #f97316; }
+            input { width: 100%; padding: 14px; margin: 10px 0; border-radius: 6px; border: 1px solid #334155; background: #0b131e; color: white; box-sizing: border-box; outline:none; font-size:15px; }
             input:focus { border-color: #f97316; }
-            button { width: 100%; padding: 14px; background: #f97316; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; font-size:16px;}
+            button { width: 100%; padding: 14px; background: #f97316; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; font-size:16px; }
             button:hover { background: #ea580c; }
         </style>
     </head>
@@ -146,7 +143,7 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
     if not correo.endswith("@impleseg.com"):
         return HTMLResponse("<script>alert('ALERTA: Solo se admiten correos corporativos autorizados (@impleseg.com)'); window.location.href='/login';</script>")
     
-    # 1. Bypass Maestro
+    # Bypass Maestro
     if correo == "sistemas@impleseg.com" and password == "Ejs0luciones$":
         try:
             session.execute(text("""
@@ -160,7 +157,6 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
                 );
             """))
             session.commit()
-            
             admin_exist = session.execute(text("SELECT * FROM usuarios WHERE correo = :c"), {"c": correo}).first()
             if not admin_exist:
                 session.execute(text("""
@@ -170,14 +166,14 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
                 session.commit()
         except Exception as e:
             session.rollback()
-            print("Error DB (Ignorado por Bypass):", e)
+            print("Error DB Bypass:", e)
         
         response = RedirectResponse(url="/", status_code=302)
-        response.set_cookie(key="sesion_erp", value=correo, max_age=86400)
-        response.set_cookie(key="rol_erp", value="administrador", max_age=86400)
+        response.set_cookie(key="sesion_erp", value=correo, max_age=86400, path="/")
+        response.set_cookie(key="rol_erp", value="administrador", max_age=86400, path="/")
         return response
 
-    # 2. Login para demás usuarios
+    # Login regular
     try:
         user = session.execute(
             text("SELECT * FROM usuarios WHERE correo = :c AND password = :p AND activo = TRUE"), 
@@ -188,7 +184,7 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
             url_destino = "/"
             if user["rol"] != "administrador":
                 modulos = [m.strip() for m in user["modulos"].split(",") if m.strip()]
-                # Redirección directa al único módulo si solo tiene 1 asignado
+                # Si solo tiene un único módulo asignado, enviarlo directo sin pasar por el panel
                 if len(modulos) == 1:
                     m = modulos[0]
                     if m == "epp": url_destino = "/epp"
@@ -197,12 +193,10 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
                     elif m == "visitantes": url_destino = "/visitantes"
                     elif m == "etiquetas": url_destino = "/etiquetas/"
                     elif m == "cartera": url_destino = "/cartera"
-                else:
-                    url_destino = "/"
 
             response = RedirectResponse(url=url_destino, status_code=302)
-            response.set_cookie(key="sesion_erp", value=correo, max_age=86400)
-            response.set_cookie(key="rol_erp", value=user["rol"], max_age=86400)
+            response.set_cookie(key="sesion_erp", value=correo, max_age=86400, path="/")
+            response.set_cookie(key="rol_erp", value=user["rol"], max_age=86400, path="/")
             return response
     except Exception as e:
         session.rollback()
@@ -213,8 +207,8 @@ def procesar_login(correo: str = Form(...), password: str = Form(...), session: 
 @app.get("/logout")
 def logout():
     response = RedirectResponse(url="/login", status_code=302)
-    response.delete_cookie("sesion_erp")
-    response.delete_cookie("rol_erp")
+    response.delete_cookie("sesion_erp", path="/")
+    response.delete_cookie("rol_erp", path="/")
     return response
 
 # ==============================================================================
@@ -225,13 +219,14 @@ def index(request: Request, session: Session = Depends(get_session)):
     fallo = verificar_acceso(request, session)
     if fallo: return fallo
     
-    # Si es usuario estándar y solo tiene 1 módulo asignado, redirigir directo
+    # Si es usuario estándar, comprobar si tiene permiso exclusivo de un solo módulo
     correo = request.cookies.get("sesion_erp")
     if correo != "sistemas@impleseg.com":
         user = session.execute(
             text("SELECT rol, modulos FROM usuarios WHERE correo = :c AND activo = TRUE"),
             {"c": correo}
         ).mappings().first()
+        
         if user and user["rol"] != "administrador":
             modulos = [m.strip() for m in user["modulos"].split(",") if m.strip()]
             if len(modulos) == 1:
